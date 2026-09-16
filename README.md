@@ -280,16 +280,6 @@ Migration / sharing          ░░░░░░░░░░  Not started
 Public alpha                 ░░░░░░░░░░  Not released
 ```
 
-Current priority order for PXL projects:
-
-```text
-1. PixelNet
-2. Pixel City
-3. PXL Cone
-```
-
-PXL Cone development will begin when the higher-priority projects reach the intended milestones.
-
 ---
 
 ## Follow development
