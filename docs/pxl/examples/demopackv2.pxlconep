@@ -1,0 +1,44 @@
+{
+  "formatVersion": 1,
+  "type": "smart",
+  "name": "Testpack",
+
+  "minecraft": {
+    "version": "1.21.1",
+    "loader": {
+      "type": "fabric",
+      "version": "0.16.14"
+    }
+  },
+
+  "mods": [
+    {
+      "source": "modrinth",
+      "project": "sodium",
+      "version": "EXACT_VERSION_ID",
+      "side": "client"
+    },
+    {
+      "source": "modrinth",
+      "project": "iris",
+      "version": "EXACT_VERSION_ID",
+      "side": "client"
+    },
+
+{
+"source": "curseforge",
+"project: "create",
+ "version": "EXACT_VERSION_ID",
+"side": "both"
+
+}
+  ],
+
+  "resourcePacks": [
+    {
+      "source": "modrinth",
+      "project": "x64textures",
+      "version": "EXACT_VERSION_ID"
+    }
+  ]
+}
