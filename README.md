@@ -1,7 +1,12 @@
-# PXL Cone Launcher
+<p align="center">
+  <img src="program_info/PXLConeLauncher.icon/assets/logo/pxlcone-logo-full.svg"
+       alt="PXL Cone Launcher"
+       width="420">
+</p>
 
-> **A fast, user-friendly Minecraft launcher based on PineconeMC.**  
-> Modern UI. Powerful instance management. Easy sharing. Easy migration.
+<p align="center">
+  A fast, user-friendly Minecraft launcher based on PineconeMC.
+</p>
 
 > [!IMPORTANT]
 > **PXL Cone is currently in the planning stage.**
