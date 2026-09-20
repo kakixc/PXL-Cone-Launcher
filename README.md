@@ -1,169 +1,333 @@
 <p align="center">
-  <img src="program_info/PXLConeLauncher.icon/assets/logo/pxlcone-logo-full.svg"
-       alt="PXL Cone Launcher"
-       width="420">
+  <b>English</b> · <a href="README_RU.md">Русский</a>
 </p>
 
 <p align="center">
-  A fast, user-friendly Minecraft launcher based on PineconeMC.
+  <img src="program_info/PXLConeLauncher.icon/assets/logo/pxlcone-logo-full.svg"
+       alt="PXL Cone Launcher"
+       width="430">
+</p>
+
+<p align="center">
+  <b>A modern Minecraft workspace and launcher based on PineconeMC.</b>
+</p>
+
+<p align="center">
+  Modern UX · Powerful instances · Smart migration · Servers · Sharing
 </p>
 
 > [!IMPORTANT]
-> **PXL Cone is currently in the planning stage.**
-> There is no public release yet. This repository is being prepared before active development begins.
+> **PXL Cone is currently in early development / pre-alpha.**
+> There are no public builds yet. Most PXL-specific features described below are planned and are not implemented yet.
 
 ---
 
 ## What is PXL Cone?
 
-PXL Cone is a planned open-source Minecraft launcher based on **PineconeMC** and, through it, the Prism Launcher ecosystem.
+PXL Cone is an open-source Minecraft launcher project built on **PineconeMC** and, through it, the Prism Launcher ecosystem.
 
-The goal is simple:
+The goal is not to replace a mature launcher core with a new one from scratch.
 
-> Keep the power and performance of PineconeMC/Prism, but make everyday use much easier.
+The goal is to keep the power of Prism/Pinecone while making everyday Minecraft management easier, more visual and more connected.
 
-PXL Cone is planned as a native **C++ / Qt** application for Windows and Linux, without replacing the launcher core with Electron or a browser-based UI.
-
-It is intended for both normal players and advanced users: simple by default, powerful when needed.
+> **Simple by default, powerful when needed.**
 
 ---
 
-## Why another Minecraft launcher?
+## The idea: Minecraft as a workspace
 
-Prism Launcher and PineconeMC are extremely powerful, but their interface and some workflows can feel technical or inconvenient to new users.
+PXL Cone is planned around the whole lifecycle of a Minecraft setup, not just the launch button.
 
-PXL Cone aims to improve the parts users interact with every day without throwing away the mature launcher core underneath.
+```mermaid
+flowchart LR
+    A[Create] --> B[Install]
+    B --> C[Play]
+    C --> D[Modify]
+    D --> E[Update]
+    E --> F[Migrate]
+    F --> G[Create Server]
+    G --> H[Share]
+    H --> I[Backup]
+    I --> J[Restore]
+    J --> K[Move to another PC]
+```
 
-The project is not intended to be just a reskin.
+A workspace may connect:
 
-The biggest planned differences are:
-
-- a modern, cleaner Library and instance interface;
-- easier importing from other launchers;
-- cross-platform migration between Windows and Linux;
-- one-file pack sharing with `.pxlconep`;
-- a dedicated transfer/backup format with `.pxlt`;
-- a normal offline ZIP export that is useful outside the Prism/Pinecone ecosystem;
-- better backup, update and error-handling workflows;
-- native performance and low idle overhead;
-- all advanced controls remain available;
-- the cats stay.
+```text
+Instance
+├── Content
+├── Worlds
+├── Server
+├── Snapshots
+├── History
+├── Variants
+└── Sharing
+```
 
 ---
 
-## `.pxlconep` — send a pack as one file
+## Planned highlights
 
-One of the main planned features is **PXL Cone Pack**.
+### 🧭 Modern everyday UX
+
+PXL Cone aims for a cleaner, more direct interface without removing advanced controls.
+
+Planned ideas include:
+
+- recent worlds, instances and servers on the home screen;
+- direct world launch;
+- `Content → Browse → Install` without unnecessary dialogs;
+- source-neutral content browsing;
+- clear background tasks and downloads;
+- native C++ / Qt instead of Electron.
+
+The standard **Cone** theme is intended to feel calm and native: useful cards, restrained animation, clear hierarchy, no giant glowing buttons or generic web-dashboard look.
+
+---
+
+### 🔄 Smart Migration
+
+Changing Minecraft version or loader should not mean rebuilding a pack by hand.
 
 Example:
 
 ```text
-Create-Survival.pxlconep
+Minecraft 1.20.1 + Forge
+→
+Minecraft 1.21.1 + Fabric
 ```
 
-Send it through Telegram, Discord, email or any other messenger.
+PXL Cone is planned to analyze installed content and classify it:
 
-The receiver opens the file in PXL Cone, checks what will be installed, and clicks **Install**.
+```text
+READY
+UPDATE
+ALTERNATIVE
+MANUAL
+UNAVAILABLE
+UNKNOWN
+CONFIG RISK
+```
 
-Two modes are planned:
+Before anything changes, the user sees a migration preview.
 
-### Smart Pack
-
-A small package containing exact Minecraft, loader and content metadata.
-
-PXL Cone downloads the exact required versions during installation.
-
-### Offline Pack
-
-A larger package containing the selected mods, resource packs, shaders, configs and other files directly.
-
-Useful when the receiver has no internet access or when a fully self-contained copy is needed.
+Alternative projects should never be substituted silently.
 
 ---
 
-## `.pxlt` — move your Minecraft setup
+### 🕓 Snapshots and history
 
-PXL Transfer is planned for moving your own Minecraft data between computers and operating systems.
+Risky changes should be reversible.
 
-Examples:
+Before actions such as:
+
+- changing Minecraft version;
+- changing loader;
+- updating many mods;
+- applying a migration;
+- modifying a linked server;
+
+PXL Cone can create a restore point.
+
+Example history:
 
 ```text
-Windows -> Fedora
-Fedora -> Windows
-PC -> laptop
-old PC -> new PC
+Today 18:42
+Migrated 1.20.1 → 1.21.1
+
+Today 17:10
+Updated 12 mods
+
+Yesterday
+Installed Create
 ```
 
-A transfer may include selected:
-
-- instances;
-- worlds;
-- configs;
-- options;
-- custom icons;
-- local content;
-- screenshots;
-- launcher organization/settings.
-
-Thin transfers can reference downloadable content instead of copying every mod.
-
-Offline transfers can bundle everything needed for restoration.
+Think of it as **Git-like history for Minecraft**, without requiring the player to know Git.
 
 ---
 
-## Universal Offline ZIP
+### 🤝 Pack Collaboration
 
-PXL Cone is also planned to export a **normal Minecraft-content ZIP**.
+Two players should be able to work on one modpack without sending `mods.zip` back and forth.
 
-Example:
+Internally the model can use ideas similar to branches, commits and merges.
+
+The normal UI should use Minecraft-friendly language instead:
+
+| Internal idea | Player-facing wording |
+| ------------- | --------------------- |
+| Branch        | Pack variant          |
+| Commit        | Save changes          |
+| Merge         | Combine changes       |
+| Conflict      | Need to choose        |
+| Pull          | Get changes           |
+| Push          | Send changes          |
+| Diff          | Changes               |
+
+Example conflict:
 
 ```text
-My-Pack-Offline.zip
-├── mods/
-├── config/
-├── resourcepacks/
-├── shaderpacks/
-├── saves/
-├── options.txt
-└── README.txt
+You both changed the same setting.
+
+Render distance
+
+Your version:
+16 chunks
+
+Alex's version:
+24 chunks
+
+[Keep your version]
+[Keep Alex's version]
+[Choose another value]
 ```
 
-This is intentionally different from a launcher-specific Prism/Pinecone instance archive.
+The collaboration system is intended to support **direct peer-to-peer synchronization** without requiring PXL-owned storage servers.
 
-The archive should remain understandable and useful even if the recipient does not use PXL Cone.
-
-Standard exports such as Modrinth `.mrpack` and supported CurseForge formats are also planned to remain available.
+GitHub integration may be offered later as an optional advanced backend.
 
 ---
 
-## Modern UI without losing advanced features
+### 🖥️ Local server workflows
 
-The UI direction is inspired by modern launchers such as the Modrinth App, but PXL Cone will have its own identity.
+PXL Cone is planned to treat local Minecraft servers as first-class workspace objects.
 
-Planned main areas:
+Possible flow:
 
 ```text
-Library
-Discover
-Downloads / Tasks
-Accounts
+Instance
+→ Create Server
+→ detect loader/version
+→ separate client-only content
+→ copy compatible configs/world
+→ create linked server
+```
+
+A server can then be managed from the launcher:
+
+```text
+Overview
+Mods / Plugins
+Players
+World
+Backups
+Console
+Logs
 Settings
-Instance Details
 ```
 
-Common actions should be easy to find.
-
-Technical controls should still exist under advanced settings instead of being removed.
+The launcher is not planned as a hosting provider. Internet exposure, VPS hosting or tunneling can remain separate.
 
 ---
 
-## PineconeMC foundation
+### 📦 Sharing and transfer
 
-PXL Cone is planned as a **PineconeMC fork**, rather than a new launcher engine written from scratch.
+PXL Cone plans to support multiple formats instead of locking users into one launcher.
 
-That means the project can build on existing work such as:
+#### `.pxlconep`
 
-- multiple isolated Minecraft instances;
+A richer **PXL Cone workspace / project format**.
+
+It may include:
+
+- Minecraft and loader metadata;
+- mod/content metadata;
+- client ↔ server relationship;
+- optional or recommended content;
+- world metadata;
+- workspace-specific settings.
+
+#### `.pxlt`
+
+A transfer format for moving your own environment:
+
+```text
+Windows → Linux
+old PC → new PC
+desktop → laptop
+```
+
+It may include selected instances, worlds, configs, screenshots, launcher organization and local servers.
+
+#### Standard formats
+
+PXL Cone also plans first-class interoperability with:
+
+- Modrinth `.mrpack`;
+- supported CurseForge formats;
+- normal offline ZIP exports.
+
+Conversion between `.mrpack` and `.pxlconep` is planned where practical, with clear warnings when Cone-specific metadata would be lost.
+
+---
+
+### 🎨 Themes
+
+PXL Cone is planned to ship with more than a simple color switch.
+
+#### Cone
+
+The normal modern interface.
+
+#### Terminal
+
+A real alternative presentation with:
+
+- monospaced typography;
+- terminal-like layouts;
+- keyboard-first navigation;
+- ASCII-style elements;
+- restrained dark visuals.
+
+Example:
+
+```text
+> workspace: create-survival
+> minecraft: 1.21.1
+> loader: fabric
+> status: ready
+
+[ RUN ]
+```
+
+Community themes are planned as **data-only packages** so a visual theme does not automatically gain arbitrary code execution.
+
+---
+
+### 🧩 Modules
+
+PXL Cone may become a large launcher, but every user should not need every feature.
+
+Planned module controls:
+
+```text
+✓ Library
+✓ Discover
+✓ Worlds
+✓ Servers
+✓ Snapshots
+✓ Migration
+✓ Pack Collaboration
+□ Developer Tools
+□ Advanced Console
+□ Experimental Features
+```
+
+Modules should be enableable or disableable without restarting the launcher where technically practical.
+
+Future community modules may use a stable permission-based API and could eventually be distributed through a built-in catalog.
+
+---
+
+<details>
+<summary><b>Advanced users: what stays from Prism / Pinecone?</b></summary>
+
+PXL Cone is not intended to remove advanced launcher functionality.
+
+The project is built on a mature upstream foundation that already provides functionality such as:
+
+- isolated Minecraft instances;
 - Microsoft account support;
 - Ely.by support inherited from PineconeMC;
 - Fabric / Forge / NeoForge / Quilt support where available upstream;
@@ -172,84 +336,63 @@ That means the project can build on existing work such as:
 - instance import/export;
 - mature Minecraft launch logic.
 
-The intention is to keep authentication and core launch behavior close to upstream whenever possible.
+The intention is to keep core launch and authentication behavior close to upstream whenever possible.
+
+</details>
 
 ---
 
-## Windows + Linux
+## Platforms
 
-PXL Cone is planned around a single cross-platform C++/Qt codebase.
+Initial focus:
 
-### Windows
+```text
+Windows
+Linux
+```
 
-Planned downloads:
+Planned packaging may include:
 
 ```text
 Windows x64 Installer
-Windows x64 Portable ZIP
-```
+Windows Portable ZIP
 
-### Linux
-
-Planned downloads:
-
-```text
-RPM                 Fedora / RPM-based distributions
-DEB                 Ubuntu / Debian-based distributions
-pkg.tar.zst         Arch Linux
+RPM
+DEB
+pkg.tar.zst
 Flatpak
 AppImage
 ```
 
-Linux is intended to be a first-class platform, not a later port.
-
-macOS may be considered after the Windows/Linux version is stable.
+macOS may be considered later after the Windows/Linux version is stable.
 
 ---
 
-## Import and migration
+## Roadmap
 
-The planned Migration Center should make it easy to detect and import existing Minecraft installations.
+This is a direction, not a release promise.
 
-Initial targets:
-
-```text
-PineconeMC
-Prism Launcher
-Modrinth App
-CurseForge
-MultiMC-compatible instances
-Vanilla .minecraft
-```
-
-The goal is to avoid manually copying random folders and rebuilding every instance after changing launcher or operating system.
-
----
-
-## Planned later features
-
-After the core launcher is stable, possible additions include:
-
-- snapshots and rollback;
-- automatic world backup before risky updates;
-- duplicate-content detection;
-- storage analyzer;
-- improved network diagnostics;
-- rule-based Crash Doctor;
-- optional AI-assisted crash explanations;
-- optional cloud backup/sync services.
-
-AI features will not be required to use the launcher.
+- [x] Create PineconeMC fork
+- [x] Initial PXL Cone branding
+- [x] Product and UX specifications
+- [ ] First PXL-specific UI prototype
+- [ ] Modern Library / Content workflow
+- [ ] Workspace foundation
+- [ ] Snapshots and history
+- [ ] Smart Migration
+- [ ] Local server workflows
+- [ ] Pack Collaboration
+- [ ] Theme system
+- [ ] Module system
+- [ ] Public alpha
 
 ---
 
 ## Performance philosophy
 
-PXL Cone should stay lightweight.
+PXL Cone should stay lightweight, but performance claims will only be used after benchmarking.
 
-The current plan is to keep the native Qt/C++ architecture and avoid turning the launcher into an Electron application.
-
-Main principles:
+Design goals:
 
 ```text
 Fast startup
@@ -261,52 +404,27 @@ No unnecessary network work at startup
 No UI freezes during long operations
 ```
 
-Performance claims will be benchmarked before being used in marketing.
+---
+
+## Development
+
+PXL Cone is currently in **early development / pre-alpha**.
+
+There is no public release date yet.
+
+> [!NOTE]
+> Ideas, UX feedback and feature discussion are welcome in GitHub Discussions.
+> Bug reports for features that do not exist yet are not useful.
 
 ---
 
 ## Open source
 
-PXL Cone is planned to remain open source in accordance with the licenses of its upstream projects.
+PXL Cone is based on GPL-licensed upstream software and is distributed under **GPL-3.0** where applicable.
 
-The launcher client will not require a PXL account for basic use.
+The launcher should remain useful without requiring a PXL account.
 
-Optional online services may be added later, but the core launcher should remain usable without them.
-
----
-
-## Project status
-
-```text
-Planning / specification     ██████████  Active
-Initial fork                 ░░░░░░░░░░  Not started
-UI prototype                 ░░░░░░░░░░  Not started
-Migration / sharing          ░░░░░░░░░░  Not started
-Public alpha                 ░░░░░░░░░░  Not released
-```
-
----
-
-## Follow development
-
-If you are interested in the project:
-
-- **Star** the repository to bookmark it;
-- **Watch** the repository for development activity;
-- follow project announcements in **GitHub Discussions** when enabled;
-- follow the PXL / Pixel Service channels for demos and development updates.
-
-A public release date has not been announced yet.
-
----
-
-## Contributing
-
-Contribution guidelines will be added when active development begins.
-
-Ideas and UX feedback will be especially useful once the first prototype exists.
-
-Please avoid opening bug reports for features that do not exist yet.
+Optional integrations may exist later, but the core launcher is intended to remain usable without them.
 
 ---
 
@@ -320,8 +438,10 @@ Minecraft is a trademark of Microsoft / Mojang Studios.
 
 ---
 
-## License
+## Follow development
 
-The final licensing and attribution files will follow the requirements of the PineconeMC / Prism Launcher upstream code used by the project.
+- ⭐ Star the repository if you want to bookmark the project.
+- 👀 Watch the repository for development activity.
+- 💬 Use GitHub Discussions for ideas and UX feedback.
 
-The intended launcher codebase is based on GPL-licensed upstream software, so corresponding source and license notices will be provided with distributed builds.
+No public build is available yet.
