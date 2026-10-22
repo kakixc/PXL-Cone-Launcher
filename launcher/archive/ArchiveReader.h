@@ -46,6 +46,10 @@ class ArchiveReader {
 
         QString filename();
         bool isFile();
+        bool isDirectory();
+        bool isLink();
+        qint64 size();
+        qint64 read(char* data, qint64 maximum);
         QDateTime dateTime();
         const char* error();
 

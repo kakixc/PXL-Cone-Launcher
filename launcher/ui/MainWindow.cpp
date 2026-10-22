@@ -109,6 +109,9 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/pxl/WorkspacePage.h"
+#include "ui/pxl/TransferDialog.h"
+#include <QStackedWidget>
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
 #include "ui/widgets/LabeledToolButton.h"
@@ -333,7 +336,61 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        m_workspaceViews = new QStackedWidget(ui->centralWidget);
+        m_workspacePage = new WorkspacePage(APPLICATION->instances(), m_workspaceViews);
+        m_workspaceViews->addWidget(m_workspacePage);
+        m_workspaceViews->addWidget(view);
+        ui->horizontalLayout->addWidget(m_workspaceViews);
+
+        connect(m_workspacePage, &WorkspacePage::selectInstance, this, &MainWindow::setSelectedInstanceById);
+        connect(m_workspacePage, &WorkspacePage::activateInstance, this, [this](const QString& id) {
+            if (!APPLICATION->instances()->getInstanceById(id)) return;
+            setSelectedInstanceById(id);
+            on_actionLaunchInstance_triggered();
+        });
+        connect(m_workspacePage, &WorkspacePage::createRequested, ui->actionAddInstance, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::accountsRequested, ui->actionManageAccounts, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::settingsRequested, ui->actionSettings, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::classicRequested, this, [this] {
+            m_workspaceViews->setCurrentWidget(view);
+            view->setFocus();
+        });
+        auto homeAction = new QAction(tr("Home / Library"), this);
+        homeAction->setShortcut(QKeySequence(tr("Ctrl+Shift+H")));
+        connect(homeAction, &QAction::triggered, this, [this] { m_workspaceViews->setCurrentWidget(m_workspacePage); });
+        ui->mainToolBar->insertAction(ui->actionAddInstance, homeAction);
+        ui->viewMenu->addAction(homeAction);
+        auto importAction = new QAction(tr("Import PXL pack / launcher…"), this);
+        importAction->setShortcut(QKeySequence(tr("Ctrl+Shift+I")));
+        connect(importAction, &QAction::triggered, this, [this] {
+            Pxl::TransferDialog dialog(Pxl::TransferDialog::Import, this);
+            dialog.exec();
+        });
+        auto exportAction = new QAction(tr("Share / transfer PXL setup…"), this);
+        exportAction->setShortcut(QKeySequence(tr("Ctrl+Shift+E")));
+        connect(exportAction, &QAction::triggered, this, [this] {
+            Pxl::TransferDialog dialog(Pxl::TransferDialog::Export, this,
+                                        m_selectedInstance ? m_selectedInstance->id() : QString());
+            dialog.exec();
+        });
+        ui->fileMenu->insertAction(ui->actionSettings, importAction);
+        ui->fileMenu->insertAction(ui->actionSettings, exportAction);
+        ui->actionExportInstance->menu()->addSeparator();
+        ui->actionExportInstance->menu()->addAction(exportAction);
+        connect(m_workspacePage, &WorkspacePage::importRequested, importAction, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::exportRequested, exportAction, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::contextMenuRequested, this, [this, exportAction](const QString& id, const QPoint& point) {
+            if (!APPLICATION->instances()->getInstanceById(id)) return;
+            setSelectedInstanceById(id);
+            QMenu menu(this);
+            menu.addActions({ ui->actionLaunchInstance, ui->actionKillInstance, ui->actionEditInstance });
+            menu.addSeparator();
+            menu.addActions({ exportAction, ui->actionExportInstance, ui->actionCopyInstance, ui->actionViewSelectedInstFolder });
+            menu.addSeparator();
+            menu.addActions({ ui->actionRenameInstance, ui->actionChangeInstGroup, ui->actionChangeInstIcon,
+                              ui->actionCreateInstanceShortcut, ui->actionDeleteInstance });
+            menu.exec(point);
+        });
     }
     // The cat background
     {
@@ -854,6 +911,7 @@ void MainWindow::setCatBackground(bool enabled)
 {
     view->setPaintCat(enabled);
     view->viewport()->repaint();
+    if (m_workspacePage) m_workspacePage->setPaintCat(enabled);
 }
 
 void MainWindow::runModalTask(Task* task)
@@ -947,6 +1005,13 @@ void MainWindow::processURLs(QList<QUrl> urls)
         // The isLocalFile() check below doesn't work as intended without an explicit scheme.
         if (url.scheme().isEmpty())
             url.setScheme("file");
+
+        const auto extension = QFileInfo(url.toLocalFile()).suffix().toLower();
+        if (url.isLocalFile() && (extension == "pxlconep" || extension == "pxlt")) {
+            Pxl::TransferDialog dialog(Pxl::TransferDialog::Import, this, {}, url.toLocalFile());
+            dialog.exec();
+            return;
+        }
 
         ModPlatform::IndexedVersion version;
         QMap<QString, QString> extra_info;
@@ -1684,6 +1749,7 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         updateLaunchButton();
 
         APPLICATION->settings()->set("SelectedInstance", m_selectedInstance->id());
+        if (m_workspacePage) m_workspacePage->setSelectedInstance(m_selectedInstance->id());
 
         connect(m_selectedInstance, &BaseInstance::runningStatusChanged, this, &MainWindow::refreshCurrentInstance);
         connect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
@@ -1712,6 +1778,7 @@ void MainWindow::selectionBad()
 {
     // start by reseting everything...
     m_selectedInstance = nullptr;
+    if (m_workspacePage) m_workspacePage->setSelectedInstance(QString());
     m_statusLeft->setText(tr("No instance selected"));
 
     statusBar()->clearMessage();

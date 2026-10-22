@@ -34,6 +34,10 @@ set(CORE_SOURCES
     archive/ExportToZipTask.h
     archive/ExtractZipTask.cpp
     archive/ExtractZipTask.h
+    pxl/WorkspaceTransfer.h
+    pxl/WorkspaceTransfer.cpp
+    pxl/WorkspaceTasks.h
+    pxl/WorkspaceTasks.cpp
     StringUtils.h
     StringUtils.cpp
     QVariantUtils.h
@@ -849,6 +853,10 @@ SET(LAUNCHER_SOURCES
     ui/GuiUtil.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
+    ui/pxl/WorkspacePage.h
+    ui/pxl/WorkspacePage.cpp
+    ui/pxl/TransferDialog.h
+    ui/pxl/TransferDialog.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h
@@ -887,6 +895,10 @@ SET(LAUNCHER_SOURCES
     ui/themes/CustomTheme.h
     ui/themes/DarkTheme.cpp
     ui/themes/DarkTheme.h
+    ui/themes/MinecraftTheme.cpp
+    ui/themes/MinecraftTheme.h
+    ui/themes/ConeTheme.cpp
+    ui/themes/ConeTheme.h
     ui/themes/ITheme.cpp
     ui/themes/ITheme.h
     ui/themes/HintOverrideProxyStyle.cpp
@@ -1226,6 +1238,7 @@ if(WIN32)
 endif()
 
 qt_add_resources(LAUNCHER_RESOURCES
+    resources/fonts/fonts.qrc
     resources/backgrounds/backgrounds.qrc
     resources/multimc/multimc.qrc
     resources/pe_dark/pe_dark.qrc
@@ -1623,6 +1636,7 @@ if(WIN32 OR (UNIX AND APPLE))
 endif()
 
 find_program(CLANG_FORMAT clang-format OPTIONAL)
+install(FILES resources/fonts/Monocraft-LICENSE.txt DESTINATION "${RESOURCES_DEST_DIR}/licenses")
 if(CLANG_FORMAT)
     message(STATUS "Creating clang-format target")
     add_custom_target(

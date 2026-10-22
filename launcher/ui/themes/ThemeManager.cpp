@@ -30,6 +30,8 @@
 #include "ui/themes/CatPack.h"
 #include "ui/themes/CustomTheme.h"
 #include "ui/themes/DarkTheme.h"
+#include "ui/themes/MinecraftTheme.h"
+#include "ui/themes/ConeTheme.h"
 #include "ui/themes/SystemTheme.h"
 
 #include "Application.h"
@@ -138,6 +140,8 @@ void ThemeManager::initializeWidgets()
     auto darkThemeId = addTheme(std::make_unique<DarkTheme>());
     themeDebugLog() << "Loading Built-in Theme:" << darkThemeId;
     themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<BrightTheme>());
+    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<MinecraftTheme>());
+    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<ConeTheme>());
 
     themeDebugLog() << "<> Initializing System Widget Themes";
     QStringList styles = QStyleFactory::keys();

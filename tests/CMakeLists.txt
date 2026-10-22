@@ -1,5 +1,11 @@
 project(tests)
 
+ecm_add_test(WorkspaceTransfer_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME WorkspaceTransfer)
+
+ecm_add_test(WorkspacePage_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME WorkspacePage)
+
 ecm_add_test(FileSystem_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME FileSystem)
 

@@ -60,6 +60,8 @@ class BaseProfilerFactory;
 class InstanceView;
 class KonamiCode;
 class InstanceTask;
+class WorkspacePage;
+class QStackedWidget;
 class LabeledToolButton;
 
 namespace Ui {
@@ -236,6 +238,8 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
+    WorkspacePage* m_workspacePage = nullptr;
+    QStackedWidget* m_workspaceViews = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/fonts">
+        <file>Monocraft.ttf</file>
+        <file>Monocraft-LICENSE.txt</file>
+    </qresource>
+    <qresource prefix="/pxl">
+        <file alias="cone-icon.svg">../../../program_info/PXLConeLauncher.icon/assets/logo/pxlcone-icon.svg</file>
+    </qresource>
+</RCC>

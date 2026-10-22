@@ -224,7 +224,8 @@ bool ArchiveReader::parse(const std::function<bool(File*, bool&)>& doStuff)
     }
 
     bool breakControl = false;
-    while (f->readNextHeader() == ARCHIVE_OK) {
+    int status = ARCHIVE_OK;
+    while ((status = f->readNextHeader()) == ARCHIVE_OK) {
         if (f && !doStuff(f.get(), breakControl)) {
             qCritical() << "Failed to parse file:" << f->filename() << "-" << f->error();
             return false;
@@ -234,8 +235,12 @@ bool ArchiveReader::parse(const std::function<bool(File*, bool&)>& doStuff)
         }
     }
 
-    archive_read_close(a);
-    return true;
+    if (!breakControl && status != ARCHIVE_EOF) {
+        qWarning() << "Failed to read archive header:" << m_archivePath << "-" << f->error();
+        archive_read_close(a);
+        return false;
+    }
+    return archive_read_close(a) == ARCHIVE_OK;
 }
 
 bool ArchiveReader::parse(const std::function<bool(File*)>& doStuff)
@@ -246,6 +251,22 @@ bool ArchiveReader::parse(const std::function<bool(File*)>& doStuff)
 bool ArchiveReader::File::isFile()
 {
     return (archive_entry_filetype(m_entry) & AE_IFMT) == AE_IFREG;
+}
+bool ArchiveReader::File::isDirectory()
+{
+    return archive_entry_filetype(m_entry) == AE_IFDIR;
+}
+bool ArchiveReader::File::isLink()
+{
+    return archive_entry_symlink(m_entry) || archive_entry_hardlink(m_entry);
+}
+qint64 ArchiveReader::File::size()
+{
+    return archive_entry_size(m_entry);
+}
+qint64 ArchiveReader::File::read(char* data, qint64 maximum)
+{
+    return archive_read_data(m_archive.get(), data, static_cast<size_t>(maximum));
 }
 bool ArchiveReader::File::skip()
 {
