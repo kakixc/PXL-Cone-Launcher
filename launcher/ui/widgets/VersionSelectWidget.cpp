@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QComboBox>
+#include <QSignalBlocker>
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QProgressBar>
@@ -65,6 +67,8 @@ void VersionSelectWidget::setCurrentVersion(const QString& version)
 
 void VersionSelectWidget::setEmptyString(QString emptyString)
 {
+    m_emptyString = emptyString;
+    syncCompactSelection();
     listView->setEmptyString(emptyString);
 }
 
@@ -89,6 +93,10 @@ void VersionSelectWidget::setResizeOn(int column)
 
 bool VersionSelectWidget::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == m_compactCombo && event->type() == QEvent::Wheel && !m_compactCombo->view()->isVisible()) {
+        event->ignore();
+        return true;
+    }
     if (watched == search && event->type() == QEvent::KeyPress) {
         const QKeyEvent* keyEvent = (QKeyEvent*)event;
         const bool up = keyEvent->key() == Qt::Key_Up;
@@ -137,6 +145,7 @@ void VersionSelectWidget::loadList(bool forceReload)
         m_load_task->start();
     }
     sneakyProgressBar->setHidden(false);
+    syncCompactSelection();
 }
 
 void VersionSelectWidget::onTaskSucceeded()
@@ -147,6 +156,7 @@ void VersionSelectWidget::onTaskSucceeded()
     sneakyProgressBar->setHidden(true);
     preselect();
     m_load_task.reset();
+    syncCompactSelection();
 }
 
 void VersionSelectWidget::onTaskFailed(const QString& reason)
@@ -163,14 +173,19 @@ void VersionSelectWidget::changeProgress(qint64 current, qint64 total)
 
 void VersionSelectWidget::currentRowChanged(const QModelIndex& current, const QModelIndex&)
 {
+    if (m_compactCombo) {
+        const QSignalBlocker blocker(m_compactCombo);
+        m_compactCombo->setCurrentIndex(current.row());
+    }
     auto variant = m_proxyModel->data(current, BaseVersionList::VersionPointerRole);
     emit selectedVersionChanged(variant.value<BaseVersion::Ptr>());
 }
 
 void VersionSelectWidget::preselect()
 {
-    if (preselectedAlready)
+    if (preselectedAlready && listView->currentIndex().isValid())
         return;
+    preselectedAlready = false;
     selectCurrent();
     if (preselectedAlready)
         return;
@@ -198,6 +213,48 @@ void VersionSelectWidget::selectSearch()
 VersionListView* VersionSelectWidget::view()
 {
     return listView;
+}
+
+void VersionSelectWidget::useCompactPresentation()
+{
+    if (m_compactCombo) return;
+    listView->hide();
+    search->hide();
+    m_compactCombo = new QComboBox(this);
+    m_compactCombo->installEventFilter(this);
+    m_compactCombo->setObjectName("compactVersionChoice");
+    m_compactCombo->setMaxVisibleItems(8);
+    m_compactCombo->setStyleSheet("QComboBox { combobox-popup: 0; }");
+    m_compactCombo->view()->setMaximumHeight(280);
+    m_compactCombo->view()->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    m_compactCombo->setModel(m_proxyModel);
+    m_compactCombo->setModelColumn(0);
+    m_compactCombo->setMinimumContentsLength(18);
+    m_compactCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    m_compactCombo->setCurrentIndex(listView->currentIndex().row());
+    verticalLayout->insertWidget(0, m_compactCombo);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    connect(m_compactCombo, qOverload<int>(&QComboBox::activated), this, [this](int row) {
+        listView->selectionModel()->setCurrentIndex(m_proxyModel->index(row, 0),
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        if (const auto version = selectedVersion()) m_currentVersion = version->descriptor();
+    });
+    connect(m_proxyModel, &QAbstractItemModel::modelReset, this, &VersionSelectWidget::syncCompactSelection);
+    connect(m_proxyModel, &QAbstractItemModel::rowsInserted, this, &VersionSelectWidget::syncCompactSelection);
+    connect(m_proxyModel, &QAbstractItemModel::rowsRemoved, this, &VersionSelectWidget::syncCompactSelection);
+    syncCompactSelection();
+}
+
+void VersionSelectWidget::syncCompactSelection()
+{
+    if (!m_compactCombo) return;
+    const bool available = m_proxyModel->rowCount() > 0;
+    if (available && !listView->currentIndex().isValid()) preselect();
+    const QSignalBlocker blocker(m_compactCombo);
+    m_compactCombo->setCurrentIndex(listView->currentIndex().row());
+    m_compactCombo->setEnabled(available);
+    const bool loading = m_load_task && m_load_task->isRunning();
+    m_compactCombo->setPlaceholderText(available ? tr("Choose a version") : loading ? tr("Loading versions…") : m_emptyString);
 }
 
 void VersionSelectWidget::selectRecommended()

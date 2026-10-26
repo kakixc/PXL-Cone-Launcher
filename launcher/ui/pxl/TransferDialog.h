@@ -37,5 +37,9 @@ class TransferDialog : public QDialog {
     QCheckBox* m_screenshots = nullptr;
     QLabel* m_summary;
     QPushButton* m_run;
+    QPushButton* m_details = nullptr;
+    QLabel* m_privacy = nullptr;
+    QWidget* m_sourceChoices = nullptr;
+    QPushButton* m_changeSource = nullptr;
 };
 }  // namespace Pxl

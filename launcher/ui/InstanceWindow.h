@@ -49,11 +49,13 @@
 
 class QPushButton;
 class PageContainer;
+class QStackedWidget;
+class ContentBrowser;
 class InstanceWindow : public QMainWindow, public BasePageContainer {
     Q_OBJECT
 
    public:
-    explicit InstanceWindow(BaseInstance* proc, QWidget* parent = 0);
+    explicit InstanceWindow(BaseInstance* proc, QWidget* parent = 0, bool embedded = false);
     virtual ~InstanceWindow() = default;
 
     bool selectPage(QString pageId) override;
@@ -64,12 +66,14 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
 
     // save all settings and changes (prepare for launch)
     bool saveAll();
+    void browseContent(const QString& category = {});
 
     // request closing the window (from a page)
     bool requestClose() override;
 
    signals:
     void isClosing();
+    void backRequested();
 
    private slots:
     void instanceLaunchTaskChanged(LaunchTask* proc);
@@ -81,6 +85,7 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
 
    private:
     void updateButtons();
+    void updateEditorNavigation(const QString& page);
 
    private:
     LaunchTask* m_proc;
@@ -90,4 +95,10 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
     QPushButton* m_closeButton = nullptr;
     QToolButton* m_launchButton = nullptr;
     QPushButton* m_killButton = nullptr;
+    bool m_embedded = false;
+    QList<QPushButton*> m_editorTabs;
+    QPushButton* m_browseContent = nullptr;
+    QPushButton* m_addContent = nullptr;
+    QStackedWidget* m_editorStack = nullptr;
+    ContentBrowser* m_contentBrowser = nullptr;
 };

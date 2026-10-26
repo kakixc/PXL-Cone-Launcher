@@ -103,6 +103,7 @@
 #include "ui/dialogs/IconPickerDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
+#include "ui/pagedialog/PageDialog.h"
 #include "ui/dialogs/NewsDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/skins/SkinManageDialog.h"
@@ -110,7 +111,12 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/pxl/WorkspacePage.h"
+#include <QScreen>
+#include "ui/pages/instance/ModFolderPage.h"
 #include "ui/pxl/TransferDialog.h"
+#include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/WindowGeometry.h"
+#include "ui/pxl/ActionMenu.h"
 #include <QStackedWidget>
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
@@ -152,11 +158,12 @@ QString profileInUseFilter(const QString& profile, bool used)
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    resize(Pxl::preferredWorkspaceWindowSize(screen()->availableGeometry().size()));
 
     setWindowIcon(APPLICATION->logo());
-    setWindowTitle(APPLICATION->applicationDisplayName());
+    setWindowTitle(QGuiApplication::applicationDisplayName());
 #ifndef QT_NO_ACCESSIBILITY
-    setAccessibleName(BuildConfig.LAUNCHER_DISPLAYNAME);
+    setAccessibleName(tr("PXL Cone Launcher"));
 #endif
 
     // instance toolbar stuff
@@ -202,7 +209,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         foldersMenuButton->setPopupMode(QToolButton::InstantPopup);
 
         helpMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionHelpButton));
-        ui->actionHelpButton->setMenu(new QMenu(this));
+        ui->actionHelpButton->setMenu(new Pxl::FrostedMenu(this));
         ui->actionHelpButton->menu()->addActions(ui->helpMenu->actions());
         ui->actionHelpButton->menu()->removeAction(ui->actionCheckUpdate);
         helpMenuButton->setPopupMode(QToolButton::InstantPopup);
@@ -210,7 +217,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         auto accountMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionAccountsButton));
         accountMenuButton->setPopupMode(QToolButton::InstantPopup);
 
-        auto exportInstanceMenu = new QMenu(this);
+        auto exportInstanceMenu = new Pxl::FrostedMenu(this);
         exportInstanceMenu->addAction(ui->actionExportInstanceZip);
         exportInstanceMenu->addAction(ui->actionExportInstanceMrPack);
         exportInstanceMenu->addAction(ui->actionExportInstanceFlamePack);
@@ -338,6 +345,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
         m_workspaceViews = new QStackedWidget(ui->centralWidget);
         m_workspacePage = new WorkspacePage(APPLICATION->instances(), m_workspaceViews);
+        setWindowIcon(QIcon(":/pxl/cone-icon.svg"));
         m_workspaceViews->addWidget(m_workspacePage);
         m_workspaceViews->addWidget(view);
         ui->horizontalLayout->addWidget(m_workspaceViews);
@@ -349,29 +357,46 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             on_actionLaunchInstance_triggered();
         });
         connect(m_workspacePage, &WorkspacePage::createRequested, ui->actionAddInstance, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::stopInstance, this, [this](const QString& id) {
+            auto* instance = APPLICATION->instances()->getInstanceById(id);
+            if (!instance || !instance->isRunning()) return;
+            setSelectedInstanceById(id);
+            on_actionKillInstance_triggered();
+        });
         connect(m_workspacePage, &WorkspacePage::accountsRequested, ui->actionManageAccounts, &QAction::trigger);
         connect(m_workspacePage, &WorkspacePage::settingsRequested, ui->actionSettings, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::openInstanceRequested, this, [this](const QString& id) {
+            openWorkspaceInstance(id);
+        });
+        connect(m_workspacePage, &WorkspacePage::catRequested, ui->actionCAT, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::browseModsRequested, this, [this](const QString& id) {
+            openWorkspaceInstance(id, true);
+        });
+        connect(m_workspaceViews, &QStackedWidget::currentChanged, this, [this] { updateMainToolBar(); });
         connect(m_workspacePage, &WorkspacePage::classicRequested, this, [this] {
+            if (!m_workspacePage->leaveInstanceView()) return;
             m_workspaceViews->setCurrentWidget(view);
             view->setFocus();
         });
         auto homeAction = new QAction(tr("Home / Library"), this);
         homeAction->setShortcut(QKeySequence(tr("Ctrl+Shift+H")));
-        connect(homeAction, &QAction::triggered, this, [this] { m_workspaceViews->setCurrentWidget(m_workspacePage); });
+        connect(homeAction, &QAction::triggered, this, &MainWindow::showWorkspace);
         ui->mainToolBar->insertAction(ui->actionAddInstance, homeAction);
         ui->viewMenu->addAction(homeAction);
         auto importAction = new QAction(tr("Import PXL pack / launcher…"), this);
         importAction->setShortcut(QKeySequence(tr("Ctrl+Shift+I")));
         connect(importAction, &QAction::triggered, this, [this] {
             Pxl::TransferDialog dialog(Pxl::TransferDialog::Import, this);
-            dialog.exec();
+            if (m_workspaceViews->currentWidget() == m_workspacePage) Pxl::DialogOverlay::run(&dialog, m_workspacePage);
+            else dialog.exec();
         });
         auto exportAction = new QAction(tr("Share / transfer PXL setup…"), this);
         exportAction->setShortcut(QKeySequence(tr("Ctrl+Shift+E")));
         connect(exportAction, &QAction::triggered, this, [this] {
             Pxl::TransferDialog dialog(Pxl::TransferDialog::Export, this,
                                         m_selectedInstance ? m_selectedInstance->id() : QString());
-            dialog.exec();
+            if (m_workspaceViews->currentWidget() == m_workspacePage) Pxl::DialogOverlay::run(&dialog, m_workspacePage);
+            else dialog.exec();
         });
         ui->fileMenu->insertAction(ui->actionSettings, importAction);
         ui->fileMenu->insertAction(ui->actionSettings, exportAction);
@@ -382,13 +407,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(m_workspacePage, &WorkspacePage::contextMenuRequested, this, [this, exportAction](const QString& id, const QPoint& point) {
             if (!APPLICATION->instances()->getInstanceById(id)) return;
             setSelectedInstanceById(id);
-            QMenu menu(this);
-            menu.addActions({ ui->actionLaunchInstance, ui->actionKillInstance, ui->actionEditInstance });
+            Pxl::FrostedMenu menu(this);
+            Pxl::forwardMenuAction(&menu, ui->actionLaunchInstance, tr("Play"), QIcon(":/pxl/icons/play.svg"));
+            if (ui->actionKillInstance->isEnabled())
+                Pxl::forwardMenuAction(&menu, ui->actionKillInstance, tr("Stop"), QIcon(":/pxl/icons/stop.svg"));
+            Pxl::forwardMenuAction(&menu, ui->actionEditInstance, tr("Manage"), QIcon(":/pxl/icons/gear-six.svg"));
             menu.addSeparator();
-            menu.addActions({ exportAction, ui->actionExportInstance, ui->actionCopyInstance, ui->actionViewSelectedInstFolder });
+            Pxl::forwardMenuAction(&menu, exportAction, tr("Share or transfer"), QIcon(":/pxl/icons/share-network.svg"));
+            Pxl::forwardMenuAction(&menu, ui->actionExportInstance, tr("Export formats"), QIcon(":/pxl/icons/download-simple.svg"));
+            Pxl::forwardMenuAction(&menu, ui->actionCopyInstance, tr("Duplicate"));
+            Pxl::forwardMenuAction(&menu, ui->actionViewSelectedInstFolder, tr("Open folder"));
+            Pxl::FrostedMenu organise(this);
+            Pxl::forwardMenuAction(&organise, ui->actionRenameInstance, tr("Rename"));
+            Pxl::forwardMenuAction(&organise, ui->actionChangeInstGroup, tr("Change group"));
+            Pxl::forwardMenuAction(&organise, ui->actionChangeInstIcon, tr("Change icon"));
+            Pxl::forwardMenuAction(&organise, ui->actionCreateInstanceShortcut, tr("Create shortcut"));
+            auto* organiseAction = menu.addMenu(&organise);
+            organiseAction->setText(tr("Organise"));
+            organiseAction->setIcon(QIcon(":/pxl/icons/sliders-horizontal.svg"));
             menu.addSeparator();
-            menu.addActions({ ui->actionRenameInstance, ui->actionChangeInstGroup, ui->actionChangeInstIcon,
-                              ui->actionCreateInstanceShortcut, ui->actionDeleteInstance });
+            Pxl::forwardMenuAction(&menu, ui->actionDeleteInstance, tr("Delete"));
             menu.exec(point);
         });
     }
@@ -488,10 +526,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     setSelectedInstanceById(APPLICATION->settings()->get("SelectedInstance").toString());
 
-    // removing this looks stupid
-    view->setFocus();
+    m_workspaceViews->setCurrentWidget(m_workspacePage);
+    m_workspacePage->setFocus();
 
     retranslateUi();
+    updateMainToolBar();
 }
 
 // macOS always has a native menu bar, so these fixes are not applicable
@@ -499,6 +538,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 #ifndef Q_OS_MAC
 void MainWindow::keyReleaseEvent(QKeyEvent* event)
 {
+    if (event->key() == Qt::Key_Alt && m_workspaceViews && m_workspaceViews->currentWidget() == m_workspacePage) {
+        ui->menuBar->hide();
+        event->accept();
+        return;
+    }
     if (event->key() == Qt::Key_Alt && !APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool())
         ui->menuBar->setVisible(!ui->menuBar->isVisible());
     else
@@ -650,9 +694,23 @@ void MainWindow::showInstanceContextMenu(const QPoint& pos)
 
 void MainWindow::updateMainToolBar()
 {
-    ui->menuBar->setVisible(APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
-    ui->mainToolBar->setVisible(ui->menuBar->isNativeMenuBar() || !APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
+    const bool workspace = m_workspaceViews && m_workspaceViews->currentWidget() == m_workspacePage;
+    statusBar()->setVisible(!workspace && APPLICATION->settings()->get("StatusBarVisible").toBool());
+    ui->menuBar->setVisible(!workspace && APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool());
+    ui->mainToolBar->setVisible(!workspace && (ui->menuBar->isNativeMenuBar() || !APPLICATION->settings()->get("MenuBarInsteadOfToolBar").toBool()));
+    for (auto* toolbar : {static_cast<QWidget*>(ui->instanceToolBar), static_cast<QWidget*>(ui->newsToolBar)}) {
+        const auto previous = toolbar->property("pxlVisibleBeforeWorkspace");
+        if (workspace) {
+            if (!previous.isValid()) toolbar->setProperty("pxlVisibleBeforeWorkspace", !toolbar->isHidden());
+            toolbar->hide();
+        } else if (previous.isValid()) {
+            toolbar->setVisible(previous.toBool());
+            toolbar->setProperty("pxlVisibleBeforeWorkspace", QVariant());
+        }
+    }
     ui->actionCAT->setVisible(APPLICATION->settings()->get("CatButtonVisible").toBool());
+    if (m_workspacePage)
+        m_workspacePage->setCatButtonVisible(APPLICATION->settings()->get("CatButtonVisible").toBool());
 }
 
 void MainWindow::updateLaunchButton()
@@ -661,7 +719,7 @@ void MainWindow::updateLaunchButton()
     if (launchMenu)
         launchMenu->clear();
     else
-        launchMenu = new QMenu(this);
+        launchMenu = new Pxl::FrostedMenu(this);
     if (m_selectedInstance)
         m_selectedInstance->populateLaunchMenu(launchMenu);
     ui->actionLaunchInstance->setMenu(launchMenu);
@@ -674,7 +732,7 @@ void MainWindow::updateThemeMenu()
     if (themeMenu) {
         themeMenu->clear();
     } else {
-        themeMenu = new QMenu(this);
+        themeMenu = new Pxl::FrostedMenu(this);
     }
 
     auto themes = APPLICATION->themeManager()->getValidApplicationThemes();
@@ -708,7 +766,7 @@ void MainWindow::repopulateAccountsMenu()
     if (accountsButtonMenu) {
         accountsButtonMenu->clear();
     } else {
-        accountsButtonMenu = new QMenu(this);
+        accountsButtonMenu = new Pxl::FrostedMenu(this);
         ui->actionAccountsButton->setMenu(accountsButtonMenu);
     }
 
@@ -935,7 +993,9 @@ void MainWindow::runModalTask(Task* task)
 
 void MainWindow::instanceFromInstanceTask(InstanceTask* rawTask)
 {
+    const auto title = rawTask->name();
     unique_qobject_ptr<Task> task(APPLICATION->instances()->wrapInstanceTask(rawTask));
+    task->setProperty("pxlTaskTitle", tr("Create instance: %1").arg(title));
     runModalTask(task.get());
 }
 
@@ -977,7 +1037,15 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
     }
 
     NewInstanceDialog newInstDlg(groupName, url, extra_info, this);
-    if (!newInstDlg.exec())
+    const bool modern = m_workspaceViews && m_workspaceViews->currentWidget() == m_workspacePage;
+    const int result = modern ? newInstDlg.execInParent(m_workspacePage) : newInstDlg.exec();
+    if (result == 2) {
+        Pxl::TransferDialog transfer(Pxl::TransferDialog::Import, this);
+        if (modern) Pxl::DialogOverlay::run(&transfer, m_workspacePage);
+        else transfer.exec();
+        return;
+    }
+    if (result != QDialog::Accepted)
         return;
 
     APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg.instGroup());
@@ -1431,6 +1499,23 @@ void MainWindow::on_actionSettings_triggered()
     APPLICATION->ShowGlobalSettings(this, "global-settings");
 }
 
+bool MainWindow::openWorkspaceSettings(const QString& page)
+{
+    if (!m_workspaceViews || m_workspaceViews->currentWidget() != m_workspacePage) return false;
+    if (m_embeddedSettings) {
+        if (!page.isEmpty()) m_embeddedSettings->selectPage(page);
+        return true;
+    }
+    if (!m_workspacePage->leaveInstanceView()) return true;
+    m_embeddedSettings = APPLICATION->createGlobalSettingsPage(m_workspacePage, page);
+    const QPointer<PageDialog> settings = m_embeddedSettings;
+    if (settings) settings->setProperty("pxlNavigation", "workspaceSettings");
+    if (settings && !m_workspacePage->presentInstanceView(settings, tr("Settings"), [settings] {
+        return !settings || settings->requestLeave();
+    })) settings->deleteLater();
+    return true;
+}
+
 void MainWindow::globalSettingsClosed()
 {
     // FIXME: quick HACK to make this work. improve, optimize.
@@ -1453,7 +1538,9 @@ void MainWindow::on_actionEditInstance_triggered()
         return;
 
     if (m_selectedInstance->canEdit()) {
-        APPLICATION->showInstanceWindow(m_selectedInstance);
+        if (m_workspaceViews && m_workspaceViews->currentWidget() == m_workspacePage)
+            openWorkspaceInstance(m_selectedInstance->id());
+        else APPLICATION->showInstanceWindow(m_selectedInstance);
     } else {
         CustomMessageBox::selectable(this, tr("Instance not editable"),
                                      tr("This instance is not editable. It may be broken, invalid, or too old. Check logs for details."),
@@ -1647,12 +1734,41 @@ void MainWindow::on_actionViewSelectedInstFolder_triggered()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    if (m_workspacePage && !m_workspacePage->leaveInstanceView()) {
+        event->ignore();
+        return;
+    }
     // Save the window state and geometry.
     APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
     APPLICATION->settings()->set("MainWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
     instanceToolbarSetting->set(QString::fromUtf8(ui->instanceToolBar->getVisibilityState().toBase64()));
     event->accept();
     emit isClosing();
+}
+
+void MainWindow::openWorkspaceInstance(const QString& id, bool browseMods)
+{
+    auto* instance = APPLICATION->instances()->getInstanceById(id);
+    if (!instance || !instance->canEdit()) return;
+    if (m_embeddedInstance && m_embeddedInstance->instanceId() != id) {
+        if (!m_workspacePage->leaveInstanceView()) return;
+        m_embeddedInstance.clear();
+    }
+    if (!m_embeddedInstance) {
+        m_embeddedInstance = new InstanceWindow(instance, m_workspacePage, true);
+        connect(m_embeddedInstance, &InstanceWindow::backRequested, this, [this] { m_workspacePage->leaveInstanceView(); });
+    }
+    const QPointer<InstanceWindow> editor = m_embeddedInstance;
+    if (!m_workspacePage->presentInstanceView(editor, instance->name(), [editor] { return !editor || editor->saveAll(); })) return;
+    setSelectedInstanceById(id);
+    if (browseMods) editor->browseContent();
+}
+
+void MainWindow::showWorkspace()
+{
+    m_workspaceViews->setCurrentWidget(m_workspacePage);
+    m_workspacePage->setFocus();
+    updateMainToolBar();
 }
 
 void MainWindow::changeEvent(QEvent* event)

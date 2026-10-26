@@ -120,6 +120,8 @@ class BaseInstance : public QObject {
     void setRunning(bool running);
     bool isRunning() const;
     int64_t totalTimePlayed() const;
+    bool isGameTimeShown() const;
+    bool isGameTimeRecordingEnabled() const;
     int64_t lastTimePlayed() const;
     void resetTimePlayed();
 

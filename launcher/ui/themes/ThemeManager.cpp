@@ -205,7 +205,7 @@ QList<ITheme*> ThemeManager::getValidApplicationThemes()
     QList<ITheme*> ret;
     ret.reserve(m_themes.size());
     for (auto&& [id, theme] : m_themes) {
-        ret.append(theme.get());
+        if (id == "cone") ret.append(theme.get());
     }
     return ret;
 }
@@ -277,9 +277,10 @@ void ThemeManager::applyCurrentlySelectedTheme(bool initial)
     setIconTheme(settings->get("IconTheme").toString());
     themeDebugLog() << "<> Icon theme set.";
     auto applicationTheme = settings->get("ApplicationTheme").toString();
-    if (applicationTheme == "") {
-        applicationTheme = m_defaultStyle;
-    }
+    // PXL currently exposes a single coherent appearance; keep upstream theme
+    // infrastructure available internally without applying an old saved style.
+    applicationTheme = "cone";
+    settings->set("ApplicationTheme", applicationTheme);
     setApplicationTheme(applicationTheme, initial);
     themeDebugLog() << "<> Application theme set.";
 }

@@ -59,6 +59,7 @@ class MainWindow;
 class ViewLogWindow;
 class SetupWizard;
 class GenericPageProvider;
+class PageDialog;
 class QFile;
 class HttpMetaCache;
 class SettingsObject;
@@ -197,6 +198,7 @@ class Application : public QApplication {
     bool updatesAreAllowed();
 
     void ShowGlobalSettings(class QWidget* parent, QString open_page = QString());
+    PageDialog* createGlobalSettingsPage(QWidget* parent, QString open_page = QString());
 
     bool updaterEnabled();
     QString updaterBinaryName();

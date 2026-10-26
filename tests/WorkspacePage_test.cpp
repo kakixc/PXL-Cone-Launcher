@@ -10,13 +10,194 @@
 #include <QFontDatabase>
 #include <QRawFont>
 #include <QStyleFactory>
+#include <QListView>
+#include <QListWidget>
+#include <QFile>
+#include <QDateTime>
+#include <QComboBox>
+#include <QLabel>
+#include <QProgressBar>
+#include <QScrollArea>
+#include <QTimer>
+#include <QStringListModel>
+#include <QWheelEvent>
+#include <QVBoxLayout>
+#include <QSlider>
+#include <QMessageBox>
+#include <ui/pagedialog/PageDialog.h>
+#include <ui/widgets/PageContainer.h>
+#include <ui/pxl/TransferDialog.h>
+#include <ui/pxl/ContentBrowser.h>
+#include <ui/dialogs/ResourceDownloadDialog.h>
+#include <BaseVersionList.h>
+#include <QStandardItemModel>
+#include <ui/pxl/FrostedSurface.h>
+#include <ui/pxl/CatalogCardDelegate.h>
+#include <ui/pxl/LibraryControls.h>
+#include <ui/pxl/ActionMenu.h>
+#include <ui/pages/modplatform/ResourcePage.h>
+
+class CatalogTestVersion final : public BaseVersion {
+public:
+    explicit CatalogTestVersion(QString id) : m_id(std::move(id)) {}
+    QString descriptor() const override { return m_id; }
+    QString name() const override { return m_id; }
+    QString typeString() const override { return "release"; }
+private:
+    QString m_id;
+};
+
+class ResettableVersionList final : public BaseVersionList {
+public:
+    Task::Ptr getLoadTask(bool = false) override { return nullptr; }
+    bool isLoaded() override { return true; }
+    const BaseVersion::Ptr at(int index) const override { return m_versions.value(index); }
+    int count() const override { return m_versions.size(); }
+    void sortVersions() override {}
+    void replace(const QStringList& versions)
+    {
+        QList<BaseVersion::Ptr> entries;
+        for (const auto& version : versions) entries.append(std::make_shared<CatalogTestVersion>(version));
+        updateListData(entries);
+    }
+protected:
+    void updateListData(QList<BaseVersion::Ptr> versions) override
+    {
+        beginResetModel();
+        m_versions = std::move(versions);
+        endResetModel();
+    }
+private:
+    QList<BaseVersion::Ptr> m_versions;
+};
+
+class EmptyCatalogDialog final : public ResourceDownload::ResourceDownloadDialog {
+public:
+    explicit EmptyCatalogDialog(QWidget* parent) : ResourceDownloadDialog(parent, nullptr)
+    {
+        initializeContainer();
+        connectButtons();
+    }
+    QList<BasePage*> getPages() override { return {}; }
+};
+
+// The real page/container layout with deterministic data and no network requests.
+class LayoutCatalogPage final : public ResourceDownload::ResourcePage {
+public:
+    LayoutCatalogPage(ResourceDownload::ResourceDownloadDialog* parent, BaseInstance& instance)
+        : ResourcePage(parent, instance)
+    {
+        auto* model = new QStandardItemModel(this);
+        for (int i = 0; i < 8; ++i) {
+            auto pack = std::make_shared<ModPlatform::IndexedPack>();
+            pack->name = QString("Resource pack %1").arg(i + 1);
+            pack->authors.append(ModPlatform::ModpackAuthor{"Example creator", {}});
+            auto* item = new QStandardItem;
+            item->setData(QVariant::fromValue(pack), Qt::UserRole);
+            item->setData("A resource pack description showing how the full catalog uses its available space.", UserDataTypes::DESCRIPTION);
+            item->setData(QIcon(":/pxl/icons/squares-four.svg"), Qt::DecorationRole);
+            model->appendRow(item);
+        }
+        findChild<QListView*>("packView")->setModel(model);
+        auto* sorting = findChild<QComboBox*>("sortByBox");
+        sorting->addItems({"Relevance", "Downloads"});
+        connect(sorting, &QComboBox::currentIndexChanged, this, [this] { ++sortChanges; });
+    }
+    QString id() const override { return "layout-catalog"; }
+    QString displayName() const override { return "Example provider"; }
+    QIcon icon() const override { return QIcon(":/pxl/icons/squares-four.svg"); }
+    QString helpPage() const override { return {}; }
+    bool shouldDisplay() const override { return true; }
+    QString metaEntryBase() const override { return {}; }
+    QString debugName() const override { return "layout fixture"; }
+    bool supportsFiltering() const override { return false; }
+    void openedImpl() override
+    {
+        findChild<QWidget*>("filterWidget")->hide();
+        findChild<QPushButton*>("resourceFilterButton")->hide();
+        findChild<QLineEdit*>("searchEdit")->setPlaceholderText("Search resource packs");
+    }
+    int sortChanges = 0;
+protected:
+    void triggerSearch() override {}
+    QMap<QString, QString> urlHandlers() const override { return {}; }
+};
+
+class LayoutCatalogDialog final : public ResourceDownload::ResourceDownloadDialog {
+public:
+    LayoutCatalogDialog(QWidget* parent, BaseInstance& instance) : ResourceDownloadDialog(parent, nullptr), m_instance(instance)
+    {
+        initializeContainer();
+        connectButtons();
+    }
+    QList<BasePage*> getPages() override { return {new LayoutCatalogPage(this, m_instance)}; }
+private:
+    BaseInstance& m_instance;
+};
+
+class PreviewSettingsPage final : public QWidget, public BasePage {
+public:
+    PreviewSettingsPage()
+    {
+        auto* layout = new QVBoxLayout(this);
+        layout->addWidget(new QLabel("Memory allocation", this));
+        edit = new QLineEdit("original", this);
+        layout->addWidget(edit);
+        slider = new QSlider(Qt::Horizontal, this);
+        layout->addWidget(slider);
+    }
+    QString id() const override { return "memory"; }
+    QString displayName() const override { return "Performance"; }
+    QIcon icon() const override { return {}; }
+    bool apply() override { ++applies; return valid; }
+    QLineEdit* edit = nullptr;
+    QSlider* slider = nullptr;
+    bool valid = true;
+    int applies = 0;
+};
 
 #include <memory>
+#include <vector>
+#include <cmath>
 
 #include <InstanceList.h>
 #include <settings/INISettingsObject.h>
 #include <ui/pxl/WorkspacePage.h>
 #include <ui/themes/MinecraftTheme.h>
+#include <ui/themes/ConeTheme.h>
+#include <ui/dialogs/ProgressDialog.h>
+#include <ui/pxl/TaskHistory.h>
+#include <ui/pxl/DialogOverlay.h>
+#include <ui/pxl/Backdrop.h>
+#include <ui/widgets/VersionSelectWidget.h>
+#include <translations/POTranslator.h>
+#include <minecraft/MinecraftInstance.h>
+#include <minecraft/PackProfile.h>
+
+class PreviewInstallTask final : public Task {
+   public:
+    PreviewInstallTask() { setAbortable(true); }
+    bool isMultiStep() const override { return true; }
+   protected:
+    void executeTask() override
+    {
+        setStatus("Downloading game files");
+        setDetails("Libraries and assets");
+        setProgress(45, 100);
+        TaskStepProgress step;
+        step.update(35, 100);
+        step.status = "Downloading assets";
+        emit stepProgress(step);
+        QTimer::singleShot(150, this, [this] { if (isRunning()) emitSucceeded(); });
+    }
+};
+
+class ManualHistoryTask final : public Task {
+   public:
+    void complete() { emitSucceeded(); }
+   protected:
+    void executeTask() override {}
+};
 
 class WorkspacePageTest : public QObject {
     Q_OBJECT
@@ -24,12 +205,25 @@ class WorkspacePageTest : public QObject {
    private:
     static std::unique_ptr<INISettingsObject> settings(const QTemporaryDir& temporary)
     {
-        return std::make_unique<INISettingsObject>(temporary.filePath("global.cfg"));
+        auto result = std::make_unique<INISettingsObject>(temporary.filePath("global.cfg"));
+        for (const auto* key : {"ShowGameTime", "ShowGlobalGameTime", "RecordGameTime", "PreLaunchCommand", "WrapperCommand", "PostExitCommand",
+                                "ShowConsole", "AutoCloseConsole", "ShowConsoleOnError", "LogPrePostOutput", "ConsoleMaxLines",
+                                "ConsoleOverflowStop"})
+            result->registerSetting(key, QVariant());
+        result->registerSetting("WorkspaceLibraryView", "cards");
+        return result;
     }
 
    private slots:
     void initTestCase()
     {
+        ConeTheme cone;
+        qApp->setStyle(QStyleFactory::create(cone.qtTheme()));
+        qApp->setPalette(cone.colorScheme());
+        qApp->setStyleSheet(cone.appStyleSheet());
+        const auto inter = QRawFont::fromFont(QFont("Inter", 12));
+        QVERIFY(inter.supportsCharacter(QChar(u'И')));
+        QVERIFY(inter.supportsCharacter(QChar(u'ё')));
         if (qEnvironmentVariable("PXL_UI_THEME") == "minecraft") {
             MinecraftTheme theme;
             qApp->setStyle(QStyleFactory::create(theme.qtTheme()));
@@ -45,6 +239,269 @@ class WorkspacePageTest : public QObject {
         }
     }
 
+    void frostedSurfaceBlursTheApplicationBackdrop()
+    {
+        QImage pattern(4, 4, QImage::Format_RGB32);
+        for (int y = 0; y < 4; ++y)
+            for (int x = 0; x < 4; ++x) pattern.setPixelColor(x, y, x < 2 ? Qt::white : Qt::black);
+        QWidget source;
+        QPalette palette = source.palette();
+        palette.setBrush(QPalette::Window, QBrush(QPixmap::fromImage(pattern)));
+        source.setPalette(palette);
+        source.setAutoFillBackground(true);
+        source.resize(400, 240);
+        source.show();
+        QCoreApplication::processEvents();
+        const QRect region(40, 40, 200, 120);
+        const auto original = source.grab(region).toImage();
+        const auto blurred = Pxl::frostedBackdrop(&source, QRect(source.mapToGlobal(region.topLeft()), region.size())).toImage();
+        QVERIFY(!blurred.isNull());
+        auto contrast = [](const QImage& image) {
+            qint64 value = 0;
+            for (int x = 20; x < image.width() - 20; ++x)
+                value += qAbs(image.pixelColor(x, 50).lightness() - image.pixelColor(x - 1, 50).lightness());
+            return value;
+        };
+        QVERIFY(contrast(original) > 1000);
+        QVERIFY(contrast(blurred) < contrast(original) / 3);
+    }
+
+    void catalogCardsKeepSelectionAndDetailsAsDistinctActions()
+    {
+        QStandardItemModel model;
+        auto pack = std::make_shared<ModPlatform::IndexedPack>();
+        pack->name = "Example performance mod";
+        pack->authors.append(ModPlatform::ModpackAuthor{"Example author", {}});
+        auto* item = new QStandardItem;
+        item->setData(QVariant::fromValue(pack), Qt::UserRole);
+        item->setData(pack->name, UserDataTypes::TITLE);
+        item->setData("A readable description of the project and what it changes in your game.", UserDataTypes::DESCRIPTION);
+        item->setData(Qt::Unchecked, Qt::CheckStateRole);
+        model.appendRow(item);
+        QListView view;
+        view.setModel(&model);
+        int selections = 0, details = 0;
+        auto* delegate = new Pxl::CatalogCardDelegate(&view, [&](const QModelIndex& index) {
+            ++selections;
+            model.setData(index, Qt::Checked, Qt::CheckStateRole);
+        }, [&](const QModelIndex&) { ++details; });
+        view.setItemDelegate(delegate);
+        view.resize(1000, 300);
+        view.show();
+        QCoreApplication::processEvents();
+        const auto row = view.visualRect(model.index(0, 0));
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::CatalogCardDelegate::actionRect(row).center());
+        QCOMPARE(selections, 1);
+        QCOMPARE(details, 0);
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::CatalogCardDelegate::detailsRect(row).center());
+        QCOMPARE(selections, 1);
+        QCOMPARE(details, 1);
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("catalog-cards.png")));
+    }
+
+    void loaderVersionsBecomeSelectableAfterModelReload()
+    {
+        ResettableVersionList versions;
+        VersionSelectWidget picker(nullptr);
+        picker.useCompactPresentation();
+        picker.setEmptyString("No versions");
+        picker.initialize(&versions);
+        auto* combo = picker.findChild<QComboBox*>("compactVersionChoice");
+        QVERIFY(!combo->isEnabled());
+        QVERIFY(!picker.selectedVersion());
+        versions.replace({"0.30.1", "0.29.2"});
+        QVERIFY(combo->isEnabled());
+        QVERIFY(picker.selectedVersion());
+        QCOMPARE(combo->currentText(), QString("0.30.1"));
+        combo->setCurrentIndex(1);
+        emit combo->activated(1);
+        QCOMPARE(picker.selectedVersion()->descriptor(), QString("0.29.2"));
+        versions.replace({});
+        QVERIFY(!combo->isEnabled());
+        QVERIFY(!picker.selectedVersion());
+        versions.replace({"0.31.0", "0.29.2"});
+        QVERIFY(picker.selectedVersion());
+        QCOMPARE(picker.selectedVersion()->descriptor(), QString("0.29.2"));
+        QCOMPARE(combo->currentText(), QString("0.29.2"));
+    }
+
+    void libraryChoiceAndForwardedCommandsKeepTheirBehavior()
+    {
+        QWidget surface;
+        surface.resize(500, 300);
+        Pxl::ChoiceChip chip(&surface);
+        chip.addItems({"All groups", "Survival"});
+        chip.resize(180, 34);
+        surface.show();
+        QSignalSpy selected(&chip, &QComboBox::currentIndexChanged);
+        QTimer::singleShot(0, &chip, [&chip] {
+            auto* menu = chip.findChild<QMenu*>();
+            QVERIFY(menu);
+            QVERIFY(menu->actions().at(0)->isChecked());
+            menu->actions().at(1)->trigger();
+            menu->close();
+        });
+        chip.showPopup();
+        QCOMPARE(chip.currentText(), QString("Survival"));
+        QCOMPARE(selected.count(), 1);
+        QAction command("Original command", &surface);
+        command.setCheckable(true);
+        command.setShortcut(QKeySequence("Ctrl+D"));
+        Pxl::FrostedMenu menu(&surface);
+        auto* presented = Pxl::forwardMenuAction(&menu, &command, "Duplicate");
+        QSignalSpy invoked(&command, &QAction::triggered);
+        presented->trigger();
+        QCOMPARE(invoked.count(), 1);
+        QVERIFY(command.isChecked());
+        QVERIFY(presented->isChecked());
+        QCOMPARE(command.text(), QString("Original command"));
+        command.setEnabled(false);
+        QVERIFY(!presented->isEnabled());
+    }
+
+    void emptyTaskPopoverFitsItsContent()
+    {
+        QWidget surface;
+        surface.resize(1080, 740);
+        surface.show();
+        Pxl::TaskHistory history;
+        history.showTasks(&surface);
+        QCoreApplication::processEvents();
+        auto* panel = surface.findChild<QDialog*>("pxlTaskPopover");
+        QVERIFY(panel);
+        QVERIFY(panel->width() <= 340);
+        QVERIFY(panel->height() <= 120);
+        for (auto* button : panel->findChildren<QPushButton*>())
+            if (button->text() == "Clear completed") QVERIFY(!button->isVisible());
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(panel->grab().save(QDir(screenshots).filePath("tasks-empty.png")));
+        panel->close();
+    }
+
+    void embeddedSettingsSelectsTheSettingsRailItem()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        InstanceList instances(globalSettings.get(), temporary.filePath("instances"));
+        WorkspacePage page(&instances);
+        auto* settingsView = new QWidget;
+        settingsView->setProperty("pxlNavigation", "workspaceSettings");
+        QVERIFY(page.presentInstanceView(settingsView, "Settings", [] { return true; }));
+        QVERIFY(page.findChild<QPushButton*>("workspaceSettings")->isChecked());
+        QVERIFY(!page.findChild<QPushButton*>("workspaceHome")->isChecked());
+        QVERIFY(!page.findChild<QPushButton*>("workspaceLibrary")->isChecked());
+        QVERIFY(page.leaveInstanceView());
+        QVERIFY(page.findChild<QPushButton*>("workspaceHome")->isChecked());
+        QVERIFY(!page.findChild<QPushButton*>("workspaceSettings")->isChecked());
+        // Both the old deferred view and the current view must be safe at page teardown.
+        auto* secondView = new QWidget;
+        QVERIFY(page.presentInstanceView(secondView, "Another view", [] { return true; }));
+    }
+
+    void embeddedCatalogEscapeReturnsWithoutHidingOrDiscarding()
+    {
+        QWidget surface;
+        EmptyCatalogDialog dialog(&surface);
+        dialog.useEmbeddedPresentation();
+        auto* layout = new QVBoxLayout(&surface);
+        layout->addWidget(&dialog);
+        surface.resize(1000, 700);
+        surface.show();
+        QVERIFY(!dialog.isWindow());
+        QVERIFY(!dialog.hasProviders());
+        QSignalSpy backs(&dialog, &ResourceDownload::ResourceDownloadDialog::embeddedCloseRequested);
+        QSignalSpy rejected(&dialog, &QDialog::rejected);
+        QTest::keyClick(&dialog, Qt::Key_Escape);
+        QCOMPARE(backs.count(), 1);
+        QCOMPARE(rejected.count(), 0);
+        QVERIFY(dialog.isVisible());
+        QSignalSpy accepted(&dialog, &QDialog::accepted);
+        dialog.accept();
+        QCOMPARE(accepted.count(), 1);
+    }
+
+    void embeddedCatalogKeepsControlsCompactAndResultsTall()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        auto instanceSettings = std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg"));
+        MinecraftInstance instance(globalSettings.get(), std::move(instanceSettings), temporary.filePath("pack"));
+        InstanceList instances(globalSettings.get(), temporary.filePath("instances"));
+        WorkspacePage surface(&instances);
+        auto* dialog = new LayoutCatalogDialog(&surface, instance);
+        dialog->useEmbeddedPresentation();
+        QVERIFY(surface.presentInstanceView(dialog, "Resource packs", [] { return true; }));
+        auto* source = dialog->findChild<QWidget*>("catalogSourceRow");
+        auto* page = dynamic_cast<LayoutCatalogPage*>(dialog->selectedPage());
+        QVERIFY(page);
+        auto* search = page->findChild<QLineEdit*>("searchEdit");
+        auto* sort = page->findChild<QComboBox*>("catalogSortChoice");
+        auto* results = page->findChild<QListView*>("packView");
+        for (const auto size : {QSize(1080, 740), QSize(1280, 900)}) {
+            surface.resize(size);
+            surface.show();
+            QCoreApplication::processEvents();
+            QVERIFY(source->height() <= 48);
+            QVERIFY(search->height() <= 48);
+            QVERIFY(sort->height() <= 40);
+            const int searchBottom = search->mapTo(dialog, QPoint(0, search->height())).y();
+            const int sourceBottom = source->mapTo(dialog, QPoint(0, source->height())).y();
+            const int searchTop = search->mapTo(dialog, QPoint()).y();
+            QVERIFY2(searchTop - sourceBottom < 28, "Source and search must stay together at either window height");
+            const int resultTop = results->mapTo(dialog, QPoint()).y();
+            QVERIFY2(resultTop - searchBottom < 100, "Catalog controls must not consume the result area with blank bands");
+            QVERIFY(results->height() > dialog->height() / 2);
+            QCOMPARE(results->model()->rowCount(), 8);
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath(QString("catalog-full-%1.png").arg(size.width()))));
+        }
+        sort->setCurrentIndex(1);
+        QCOMPARE(page->findChild<QComboBox*>("sortByBox")->currentIndex(), 1);
+        QCOMPARE(page->sortChanges, 1);
+        dialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    void contentCatalogExplainsPrerequisitesInsideTheInstance()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        auto instanceSettings = std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg"));
+        MinecraftInstance instance(globalSettings.get(), std::move(instanceSettings), temporary.filePath("pack"));
+        instance.getPackProfile()->setComponentVersion("net.minecraft", "1.20.1");
+        QWidget surface;
+        auto* layout = new QVBoxLayout(&surface);
+        ContentBrowser browser(&instance);
+        layout->addWidget(&browser);
+        surface.resize(1000, 700);
+        surface.show();
+        QSignalSpy setup(&browser, &ContentBrowser::setupRequested);
+        QSignalSpy worlds(&browser, &ContentBrowser::worldsRequested);
+        browser.browse("mods");
+        auto* notice = browser.findChild<QWidget*>("contentPrerequisite");
+        QVERIFY(notice && notice->isVisible());
+        QVERIFY(!browser.isWindow());
+        notice->findChild<QPushButton*>()->click();
+        QCOMPARE(setup.count(), 1);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        browser.browse("shaderpacks");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        notice = browser.findChild<QWidget*>("contentPrerequisite");
+        QVERIFY(notice && notice->isVisible());
+        QVERIFY(notice->findChild<QPushButton*>()->text().contains("renderer"));
+        browser.browse("datapacks");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        notice = browser.findChild<QWidget*>("contentPrerequisite");
+        QVERIFY(notice && notice->isVisible());
+        notice->findChild<QPushButton*>()->click();
+        QCOMPARE(worlds.count(), 1);
+        QCOMPARE(setup.count(), 1);
+        QVERIFY(browser.prepareToLeave());
+        // Stack-owned browser must be detached before the surface destroys children.
+        browser.setParent(nullptr);
+    }
+
     void emptyLibraryIsNavigableAndSafe()
     {
         QTemporaryDir temporary;
@@ -54,12 +511,23 @@ class WorkspacePageTest : public QObject {
         WorkspacePage page(&instances);
         auto* library = page.findChild<QPushButton*>("workspaceLibrary");
         auto* search = page.findChild<QLineEdit*>("workspaceSearch");
-        auto* play = page.findChild<QPushButton*>("workspacePlaySelected");
+        auto* play = page.findChild<QPushButton*>("workspaceContinue");
         QVERIFY(library);
         QVERIFY(search);
         QVERIFY(play);
-        QVERIFY(page.findChild<QPushButton*>("workspaceContinue")->isHidden());
+        QCOMPARE(page.findChild<QListView*>("workspaceRecent")->model()->rowCount(), 0);
         QVERIFY(!play->isEnabled());
+        auto* emptyCreate = page.findChild<QPushButton*>("workspaceEmptyCreate");
+        auto* emptyImport = page.findChild<QPushButton*>("workspaceEmptyImport");
+        QVERIFY(emptyCreate && emptyImport);
+        QVERIFY(emptyCreate->minimumHeight() >= 48);
+        QVERIFY(page.findChild<QPushButton*>("workspaceHomeCreate")->isHidden());
+        QSignalSpy creates(&page, &WorkspacePage::createRequested);
+        QSignalSpy imports(&page, &WorkspacePage::importRequested);
+        emptyCreate->click();
+        emptyImport->click();
+        QCOMPARE(creates.count(), 1);
+        QCOMPARE(imports.count(), 1);
 
         const QString screenshotDirectory = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
         if (!screenshotDirectory.isEmpty()) {
@@ -98,6 +566,16 @@ class WorkspacePageTest : public QObject {
         QSignalSpy settingsRequest(&page, &WorkspacePage::settingsRequested);
         QSignalSpy classic(&page, &WorkspacePage::classicRequested);
 
+        page.setNavigationPosition(false);
+        QCOMPARE(page.findChild<QWidget*>("workspaceRail")->width(), 68);
+        auto* library = page.findChild<QPushButton*>("workspaceLibrary");
+        QVERIFY(library->text().isEmpty());
+        QVERIFY(!library->accessibleName().isEmpty());
+        QVERIFY(!library->toolTip().isEmpty());
+        page.resize(1080, 820);
+        page.setNavigationPosition(true);
+        QVERIFY(!library->text().isEmpty());
+
         page.findChild<QPushButton*>("workspaceHomeCreate")->click();
         page.findChild<QPushButton*>("workspaceHomeImport")->click();
         page.findChild<QPushButton*>("workspaceHomeExport")->click();
@@ -111,6 +589,596 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(accounts.count(), 1);
         QCOMPARE(settingsRequest.count(), 1);
         QCOMPARE(classic.count(), 1);
+    }
+
+    void libraryModesKeepTheSameDataSelectionAndPlaytime()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        globalSettings->set("ShowGameTime", true);
+        globalSettings->set("RecordGameTime", true);
+        globalSettings->set("ShowGlobalGameTime", true);
+        const auto root = temporary.filePath("instances");
+        for (int i = 0; i < 2; ++i) {
+            QVERIFY(QDir().mkpath(root + "/pack" + QString::number(i)));
+            QFile config(root + "/pack" + QString::number(i) + "/instance.cfg");
+            QVERIFY(config.open(QIODevice::WriteOnly));
+            config.write(QString("[General]\nInstanceType=OneSix\nname=%1\niconKey=grass\ntotalTimePlayed=%2\n")
+                .arg(i == 0 ? "First world" : "Second world").arg((i + 1) * 3600).toUtf8());
+        }
+        InstanceList instances(globalSettings.get(), root);
+        instances.loadList();
+        instances.setInstanceGroup("pack0", "Survival");
+        WorkspacePage page(&instances, nullptr, globalSettings.get());
+        page.resize(1080, 820);
+        page.show();
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        page.setSelectedInstance("pack1");
+        auto* view = page.findChild<QListView*>("workspaceCards");
+        auto* model = view->model();
+        QCOMPARE(model->rowCount(), 2);
+        QCOMPARE(model->index(0, 0).data(InstanceList::GroupRole).toString(), QString("Survival"));
+        auto* toggle = page.findChild<QPushButton*>("workspaceViewMode");
+        QVERIFY(toggle);
+        QCOMPARE(view->viewMode(), QListView::IconMode);
+        QCOMPARE(toggle->accessibleName(), QString("Switch to list"));
+        const auto listIcon = toggle->icon().cacheKey();
+        toggle->click();
+        QCOMPARE(view->viewMode(), QListView::ListMode);
+        QCOMPARE(toggle->accessibleName(), QString("Switch to cards"));
+        QVERIFY(toggle->icon().cacheKey() != listIcon);
+        toggle->click();
+        QCOMPARE(view->viewMode(), QListView::IconMode);
+        QCOMPARE(view->model(), model);
+        QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(), QString("pack1"));
+        QVERIFY(page.findChild<QLabel*>("workspaceTotalTime")->text().startsWith("3 h"));
+        QCoreApplication::processEvents();
+        QSignalSpy opened(&page, &WorkspacePage::openInstanceRequested);
+        QSignalSpy launched(&page, &WorkspacePage::activateInstance);
+        QSignalSpy menu(&page, &WorkspacePage::contextMenuRequested);
+        const auto card = view->visualRect(model->index(0, 0)).adjusted(0, 2, -4, -2);
+        const QPoint playCenter(card.right() - 34, card.bottom() - 36);
+        const QPoint playSample(card.right() - 47, card.bottom() - 36);
+        QTest::mouseMove(view->viewport(), card.topLeft() + QPoint(8, 8));
+        const auto idle = view->viewport()->grab();
+        const auto idleColor = idle.toImage().pixelColor(playSample * idle.devicePixelRatio());
+        QTest::mouseMove(view->viewport(), playCenter);
+        const auto hovered = view->viewport()->grab();
+        const auto hoverColor = hovered.toImage().pixelColor(playSample * hovered.devicePixelRatio());
+        QVERIFY2(hoverColor.lightness() > idleColor.lightness() + 25, "Play should brighten only when hovered");
+        QTest::mouseMove(view->viewport(), card.topLeft() + QPoint(8, 8));
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, card.center());
+        QCOMPARE(opened.count(), 1);
+        QCOMPARE(launched.count(), 0);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          QPoint(card.right() - 25, card.bottom() - 25));
+        QCOMPARE(opened.count(), 1);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          QPoint(card.right() - 25, card.top() + 25));
+        QCOMPARE(opened.count(), 1);
+        QCOMPARE(menu.count(), 1);
+        page.setSelectedInstance("pack1");
+        page.setImageBackground(true);
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) {
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("library-tiles.png")));
+        }
+        page.findChild<QLineEdit*>("workspaceSearch")->setText("Second");
+        QCOMPARE(model->rowCount(), 1);
+        toggle->click();
+        QCOMPARE(view->viewMode(), QListView::ListMode);
+        QCOMPARE(view->model(), model);
+        QCOMPARE(model->rowCount(), 1);
+        QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(), QString("pack1"));
+        QCOMPARE(globalSettings->get("WorkspaceLibraryView").toString(), QString("list"));
+        WorkspacePage restored(&instances, nullptr, globalSettings.get());
+        QCOMPARE(restored.findChild<QListView*>("workspaceCards")->viewMode(), QListView::ListMode);
+    }
+
+    void populatedLibraryFiltersSelectionAndLaunches()
+    {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        auto globalSettings = settings(temporary);
+        const auto root = temporary.filePath("instances");
+        const QStringList names{"Create Survival", "Vanilla 1.21.1", "Fabric Performance", "Creative Lab", "Adventure"};
+        const QStringList icons{"gear", "grass", "enderpearl", "magitech", "netherstar"};
+        for (int i = 0; i < names.size(); ++i) {
+            QVERIFY(QDir().mkpath(root + "/pack" + QString::number(i)));
+            QFile config(root + "/pack" + QString::number(i) + "/instance.cfg");
+            QVERIFY(config.open(QIODevice::WriteOnly));
+            config.write(QString("[General]\nInstanceType=OneSix\nname=%1\niconKey=%2\nlastLaunchTime=%3\n")
+                             .arg(names[i], icons[i]).arg(i < 3 ? QDateTime::currentMSecsSinceEpoch() - (i + 1) * 3600000 : 0).toUtf8());
+        }
+        InstanceList instances(globalSettings.get(), root);
+        instances.loadList();
+        QCOMPARE(instances.rowCount(), 5);
+        for (int i = 0; i < 5; ++i) {
+            auto* instance = dynamic_cast<MinecraftInstance*>(instances.getInstanceById("pack" + QString::number(i)));
+            QVERIFY(instance);
+            instance->getPackProfile()->setComponentVersion("net.minecraft", "1.21.1");
+            if (i != 1) instance->getPackProfile()->setComponentVersion("net.fabricmc.fabric-loader", "0.16.14");
+        }
+        instances.setInstanceGroup("pack0", "Survival");
+        WorkspacePage page(&instances);
+        page.resize(1080, 820);
+        page.show();
+        QCoreApplication::processEvents();
+        auto* cards = page.findChild<QListView*>("workspaceCards");
+        auto* search = page.findChild<QLineEdit*>("workspaceSearch");
+        auto* play = page.findChild<QPushButton*>("workspaceContinue");
+        auto* groups = page.findChild<QComboBox*>("workspaceGroups");
+        QCOMPARE(cards->model()->rowCount(), 4); // Includes the two never-launched instances below the hero.
+        QCOMPARE(page.findChild<QListView*>("workspaceRecent")->model()->rowCount(), 3);
+        page.setSelectedInstance("pack0");
+        QVERIFY(play->isEnabled());
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) {
+            QVERIFY(QDir().mkpath(screenshots));
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("home-populated.png")));
+            page.setImageBackground(true);
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("home-wallpaper.png")));
+            page.setNavigationPosition(false);
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("home-wallpaper-side.png")));
+            page.setNavigationPosition(true);
+            page.setImageBackground(false);
+        }
+        QSignalSpy activated(&page, &WorkspacePage::activateInstance);
+        play->click();
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.takeFirst().first().toString(), QString("pack0"));
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        QCOMPARE(cards->model()->rowCount(), 5);
+        search->setText("Vanilla");
+        QCOMPARE(cards->model()->rowCount(), 1);
+        QVERIFY(!play->isEnabled());
+        cards->setFocus();
+        QTest::keyClick(cards, Qt::Key_Return, Qt::ControlModifier);
+        QCOMPARE(activated.count(), 0);
+        search->clear();
+        page.setSelectedInstance("pack0");
+        QVERIFY(!play->isEnabled());
+        groups->setCurrentIndex(groups->findText("Survival"));
+        QCOMPARE(cards->model()->rowCount(), 1);
+        groups->setCurrentIndex(0);
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        if (!screenshots.isEmpty()) {
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("library-populated.png")));
+            page.resize(780, 640);
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("library-compact.png")));
+        }
+        page.setSelectedInstance("pack0");
+        cards->setFocus();
+        QSignalSpy opened(&page, &WorkspacePage::openInstanceRequested);
+        QTest::keyClick(cards, Qt::Key_Return);
+        QCOMPARE(opened.count(), 1);
+        QCOMPARE(activated.count(), 0);
+        QTest::keyClick(cards, Qt::Key_Return, Qt::ControlModifier);
+        QCOMPARE(activated.count(), 1);
+        page.findChild<QPushButton*>("workspaceHome")->click();
+        QVERIFY(play->isEnabled());
+        instances.getInstanceById("pack0")->setRunning(true);
+        QVERIFY(play->isEnabled());
+        QCOMPARE(play->text(), QString("Stop"));
+        QSignalSpy stopped(&page, &WorkspacePage::stopInstance);
+        play->click();
+        QCOMPARE(stopped.count(), 1);
+        QCOMPARE(stopped.takeFirst().first().toString(), QString("pack0"));
+        QCOMPARE(activated.count(), 1);
+        instances.getInstanceById("pack0")->setRunning(false);
+        QCOMPARE(play->text(), QString("Play"));
+    }
+
+    void neverPlayedInstanceHasHomeFeature()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        const auto root = temporary.filePath("instances");
+        QVERIFY(QDir().mkpath(root + "/new-pack"));
+        QFile config(root + "/new-pack/instance.cfg");
+        QVERIFY(config.open(QIODevice::WriteOnly));
+        config.write("[General]\nInstanceType=OneSix\nname=Fresh survival\niconKey=grass\n");
+        config.close();
+        InstanceList instances(globalSettings.get(), root);
+        instances.loadList();
+        WorkspacePage page(&instances);
+        page.resize(1080, 820);
+        page.show();
+        auto* play = page.findChild<QPushButton*>("workspaceContinue");
+        QVERIFY(play->isVisible());
+        QVERIFY(play->isEnabled());
+        QVERIFY(page.findChild<QLineEdit*>("workspaceSearch")->isHidden());
+        QCOMPARE(page.findChild<QListView*>("workspaceCards")->model()->rowCount(), 0);
+        QSignalSpy activated(&page, &WorkspacePage::activateInstance);
+        play->click();
+        QCOMPARE(activated.takeFirst().first().toString(), QString("new-pack"));
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) {
+            page.setImageBackground(true);
+            QCoreApplication::processEvents();
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("home-never-played.png")));
+        }
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        QVERIFY(page.findChild<QLineEdit*>("workspaceSearch")->isVisible());
+        QCOMPARE(page.findChild<QListView*>("workspaceCards")->model()->rowCount(), 1);
+    }
+
+    void russianCatalogAndLiveLanguageSwitch()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        InstanceList instances(globalSettings.get(), temporary.filePath("instances"));
+        WorkspacePage page(&instances);
+        QTranslator upstream;
+        QVERIFY(upstream.load(":/pxl/translations/ru.qm"));
+        POTranslator pxl(":/pxl/translations/pxl-ru.po");
+        QVERIFY(!pxl.isEmpty());
+        QVERIFY(qApp->installTranslator(&upstream));
+        QVERIFY(qApp->installTranslator(&pxl));
+        QCoreApplication::processEvents();
+        QCOMPARE(page.findChild<QLineEdit*>("workspaceSearch")->placeholderText(), QString::fromUtf8("Поиск сборок"));
+        QCOMPARE(page.findChild<QPushButton*>("workspaceLibrary")->toolTip(), QString::fromUtf8("Библиотека"));
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) {
+            page.resize(1080, 820);
+            page.show();
+            page.setImageBackground(true);
+            QCoreApplication::processEvents();
+            QTest::qWait(180);
+            QVERIFY(page.grab().save(QDir(screenshots).filePath("home-russian-empty.png")));
+        }
+        qApp->removeTranslator(&pxl);
+        qApp->removeTranslator(&upstream);
+        QCoreApplication::processEvents();
+        QCOMPARE(page.findChild<QLineEdit*>("workspaceSearch")->placeholderText(), QString("Search instances"));
+    }
+
+    void progressDetailsAndCancellationPreserveTaskBehavior()
+    {
+        ProgressDialog dialog;
+        auto* bar = dialog.findChild<QProgressBar*>("globalProgressBar");
+        QVERIFY(bar);
+        dialog.changeProgress(0, 0);
+        QCOMPARE(bar->maximum(), 0);
+        dialog.changeProgress(500, 100);
+        QCOMPARE(bar->value(), bar->maximum());
+        dialog.setSkipButton(true, "Cancel");
+        PreviewInstallTask task;
+        QTimer::singleShot(50, &dialog, [&] {
+            auto* details = dialog.findChild<QScrollArea*>("taskProgressScrollArea");
+            QVERIFY(details->isHidden());
+            QPushButton* toggle = nullptr;
+            for (auto* button : dialog.findChildren<QPushButton*>())
+                if (button->isCheckable()) toggle = button;
+            QVERIFY(toggle);
+            const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(dialog.grab().save(QDir(screenshots).filePath("task-progress.png")));
+            toggle->click();
+            QVERIFY(details->isVisible());
+            if (!screenshots.isEmpty()) QVERIFY(dialog.grab().save(QDir(screenshots).filePath("task-details.png")));
+        });
+        QCOMPARE(dialog.execWithTask(&task), int(QDialog::Accepted));
+        QVERIFY(task.wasSuccessful());
+
+        ProgressDialog cancelled;
+        cancelled.setSkipButton(true, "Cancel");
+        PreviewInstallTask cancelledTask;
+        QTimer::singleShot(20, &cancelled, [&] { cancelled.findChild<QPushButton*>("skipButton")->click(); });
+        QCOMPARE(cancelled.execWithTask(&cancelledTask), int(QDialog::Rejected));
+        QCOMPARE(cancelledTask.getState(), Task::State::AbortedByUser);
+    }
+
+    void taskHistoryTracksCompletionCancellationAndDestroyedTasks()
+    {
+        Pxl::TaskHistory history;
+        PreviewInstallTask task;
+        task.setProperty("pxlTaskTitle", "Adventure pack");
+        history.watch(&task, "Fallback");
+        history.watch(&task, "Duplicate");
+        QCOMPARE(history.records().size(), 1);
+        QCOMPARE(history.records().first().title, QString("Adventure pack"));
+        QVERIFY(!history.cancel(history.records().first().id));
+        task.start();
+        QCOMPARE(history.activeCount(), 1);
+        QWidget owner;
+        history.showTasks(&owner);
+        QTest::qWait(20);
+        auto* dialog = owner.findChild<QDialog*>();
+        QVERIFY(dialog);
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(dialog->grab().save(QDir(screenshots).filePath("task-center-active.png")));
+        QTRY_VERIFY(task.wasSuccessful());
+        QCOMPARE(history.activeCount(), 0);
+        QCOMPARE(history.records().first().state, Task::State::Succeeded);
+        QTest::qWait(120);
+        if (!screenshots.isEmpty()) QVERIFY(dialog->grab().save(QDir(screenshots).filePath("task-center-complete.png")));
+
+        PreviewInstallTask cancelled;
+        history.watch(&cancelled, "Cancelled pack");
+        cancelled.start();
+        QVERIFY(history.cancel(history.records().last().id));
+        QCOMPARE(history.records().last().state, Task::State::AbortedByUser);
+        history.clearFinished();
+        QCOMPARE(history.records().size(), 0);
+        auto* interrupted = new PreviewInstallTask;
+        history.watch(interrupted, "Interrupted");
+        delete interrupted;
+        QCOMPARE(history.records().first().state, Task::State::Failed);
+        QVERIFY(history.records().first().task.isNull());
+        QVERIFY(!history.cancel(history.records().first().id));
+        dialog->close();
+    }
+
+    void popupSelectionKeepsReadableText()
+    {
+        QComboBox combo;
+        combo.addItems({"Simple (Blue)", "Simple (Colored)", "Simple (Dark)"});
+        combo.resize(320, 44);
+        combo.show();
+        combo.showPopup();
+        auto* view = combo.view();
+        view->setCurrentIndex(view->model()->index(0, 0));
+        QCoreApplication::processEvents();
+        auto luminance = [](const QColor& color) {
+            auto linear = [](double component) { return component <= 0.04045 ? component / 12.92 : std::pow((component + 0.055) / 1.055, 2.4); };
+            return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) + 0.0722 * linear(color.blueF());
+        };
+        const auto foreground = luminance(view->palette().color(QPalette::HighlightedText));
+        const auto background = luminance(view->palette().color(QPalette::Highlight));
+        const auto contrast = (qMax(foreground, background) + 0.05) / (qMin(foreground, background) + 0.05);
+        QVERIFY2(contrast >= 4.5, qPrintable(QString("Selected popup text contrast is %1").arg(contrast)));
+        const auto hovered = view->visualRect(view->model()->index(0, 0)).center();
+        QTest::mouseMove(view->viewport(), hovered);
+        QTest::qWait(30);
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(view->window()->grab().save(QDir(screenshots).filePath("popup-hover.png")));
+        combo.hidePopup();
+    }
+
+    void instanceContentStaysInShellAndRespectsSaveGuard()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        InstanceList instances(globalSettings.get(), temporary.filePath("instances"));
+        WorkspacePage page(&instances);
+        page.resize(1080, 820);
+        page.show();
+        auto* editor = new QWidget;
+        bool canLeave = false;
+        int saveAttempts = 0;
+        QVERIFY(page.presentInstanceView(editor, "Adventure pack", [&] { ++saveAttempts; return canLeave; }));
+        QVERIFY(editor->isVisible());
+        QVERIFY(page.findChild<QWidget*>("workspaceRail")->isVisible());
+        QVERIFY(page.findChild<QPushButton*>("workspaceBack")->isVisible());
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        QVERIFY(editor->isVisible());
+        QVERIFY(saveAttempts > 0);
+        canLeave = true;
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        QVERIFY(editor->isHidden());
+        QCOMPARE(page.findChild<QLabel*>("workspacePageTitle")->text(), QString("Library"));
+        QVERIFY(page.presentInstanceView(editor, "Adventure pack", [] { return true; }));
+        delete editor;
+        QCoreApplication::processEvents();
+        QVERIFY(page.findChild<QPushButton*>("workspaceBack")->isHidden());
+        QCOMPARE(page.findChild<QLabel*>("workspacePageTitle")->text(), QString("Library"));
+    }
+
+    void historyCapsCompletedEntriesWithoutHidingActiveTasks()
+    {
+        Pxl::TaskHistory history;
+        std::vector<std::unique_ptr<ManualHistoryTask>> tasks;
+        for (int i = 0; i < 70; ++i) {
+            auto task = std::make_unique<ManualHistoryTask>();
+            history.watch(task.get(), QString::number(i));
+            task->start();
+            tasks.push_back(std::move(task));
+        }
+        QCOMPARE(history.activeCount(), 70);
+        QCOMPARE(history.records().size(), 70);
+        for (const auto& task : tasks) task->complete();
+        QCOMPARE(history.activeCount(), 0);
+        QCOMPARE(history.records().size(), 50);
+        ManualHistoryTask finished;
+        finished.start();
+        finished.complete();
+        history.watch(&finished, "Already finished");
+        QCOMPARE(history.activeCount(), 0);
+        QMetaObject::invokeMethod(&finished, "started", Qt::QueuedConnection);
+        QCoreApplication::processEvents();
+        QCOMPARE(history.activeCount(), 0);
+        QCOMPARE(history.records().last().state, Task::State::Succeeded);
+    }
+    void creationOverlayIsContainedAndRestoresBackground()
+    {
+        QWidget surface;
+        surface.resize(900, 760);
+        QPushButton background("Library", &surface);
+        background.show();
+        surface.show();
+        QDialog dialog(&surface);
+        dialog.setStyleSheet("QDialog { background: transparent; }");
+        dialog.setProperty("pxlPreferredSize", QSize(560, 490));
+        bool child = false, blocked = false, contained = false, painted = false;
+        QTimer::singleShot(20, &dialog, [&] {
+            child = !dialog.isWindow() && dialog.parentWidget()->objectName() == "pxlDialogOverlay";
+            blocked = !background.isEnabled();
+            surface.resize(500, 600);
+            contained = dialog.parentWidget()->rect().contains(dialog.geometry());
+            const auto image = dialog.parentWidget()->grab().toImage();
+            const auto point = dialog.geometry().topLeft() + QPoint(24, 24);
+            const auto color = image.pixelColor(point);
+            painted = color.alpha() == 255 && color.lightness() >= 18 && color.lightness() <= 65;
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) image.save(QDir(screenshots).filePath("overlay-glass.png"));
+            dialog.reject();
+        });
+        QCOMPARE(Pxl::DialogOverlay::run(&dialog, &surface), int(QDialog::Rejected));
+        QVERIFY(child);
+        QVERIFY(blocked);
+        QVERIFY(contained);
+        QVERIFY(painted);
+        QVERIFY(background.isEnabled());
+        QCOMPARE(dialog.parentWidget(), &surface);
+        QVERIFY(dialog.isHidden());
+    }
+
+    void compactVersionPopupStaysBounded()
+    {
+        VersionSelectWidget picker(nullptr);
+        picker.useCompactPresentation();
+        auto* combo = picker.findChild<QComboBox*>("compactVersionChoice");
+        QVERIFY(combo);
+        QStringList versions;
+        for (int index = 0; index < 200; ++index) versions.append(QString("1.%1").arg(index));
+        QStringListModel model(versions);
+        combo->setModel(&model);
+        combo->setEnabled(true);
+        combo->setCurrentIndex(3);
+        QWheelEvent wheel(QPointF(10, 10), QPointF(10, 10), QPoint(), QPoint(0, 120), Qt::NoButton,
+                          Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(combo, &wheel);
+        QCOMPARE(combo->currentIndex(), 3);
+        picker.resize(500, 50);
+        picker.show();
+        combo->showPopup();
+        QTest::qWait(30);
+        QVERIFY(combo->view()->isVisible());
+        QVERIFY(combo->view()->height() <= 280);
+        QVERIFY(combo->view()->window()->height() <= 320);
+        combo->hidePopup();
+    }
+
+    void creationOverlaySurvivesSurfaceDestruction()
+    {
+        auto* surface = new QWidget;
+        surface->resize(900, 760);
+        surface->show();
+        auto* dialog = new QDialog(surface);
+        QPointer<QDialog> guarded(dialog);
+        QTimer::singleShot(20, dialog, [surface] { delete surface; });
+        QCOMPARE(Pxl::DialogOverlay::run(dialog, surface), int(QDialog::Rejected));
+        QVERIFY(guarded);
+        QVERIFY(!guarded->parentWidget());
+        delete guarded.data();
+    }
+
+    void customBackgroundAndMissingFileFallback()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        QImage image(320, 200, QImage::Format_RGB32);
+        image.fill(QColor("#a04127"));
+        const auto path = directory.filePath("wallpaper.png");
+        QVERIFY(image.save(path));
+        QVERIFY(!Pxl::loadBackdropImage(path).isNull());
+        const auto custom = Pxl::blurredBackdrop(path);
+        QVERIFY(!custom.isNull());
+        QCOMPARE(Pxl::blurredBackdrop(path).cacheKey(), custom.cacheKey());
+        QVERIFY(Pxl::loadBackdropImage(directory.filePath("missing.png")).isNull());
+        QVERIFY(!Pxl::blurredBackdrop(directory.filePath("missing.png")).isNull());
+    }
+
+    void emptyTaskHistoryIsCompactPopup()
+    {
+        QWidget surface;
+        surface.resize(900, 760);
+        QPushButton anchor("Tasks", &surface);
+        anchor.setGeometry(20, 100, 42, 42);
+        surface.show();
+        auto* history = Pxl::TaskHistory::instance();
+        history->clearFinished();
+        history->showTasks(&anchor);
+        auto* popup = anchor.findChild<QDialog*>("pxlTaskPopover");
+        QVERIFY(popup);
+        QCOMPARE(popup->windowType(), Qt::Popup);
+        QVERIFY(popup->width() <= 420);
+        QVERIFY(popup->height() <= 200);
+        const auto surfacePixel = popup->grab().toImage().pixelColor(popup->width() - 20, popup->height() - 20);
+        QVERIFY(surfacePixel.alpha() >= 205); // A captured, blurred app backdrop may make the final image opaque.
+        QVERIFY(surfacePixel.lightness() < 90);
+        QVERIFY(surfacePixel.blue() >= surfacePixel.red());
+        popup->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    void embeddedSettingsValidateAndProtectUnsavedChanges()
+    {
+        QWidget surface;
+        surface.resize(1000, 800);
+        surface.show();
+        GenericPageProvider provider("Settings");
+        PreviewSettingsPage* fields = nullptr;
+        provider.addPageCreator([&] { fields = new PreviewSettingsPage; return fields; });
+        auto* page = new PageDialog(&provider, {}, &surface, true);
+        page->resize(950, 750);
+        page->show();
+        QVERIFY(!page->isWindow());
+        QSignalSpy applied(page, &PageDialog::applied);
+        fields->valid = false;
+        QVERIFY(!page->applyChanges());
+        QCOMPARE(applied.count(), 0);
+        fields->valid = true;
+        QVERIFY(page->applyChanges());
+        QCOMPARE(applied.count(), 1);
+        auto* container = page->findChild<PageContainer*>();
+        container->setSearchText("memory allocation");
+        auto* categories = container->findChild<QListView*>("conePageNavigation");
+        QCOMPARE(categories->model()->rowCount(), 1);
+        container->setSearchText("no matching setting");
+        QCOMPARE(categories->model()->rowCount(), 0);
+        container->setSearchText({});
+        fields->slider->setValue(10);
+        QTimer::singleShot(20, page, [page] {
+            if (auto* question = page->findChild<QMessageBox*>()) question->reject();
+        });
+        QVERIFY(!page->requestLeave());
+        QCOMPARE(fields->slider->value(), 10);
+        fields->edit->setText("changed");
+        QTimer::singleShot(20, page, [page] {
+            if (auto* question = page->findChild<QMessageBox*>()) question->button(QMessageBox::Discard)->click();
+        });
+        QVERIFY(page->requestLeave());
+        QCOMPARE(applied.count(), 1);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    void importPreviewUsesSourceAndRevealsResults()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto source = directory.filePath("launcher");
+        const auto instance = source + "/instances/demo";
+        QVERIFY(QDir().mkpath(instance + "/minecraft"));
+        auto write = [](const QString& path, const QByteArray& data) {
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+        };
+        QVERIFY(write(instance + "/instance.cfg", "[General]\nInstanceType=OneSix\nname=Preview fixture\n"));
+        QVERIFY(write(instance + "/mmc-pack.json", "{\"formatVersion\":1,\"components\":[{\"uid\":\"net.minecraft\",\"version\":\"1.20.1\"}]}"));
+        Pxl::TransferDialog dialog(Pxl::TransferDialog::Import);
+        auto* list = dialog.findChild<QListWidget*>("transferInstances");
+        auto* run = dialog.findChild<QPushButton*>("transferRun");
+        QVERIFY(list && run);
+        QVERIFY(list->isHidden());
+        QVERIFY(!run->isEnabled());
+        auto* path = dialog.findChild<QLineEdit*>();
+        QVERIFY(path);
+        path->setText(source);
+        QTest::keyClick(path, Qt::Key_Return);
+        QCOMPARE(list->count(), 1);
+        QVERIFY(!list->isHidden());
+        QVERIFY(run->isEnabled());
+        QVERIFY(list->item(0)->text().contains("Preview fixture"));
+        path->setText(directory.filePath("different"));
+        QVERIFY(list->isHidden());
+        QVERIFY(!run->isEnabled());
     }
 };
 

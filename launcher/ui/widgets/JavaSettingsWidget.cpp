@@ -54,6 +54,7 @@
 #include "ui/java/InstallJavaDialog.h"
 
 #include "ui_JavaSettingsWidget.h"
+#include "ui/pxl/SettingsCards.h"
 
 JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
     : QWidget(parent), m_instance(instance), m_ui(new Ui::JavaSettingsWidget)
@@ -116,6 +117,60 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
     loadSettings();
     updateThresholds();
     updateLauncherArgs();
+    if (!m_instance) {
+        for (auto* group : {m_ui->javaInstallationGroupBox, m_ui->memoryGroupBox, m_ui->javaArgumentsGroupBox}) group->hide();
+        while (auto* item = m_ui->verticalLayout->takeAt(0)) delete item;
+        m_ui->verticalLayout->setContentsMargins(0, 0, 8, 0);
+        m_ui->verticalLayout->setSpacing(16);
+        auto* automatic = Pxl::settingsCard(this, tr("Automatic Java"), tr("PXL Cone can select and download the runtime required by each Minecraft version."));
+        auto* automaticLayout = static_cast<QVBoxLayout*>(automatic->layout());
+        automaticLayout->addWidget(m_ui->autodetectJavaCheckBox);
+        m_ui->autodetectJavaCheckBox->show();
+        automaticLayout->addWidget(m_ui->autodownloadJavaCheckBox);
+        m_ui->autodownloadJavaCheckBox->setVisible(BuildConfig.JAVA_DOWNLOADER_ENABLED);
+        m_ui->verticalLayout->addWidget(automatic);
+
+        auto* runtime = Pxl::settingsCard(this, tr("Manual runtime"), tr("Choose an executable when your instance requires a specific Java installation."));
+        auto* runtimeLayout = static_cast<QVBoxLayout*>(runtime->layout());
+        runtimeLayout->addWidget(m_ui->javaPathTextBox);
+        m_ui->javaPathTextBox->show();
+        auto* actions = new QHBoxLayout;
+        for (auto* button : {m_ui->javaDetectBtn, m_ui->javaBrowseBtn, m_ui->javaTestBtn}) {
+            actions->addWidget(button);
+            button->show();
+        }
+        actions->addStretch();
+        runtimeLayout->addLayout(actions);
+        m_ui->verticalLayout->addWidget(runtime);
+
+        auto* memory = Pxl::settingsCard(this, tr("Memory"), tr("Memory limits apply to the game. More allocated memory does not always improve performance."));
+        auto* memoryLayout = static_cast<QVBoxLayout*>(memory->layout());
+        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Minimum memory"), m_ui->minMemSpinBox));
+        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Maximum memory"), m_ui->maxMemSpinBox));
+        m_ui->minMemSpinBox->show();
+        m_ui->maxMemSpinBox->show();
+        memoryLayout->addWidget(m_ui->lowMemWarningCheckBox);
+        m_ui->lowMemWarningCheckBox->show();
+        memoryLayout->addWidget(m_ui->labelMaxMemNotice);
+        m_ui->verticalLayout->addWidget(memory);
+
+        auto* advancedButton = new QPushButton(tr("Advanced Java options"), this);
+        advancedButton->setCheckable(true);
+        advancedButton->setProperty("pxlDisclosure", true);
+        m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);
+        auto* advanced = new QWidget(this);
+        auto* advancedLayout = new QVBoxLayout(advanced);
+        advancedLayout->setContentsMargins(0, 0, 0, 0);
+        for (auto* group : {m_ui->javaInstallationGroupBox, m_ui->memoryGroupBox, m_ui->javaArgumentsGroupBox}) {
+            advancedLayout->addWidget(group);
+            group->show();
+        }
+        for (auto* label : {m_ui->label_4, m_ui->labelMinMem, m_ui->labelMaxMem, m_ui->label, m_ui->label_2}) label->hide();
+        advanced->hide();
+        m_ui->verticalLayout->addWidget(advanced);
+        m_ui->verticalLayout->addStretch();
+        connect(advancedButton, &QPushButton::toggled, advanced, &QWidget::setVisible);
+    }
 }
 
 JavaSettingsWidget::~JavaSettingsWidget()

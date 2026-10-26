@@ -35,6 +35,14 @@
  */
 
 #include "AppearanceWidget.h"
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMessageBox>
+#include "ui/pxl/Backdrop.h"
+#include "ui/pxl/SettingsCards.h"
+#include "LanguageSelectionWidget.h"
 #include "ui_AppearanceWidget.h"
 
 #include <DesktopServices.h>
@@ -50,12 +58,52 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     : QWidget(parent), m_ui(new Ui::AppearanceWidget), m_themesOnly(themesOnly)
 {
     m_ui->setupUi(this);
+    if (!themesOnly) {
+        auto* imageRow = new QWidget(this);
+        imageRow->setObjectName("workspaceCustomImageControls");
+        auto* imageLayout = new QHBoxLayout(imageRow);
+        imageLayout->setContentsMargins(0, 0, 0, 0);
+        auto* imageName = new QLabel(imageRow);
+        imageName->setObjectName("workspaceCustomImageName");
+        imageName->setWordWrap(true);
+        auto* choose = new QPushButton(tr("Choose image…"), imageRow);
+        auto* reset = new QPushButton(tr("Use default"), imageRow);
+        imageLayout->addWidget(imageName, 1);
+        imageLayout->addWidget(choose);
+        imageLayout->addWidget(reset);
+        m_ui->gridLayout->addWidget(imageRow, m_ui->gridLayout->rowCount(), 0, 1, 4);
+        auto updateName = [this, imageName] {
+            imageName->setText(m_backgroundImagePath.isEmpty() ? tr("Built-in background") : QFileInfo(m_backgroundImagePath).fileName());
+            imageName->setToolTip(m_backgroundImagePath);
+        };
+        connect(choose, &QPushButton::clicked, this, [this, updateName] {
+            const auto path = QFileDialog::getOpenFileName(this, tr("Choose a background image"), QString(),
+                                                          tr("Images (*.png *.jpg *.jpeg *.webp *.bmp)"));
+            if (path.isEmpty()) return;
+            if (Pxl::loadBackdropImage(path).isNull()) {
+                QMessageBox::warning(this, tr("Background image"), tr("Cannot read this image. Choose a PNG, JPEG, WebP or BMP image up to 64 megapixels."));
+                return;
+            }
+            m_backgroundImagePath = QFileInfo(path).absoluteFilePath();
+            m_ui->workspaceBackgroundCombo->setCurrentIndex(0);
+            updateName();
+        });
+        connect(reset, &QPushButton::clicked, this, [this, updateName] {
+            m_backgroundImagePath.clear();
+            m_ui->workspaceBackgroundCombo->setCurrentIndex(0);
+            updateName();
+        });
+    }
 
     m_ui->catPreview->setGraphicsEffect(new QGraphicsOpacityEffect(this));
 
     m_defaultFormat = QTextCharFormat(m_ui->consolePreview->currentCharFormat());
 
     if (themesOnly) {
+        m_ui->workspaceBackgroundLabel->hide();
+        m_ui->workspaceBackgroundCombo->hide();
+        m_ui->workspaceNavigationLabel->hide();
+        m_ui->workspaceNavigationCombo->hide();
         m_ui->catPackLabel->hide();
         m_ui->catPackComboBox->hide();
         m_ui->catPackFolder->hide();
@@ -86,6 +134,40 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     connect(m_ui->catPackFolder, &QPushButton::clicked, this,
             [] { DesktopServices::openPath(APPLICATION->themeManager()->getCatPacksFolder().path()); });
     connect(m_ui->reloadThemesButton, &QPushButton::pressed, this, &AppearanceWidget::loadThemeSettings);
+    if (!themesOnly) {
+        for (auto* group : {m_ui->themingBox, m_ui->settingsBox, m_ui->previewBox}) group->hide();
+        while (auto* item = m_ui->verticalLayout->takeAt(0)) delete item;
+        m_ui->verticalLayout->setContentsMargins(0, 0, 8, 0);
+        m_ui->verticalLayout->setSpacing(16);
+        auto* workspace = Pxl::settingsCard(this, tr("Workspace"), tr("Make the launcher comfortable for you."));
+        auto* workspaceLayout = static_cast<QVBoxLayout*>(workspace->layout());
+        workspaceLayout->addWidget(Pxl::settingsRow(workspace, tr("Navigation"), m_ui->workspaceNavigationCombo));
+        workspaceLayout->addWidget(Pxl::settingsRow(workspace, tr("Background"), m_ui->workspaceBackgroundCombo));
+        m_ui->workspaceNavigationCombo->show();
+        m_ui->workspaceBackgroundCombo->show();
+        workspaceLayout->addWidget(findChild<QWidget*>("workspaceCustomImageControls"));
+        m_ui->workspaceBackgroundLabel->hide();
+        m_ui->workspaceNavigationLabel->hide();
+        m_ui->verticalLayout->addWidget(workspace);
+        m_languageWidget = new LanguageSelectionWidget(this);
+        m_languageWidget->setObjectName("appearanceLanguage");
+        m_ui->verticalLayout->addWidget(m_languageWidget);
+        auto* advancedButton = new QPushButton(tr("Icons, console and mascot"), this);
+        advancedButton->setCheckable(true);
+        advancedButton->setProperty("pxlDisclosure", true);
+        m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);
+        auto* advanced = new QWidget(this);
+        auto* advancedLayout = new QVBoxLayout(advanced);
+        advancedLayout->setContentsMargins(0, 0, 0, 0);
+        for (auto* group : {m_ui->themingBox, m_ui->settingsBox, m_ui->previewBox}) {
+            advancedLayout->addWidget(group);
+            group->show();
+        }
+        advanced->hide();
+        m_ui->verticalLayout->addWidget(advanced);
+        m_ui->verticalLayout->addStretch();
+        connect(advancedButton, &QPushButton::toggled, advanced, &QWidget::setVisible);
+    }
 }
 
 AppearanceWidget::~AppearanceWidget()
@@ -96,6 +178,7 @@ AppearanceWidget::~AppearanceWidget()
 void AppearanceWidget::applySettings()
 {
     SettingsObject* settings = APPLICATION->settings();
+    if (m_languageWidget) settings->set("Language", m_languageWidget->getSelectedLanguageKey());
     QString consoleFontFamily = m_ui->consoleFont->currentFont().family();
     settings->set("ConsoleFont", consoleFontFamily);
     settings->set("ConsoleFontSize", m_ui->fontSizeBox->value());
@@ -103,11 +186,21 @@ void AppearanceWidget::applySettings()
     auto catFit = m_ui->catFitComboBox->currentIndex();
     settings->set("CatFit", catFit == 0 ? "fit" : catFit == 1 ? "fill" : "strech");
     settings->set("CatButtonVisible", !m_ui->hideCatButtonCheckBox->isChecked());
+    settings->set("WorkspaceBackground", m_ui->workspaceBackgroundCombo->currentIndex() == 0 ? "image" : "solid");
+    settings->set("WorkspaceBackgroundImage", m_backgroundImagePath);
+    settings->set("WorkspaceNavigation", m_ui->workspaceNavigationCombo->currentIndex() == 1 ? "side" : "top");
 }
 
 void AppearanceWidget::loadSettings()
 {
     SettingsObject* settings = APPLICATION->settings();
+    m_ui->workspaceBackgroundCombo->setCurrentIndex(settings->get("WorkspaceBackground").toString() == "solid" ? 1 : 0);
+    m_backgroundImagePath = settings->get("WorkspaceBackgroundImage").toString();
+    if (auto* label = findChild<QLabel*>("workspaceCustomImageName")) {
+        label->setText(m_backgroundImagePath.isEmpty() ? tr("Built-in background") : QFileInfo(m_backgroundImagePath).fileName());
+        label->setToolTip(m_backgroundImagePath);
+    }
+    m_ui->workspaceNavigationCombo->setCurrentIndex(settings->get("WorkspaceNavigation").toString() == "side" ? 1 : 0);
     QString fontFamily = settings->get("ConsoleFont").toString();
     QFont consoleFont(fontFamily);
     m_ui->consoleFont->setCurrentFont(consoleFont);
@@ -129,6 +222,7 @@ void AppearanceWidget::loadSettings()
 void AppearanceWidget::retranslateUi()
 {
     m_ui->retranslateUi(this);
+    if (m_languageWidget) m_languageWidget->retranslate();
 }
 
 void AppearanceWidget::applyIconTheme(int index)

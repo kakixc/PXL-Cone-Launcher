@@ -855,6 +855,12 @@ SET(LAUNCHER_SOURCES
     ui/MainWindow.cpp
     ui/pxl/WorkspacePage.h
     ui/pxl/WorkspacePage.cpp
+    ui/pxl/TaskHistory.h
+    ui/pxl/ContentBrowser.h
+    ui/pxl/ContentBrowser.cpp
+    ui/pxl/TaskHistory.cpp
+    ui/pxl/Animations.h
+    ui/pxl/Backdrop.h
     ui/pxl/TransferDialog.h
     ui/pxl/TransferDialog.cpp
     ui/InstanceWindow.h
@@ -1637,6 +1643,7 @@ endif()
 
 find_program(CLANG_FORMAT clang-format OPTIONAL)
 install(FILES resources/fonts/Monocraft-LICENSE.txt DESTINATION "${RESOURCES_DEST_DIR}/licenses")
+install(FILES resources/fonts/Manrope-OFL.txt resources/fonts/Inter-OFL.txt resources/pxl/icons/LICENSE.txt DESTINATION "${RESOURCES_DEST_DIR}/licenses")
 if(CLANG_FORMAT)
     message(STATUS "Creating clang-format target")
     add_custom_target(

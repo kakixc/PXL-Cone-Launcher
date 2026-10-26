@@ -41,17 +41,33 @@
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QAction>
+#include <QStyle>
 #include <QScrollBar>
+#include <QStackedWidget>
+#include "ui/pxl/ContentBrowser.h"
 
 #include "ui/widgets/PageContainer.h"
 
 #include "InstancePageProvider.h"
 
 #include "icons/IconList.h"
+#include "ui/pages/instance/ModFolderPage.h"
+#include "ui/pages/instance/ResourcePackPage.h"
+#include "ui/pages/instance/TexturePackPage.h"
+#include "ui/pages/instance/ShaderPackPage.h"
 
-InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainWindow(parent), m_instance(instance)
+InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool embedded)
+    : QMainWindow(parent), m_instance(instance), m_embedded(embedded)
 {
     setAttribute(Qt::WA_DeleteOnClose);
+    if (m_embedded) {
+        setWindowFlags(Qt::Widget);
+        setProperty("pxlFlow", true);
+        setStyleSheet("InstanceWindow { background: transparent; }");
+    }
 
     auto icon = APPLICATION->icons()->getIcon(m_instance->iconKey());
     QString windowTitle = tr("Console window for ") + m_instance->name();
@@ -65,10 +81,60 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainW
     // Add page container
     {
         auto provider = std::make_shared<InstancePageProvider>(m_instance);
-        m_container = new PageContainer(provider.get(), "console", this);
+        m_container = new PageContainer(provider.get(), m_embedded ? "mods" : "console", this);
+        m_container->useConeStyle();
         m_container->setParentContainer(this);
         setCentralWidget(m_container);
         setContentsMargins(0, 0, 0, 0);
+    }
+
+    if (m_embedded) {
+        auto* body = new QWidget(this);
+        auto* layout = new QVBoxLayout(body);
+        layout->setContentsMargins(24, 16, 24, 24);
+        layout->setSpacing(16);
+        auto* tabs = new QHBoxLayout;
+        const QString resourcePage = m_instance->traits().contains("texturepacks") ? "texturepacks" : "resourcepacks";
+        const QList<QPair<QString, QString>> categories{{"mods", tr("Mods")}, {resourcePage, tr("Resource packs")},
+            {"shaderpacks", tr("Shaders")}, {"worlds", tr("Worlds")}, {"console", tr("Logs")}, {"version", tr("Advanced")}};
+        for (const auto& category : categories) {
+            auto* button = new QPushButton(category.second, body);
+            button->setCheckable(true);
+            button->setProperty("pxlMode", true);
+            button->setProperty("pxlPage", category.first);
+            tabs->addWidget(button);
+            m_editorTabs.append(button);
+            connect(button, &QPushButton::clicked, this, [this, id = category.first] { selectPage(id); });
+        }
+        tabs->addStretch();
+        layout->addLayout(tabs);
+        auto* actions = new QHBoxLayout;
+        m_browseContent = new QPushButton(tr("Browse content"), body);
+        m_browseContent->setIcon(QIcon(":/pxl/icons/download-simple.svg"));
+        m_addContent = new QPushButton(tr("Add files"), body);
+        m_addContent->setIcon(QIcon(":/pxl/icons/plus.svg"));
+        actions->addWidget(m_browseContent);
+        actions->addWidget(m_addContent);
+        actions->addStretch();
+        layout->addLayout(actions);
+        connect(m_browseContent, &QPushButton::clicked, this, [this] {
+            QString category = selectedPage() ? selectedPage()->id() : QString();
+            if (category == "texturepacks") category = "resourcepacks";
+            browseContent(category);
+        });
+        connect(m_addContent, &QPushButton::clicked, this, [this] {
+            if (auto* page = dynamic_cast<QWidget*>(selectedPage()))
+                if (auto* action = page->findChild<QAction*>("actionAddItem")) action->trigger();
+        });
+        takeCentralWidget();
+        layout->addWidget(m_container, 1);
+        m_editorStack = new QStackedWidget(this);
+        m_editorStack->addWidget(body);
+        setCentralWidget(m_editorStack);
+        connect(m_container, &PageContainer::selectedPageChanged, this, [this](BasePage*, BasePage* selected) {
+            updateEditorNavigation(selected ? selected->id() : QString());
+        });
+        updateEditorNavigation("mods");
     }
 
     // Add custom buttons to the page container layout.
@@ -91,7 +157,9 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainW
         m_launchButton->setPopupMode(QToolButton::MenuButtonPopup);
         m_launchButton->setMinimumWidth(80);  // HACK!!
         horizontalLayout->addWidget(m_launchButton);
-        connect(m_launchButton, &QPushButton::clicked, this, [this] { APPLICATION->launch(m_instance); });
+        connect(m_launchButton, &QPushButton::clicked, this, [this] {
+            if (!m_embedded || saveAll()) APPLICATION->launch(m_instance);
+        });
 
         m_killButton = new QPushButton(this);
         m_killButton->setText(tr("&Kill"));
@@ -105,7 +173,10 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainW
         m_closeButton = new QPushButton(this);
         m_closeButton->setText(tr("Close"));
         horizontalLayout->addWidget(m_closeButton);
-        connect(m_closeButton, &QPushButton::clicked, this, &QMainWindow::close);
+        connect(m_closeButton, &QPushButton::clicked, this, [this] {
+            if (m_embedded) emit backRequested();
+            else close();
+        });
 
         m_container->addButtons(horizontalLayout);
 
@@ -114,7 +185,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainW
     }
 
     // restore window state
-    {
+    if (!m_embedded) {
         auto base64State = APPLICATION->settings()->get("ConsoleWindowState").toString().toUtf8();
         restoreState(QByteArray::fromBase64(base64State));
         auto base64Geometry = APPLICATION->settings()->get("ConsoleWindowGeometry").toString().toUtf8();
@@ -139,7 +210,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent) : QMainW
         static_cast<ManagedPackPage*>(m_container->getPage("managed_pack"))->setInstanceWindow(this);
     }
 
-    show();
+    if (!m_embedded) show();
 }
 
 void InstanceWindow::on_instanceStatusChanged(BaseInstance::Status, BaseInstance::Status newStatus)
@@ -154,6 +225,21 @@ void InstanceWindow::updateButtons()
 {
     m_launchButton->setEnabled(m_instance->canLaunch());
     m_killButton->setEnabled(m_instance->isRunning());
+    if (m_embedded) {
+        const bool running = m_instance->isRunning();
+        m_launchButton->setVisible(!running);
+        m_launchButton->setText(tr("Play"));
+        m_launchButton->setIcon(QIcon(":/pxl/icons/play.svg"));
+        m_launchButton->setProperty("pxlPrimary", true);
+        m_killButton->setVisible(running);
+        m_killButton->setText(tr("Stop"));
+        m_killButton->setIcon(QIcon(":/pxl/icons/stop.svg"));
+        m_killButton->setProperty("pxlStop", true);
+        for (auto* button : {static_cast<QWidget*>(m_launchButton), static_cast<QWidget*>(m_killButton)}) {
+            button->style()->unpolish(button);
+            button->style()->polish(button);
+        }
+    }
 
     QMenu* launchMenu = m_launchButton->menu();
     if (launchMenu)
@@ -181,23 +267,52 @@ void InstanceWindow::runningStateChanged(bool running)
 void InstanceWindow::closeEvent(QCloseEvent* event)
 {
     bool proceed = true;
+    if (m_contentBrowser && !m_contentBrowser->prepareToLeave()) {
+        event->ignore();
+        return;
+    }
     if (!m_doNotSave) {
         proceed &= m_container->prepareToClose();
     }
 
     if (!proceed) {
+        event->ignore();
         return;
     }
 
-    APPLICATION->settings()->set("ConsoleWindowState", QString::fromUtf8(saveState().toBase64()));
-    APPLICATION->settings()->set("ConsoleWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    if (!m_embedded) {
+        APPLICATION->settings()->set("ConsoleWindowState", QString::fromUtf8(saveState().toBase64()));
+        APPLICATION->settings()->set("ConsoleWindowGeometry", QString::fromUtf8(saveGeometry().toBase64()));
+    }
     emit isClosing();
     event->accept();
 }
 
 bool InstanceWindow::saveAll()
 {
-    return m_container->saveAll();
+    if (m_contentBrowser && !m_contentBrowser->prepareToLeave()) return false;
+    return m_doNotSave || m_container->saveAll();
+}
+
+void InstanceWindow::browseContent(const QString& category)
+{
+    auto* instance = dynamic_cast<MinecraftInstance*>(m_instance);
+    if (!m_embedded || !instance || !m_editorStack) return;
+    if (!m_contentBrowser) {
+        m_contentBrowser = new ContentBrowser(instance, m_editorStack);
+        m_editorStack->addWidget(m_contentBrowser);
+        connect(m_contentBrowser, &ContentBrowser::installedContentRequested, this, [this] { m_editorStack->setCurrentIndex(0); });
+        connect(m_contentBrowser, &ContentBrowser::setupRequested, this, [this] {
+            m_editorStack->setCurrentIndex(0);
+            selectPage("version");
+        });
+        connect(m_contentBrowser, &ContentBrowser::worldsRequested, this, [this] {
+            m_editorStack->setCurrentIndex(0);
+            selectPage("worlds");
+        });
+    }
+    if (!m_contentBrowser->browse(category)) return;
+    m_editorStack->setCurrentWidget(m_contentBrowser);
 }
 
 QString InstanceWindow::instanceId()
@@ -207,7 +322,9 @@ QString InstanceWindow::instanceId()
 
 bool InstanceWindow::selectPage(QString pageId)
 {
-    return m_container->selectPage(pageId);
+    const bool selected = m_container->selectPage(pageId);
+    if (m_embedded && selectedPage()) updateEditorNavigation(selectedPage()->id());
+    return selected;
 }
 
 void InstanceWindow::refreshContainer()
@@ -222,9 +339,31 @@ BasePage* InstanceWindow::selectedPage() const
 
 bool InstanceWindow::requestClose()
 {
+    if (m_embedded) {
+        if (!saveAll()) return false;
+        emit backRequested();
+        return true;
+    }
     if (m_container->prepareToClose()) {
         close();
         return true;
     }
     return false;
+}
+
+void InstanceWindow::updateEditorNavigation(const QString& page)
+{
+    if (!m_embedded) return;
+    bool common = false;
+    for (auto* button : m_editorTabs) {
+        const bool selected = button->property("pxlPage").toString() == page;
+        button->setChecked(selected);
+        common |= selected && page != "version";
+    }
+    const bool content = page == "mods" || page == "resourcepacks" || page == "texturepacks" || page == "shaderpacks";
+    m_browseContent->setVisible(content);
+    m_addContent->setVisible(content);
+    m_container->setPageListVisible(!common);
+    m_container->setPageHeadingVisible(!common);
+    if (!common && !m_editorTabs.isEmpty()) m_editorTabs.last()->setChecked(true);
 }

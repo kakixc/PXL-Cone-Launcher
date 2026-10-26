@@ -48,6 +48,8 @@ class PageContainer;
 class QDialogButtonBox;
 class ImportPage;
 class FlamePage;
+class QLabel;
+class QPushButton;
 
 class NewInstanceDialog : public QDialog, public BasePageProvider {
     Q_OBJECT
@@ -58,6 +60,7 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
                                const QMap<QString, QString>& extra_info = {},
                                QWidget* parent = 0);
     ~NewInstanceDialog();
+    int execInParent(QWidget* surface);
 
     void updateDialogState();
 
@@ -84,10 +87,21 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     void on_instNameTextBox_textChanged(const QString& arg1);
     void selectedPageChanged(BasePage* previous, BasePage* selected);
 
+   protected:
+    void paintEvent(QPaintEvent* event) override;
+
    private:
     Ui::NewInstanceDialog* ui = nullptr;
     PageContainer* m_container = nullptr;
     QDialogButtonBox* m_buttons = nullptr;
+    QWidget* m_identity = nullptr;
+    QWidget* m_choices = nullptr;
+    QPushButton* m_back = nullptr;
+    QPushButton* m_create = nullptr;
+    QLabel* m_hint = nullptr;
+    bool m_overlay = false;
+    void chooseSource(const QString& page);
+    void showSourceChoices();
 
     QString InstIconKey;
     ImportPage* importPage = nullptr;

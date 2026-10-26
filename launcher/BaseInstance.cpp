@@ -314,6 +314,16 @@ int64_t BaseInstance::totalTimePlayed() const
     return current;
 }
 
+bool BaseInstance::isGameTimeShown() const
+{
+    return m_settings->get("ShowGameTime").toBool();
+}
+
+bool BaseInstance::isGameTimeRecordingEnabled() const
+{
+    return m_settings->get("RecordGameTime").toBool();
+}
+
 int64_t BaseInstance::lastTimePlayed() const
 {
     if (m_isRunning) {

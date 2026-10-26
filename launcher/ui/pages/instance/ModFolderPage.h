@@ -62,11 +62,11 @@ class ModFolderPage : public ExternalResourcesPage {
 
    public slots:
     void updateFrame(const QModelIndex& current, const QModelIndex& previous) override;
+    void downloadMods();
 
    private slots:
     void removeItems(const QItemSelection& selection) override;
 
-    void downloadMods();
     void downloadDialogFinished(int result);
     void updateMods(bool includeDeps = false);
     void deleteModMetadata();

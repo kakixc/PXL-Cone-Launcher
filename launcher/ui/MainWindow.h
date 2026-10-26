@@ -44,6 +44,7 @@
 
 #include <QMainWindow>
 #include <QProcess>
+#include <QPointer>
 #include <QTimer>
 
 #include "BaseInstance.h"
@@ -54,6 +55,7 @@ class NewsChecker;
 class QToolButton;
 class InstanceProxyModel;
 class LabeledToolButton;
+class PageDialog;
 class QLabel;
 class MinecraftLauncher;
 class BaseProfilerFactory;
@@ -61,6 +63,7 @@ class InstanceView;
 class KonamiCode;
 class InstanceTask;
 class WorkspacePage;
+class InstanceWindow;
 class QStackedWidget;
 class LabeledToolButton;
 
@@ -72,6 +75,8 @@ class MainWindow : public QMainWindow {
 
    public:
     explicit MainWindow(QWidget* parent = 0);
+    void showWorkspace();
+    bool openWorkspaceSettings(const QString& page = {});
     ~MainWindow();
 
     bool eventFilter(QObject* obj, QEvent* ev) override;
@@ -233,6 +238,7 @@ class MainWindow : public QMainWindow {
 
     void runModalTask(Task* task);
     void instanceFromInstanceTask(InstanceTask* task);
+    void openWorkspaceInstance(const QString& id, bool browseMods = false);
 
    private:
     Ui::MainWindow* ui;
@@ -240,6 +246,8 @@ class MainWindow : public QMainWindow {
     InstanceView* view = nullptr;
     WorkspacePage* m_workspacePage = nullptr;
     QStackedWidget* m_workspaceViews = nullptr;
+    QPointer<InstanceWindow> m_embeddedInstance;
+    QPointer<PageDialog> m_embeddedSettings;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;

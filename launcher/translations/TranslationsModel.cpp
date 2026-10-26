@@ -53,6 +53,11 @@
 
 static constexpr QLatin1String g_defaultLangCode("en_US");
 
+static void initializePxlTranslationResources()
+{
+    Q_INIT_RESOURCE(fonts);
+}
+
 namespace {
 enum class FileType : std::uint8_t { None, Qm, Po };
 
@@ -158,11 +163,12 @@ struct TranslationsModel::Private {
     QDir m_dir;
 
     // initial state is just english
-    QList<Language> m_languages = { Language(g_defaultLangCode) };
+    QList<Language> m_languages = { Language(g_defaultLangCode), Language(QStringLiteral("ru")) };
 
     QString m_selectedLanguage = g_defaultLangCode;
     std::unique_ptr<QTranslator> m_qtTranslator;
     std::unique_ptr<QTranslator> m_appTranslator;
+    std::unique_ptr<POTranslator> m_pxlTranslator;
 
     Net::Download* m_indexTask = nullptr;
     QString m_downloadingTranslation;
@@ -177,6 +183,7 @@ struct TranslationsModel::Private {
 
 TranslationsModel::TranslationsModel(const QString& path, QObject* parent) : QAbstractListModel(parent)
 {
+    initializePxlTranslationResources();
     d = std::make_unique<Private>();
     d->m_dir.setPath(path);
     d->m_selectedLanguage = APPLICATION->settings()->get("Language").toString();
@@ -264,7 +271,8 @@ void readIndex(const QString& path, QMap<QString, Language>& languages)
 
 void TranslationsModel::reloadLocalFiles()
 {
-    QMap<QString, Language> languages = { { g_defaultLangCode, Language(g_defaultLangCode) } };
+    QMap<QString, Language> languages = { { g_defaultLangCode, Language(g_defaultLangCode) },
+                                        { QStringLiteral("ru"), Language(QStringLiteral("ru")) } };
 
     const auto indexPath = d->m_dir.absoluteFilePath("index_v2.json");
     if (!QFileInfo::exists(indexPath)) {
@@ -301,6 +309,12 @@ void TranslationsModel::reloadLocalFiles()
                 languages.insert(langCode, localFound);
             }
         }
+    }
+
+    // Only these languages include the PXL-specific interface strings.
+    for (auto it = languages.begin(); it != languages.end();) {
+        if (it.key() != g_defaultLangCode && it.key() != QStringLiteral("ru")) it = languages.erase(it);
+        else ++it;
     }
 
     // changed and removed languages
@@ -373,6 +387,7 @@ QVariant TranslationsModel::data(const QModelIndex& index, const int role) const
                     return lang.languageName();
                 }
                 case Column::Completeness: {
+                    if (lang.key == g_defaultLangCode) return QStringLiteral("100%");
                     return QString("%1%").arg(lang.percentTranslated(), 3, 'f', 1);
                 }
             }
@@ -446,6 +461,7 @@ void TranslationsModel::setUseSystemLocale(const bool useSystemLocale) const
 
 bool TranslationsModel::selectLanguage(QString key) const
 {
+    if (key == "ru_RU") key = "ru";
     QString& langCode = key;
     auto langPtr = findLanguageAsOptional(key);
 
@@ -461,6 +477,10 @@ bool TranslationsModel::selectLanguage(QString key) const
     }
 
     // uninstall existing translators if there are any
+    if (d->m_pxlTranslator) {
+        QCoreApplication::removeTranslator(d->m_pxlTranslator.get());
+        d->m_pxlTranslator.reset();
+    }
     if (d->m_appTranslator) {
         QCoreApplication::removeTranslator(d->m_appTranslator.get());
         d->m_appTranslator.reset();
@@ -530,6 +550,18 @@ bool TranslationsModel::selectLanguage(QString key) const
     } else {
         d->m_appTranslator.reset();
     }
+    if (langCode == "ru") {
+        if (!d->m_appTranslator) {
+            auto bundled = std::make_unique<QTranslator>();
+            if (bundled->load(":/pxl/translations/ru.qm") && QCoreApplication::installTranslator(bundled.get())) {
+                d->m_appTranslator = std::move(bundled);
+                successful = true;
+            }
+        }
+        d->m_pxlTranslator = std::make_unique<POTranslator>(":/pxl/translations/pxl-ru.po");
+        if (!d->m_pxlTranslator->isEmpty())
+            successful = QCoreApplication::installTranslator(d->m_pxlTranslator.get()) || successful;
+    }
     d->m_selectedLanguage = langCode;
     return successful;
 }
@@ -577,7 +609,7 @@ void TranslationsModel::updateLanguage(const QString& key)
         qWarning() << "Cannot update invalid language" << key;
         return;
     }
-    if (!found->updated) {
+    if (!found->updated && !found->fileName.isEmpty()) {
         downloadTranslation(key);
     }
 }

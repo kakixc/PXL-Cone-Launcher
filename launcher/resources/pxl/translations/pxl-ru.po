@@ -1,0 +1,1737 @@
+# PXL Cone Russian UI additions. SPDX-License-Identifier: GPL-3.0-only
+
+msgctxt "AppearanceWidget"
+msgid "Image (blurred)"
+msgstr "Изображение с размытием"
+
+msgctxt "AppearanceWidget"
+msgid "Side"
+msgstr "Сбоку"
+
+msgctxt "AppearanceWidget"
+msgid "Solid color"
+msgstr "Однотонный"
+
+msgctxt "AppearanceWidget"
+msgid "Top"
+msgstr "Сверху"
+
+msgctxt "ConeTheme"
+msgid "Cone"
+msgstr "PXL Cone"
+
+msgctxt "ConeTheme"
+msgid "The standard PXL Cone appearance."
+msgstr "Основное оформление PXL Cone."
+
+msgctxt "MainWindow"
+msgid "Accounts"
+msgstr "Учётные записи"
+
+msgctxt "MainWindow"
+msgid "Home / Library"
+msgstr "Главная / Библиотека"
+
+msgctxt "MainWindow"
+msgid "Import PXL pack / launcher…"
+msgstr "Импорт сборки PXL или лаунчера…"
+
+msgctxt "MainWindow"
+msgid "Share / transfer PXL setup…"
+msgstr "Поделиться или перенести сборки…"
+
+msgctxt "NewInstanceDialog"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "NewInstanceDialog"
+msgid "Choose a Minecraft version and loader, or install a ready-made modpack."
+msgstr "Выберите версию Minecraft и загрузчик или установите готовую сборку."
+
+msgctxt "NewInstanceDialog"
+msgid "Create an instance"
+msgstr "Создать сборку"
+
+msgctxt "NewInstanceDialog"
+msgid "Create instance"
+msgstr "Создать сборку"
+
+msgctxt "ProgressDialog"
+msgid "Downloads & tasks"
+msgstr "Загрузки и задачи"
+
+msgctxt "ProgressDialog"
+msgid "Hide details"
+msgstr "Скрыть подробности"
+
+msgctxt "ProgressDialog"
+msgid "Show details"
+msgstr "Показать подробности"
+
+msgctxt "ProgressDialog"
+msgid "Working…"
+msgstr "Выполняется…"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Archive or launcher directory"
+msgstr "Архив или папка лаунчера"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Content storage"
+msgstr "Хранение контента"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Detected launchers"
+msgstr "Найденные лаунчеры"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Detected launchers — choose to preview"
+msgstr "Найденные лаунчеры — выберите для просмотра"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Export purpose"
+msgstr "Назначение экспорта"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Export selected…"
+msgstr "Экспортировать выбранное…"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Import content preview"
+msgstr "Просмотр импортируемого контента"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Import selected"
+msgstr "Импортировать выбранное"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Import your Minecraft setup"
+msgstr "Импорт окружения Minecraft"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Include screenshots"
+msgstr "Включить снимки экрана"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Include worlds"
+msgstr "Включить миры"
+
+msgctxt "Pxl::TransferDialog"
+msgid "included"
+msgstr "включено"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Instances to import or export"
+msgstr "Сборки для импорта или экспорта"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Launcher folder…"
+msgstr "Папка лаунчера…"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Move instances to another computer (.pxlt)"
+msgstr "Перенести сборки на другой компьютер (.pxlt)"
+
+msgctxt "Pxl::TransferDialog"
+msgid "none found"
+msgstr "не найдены"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Offline — include selected content files"
+msgstr "Автономный — включить выбранные файлы контента"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Open pack…"
+msgstr "Открыть сборку…"
+
+msgctxt "Pxl::TransferDialog"
+msgid "present"
+msgstr "есть"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Press Enter or choose a source to load a new preview."
+msgstr "Нажмите Enter или выберите источник для загрузки предварительного просмотра."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Restore a PXL pack or copy instances from Prism / Pinecone."
+msgstr "Восстановите пакет PXL или скопируйте сборки из Prism / Pinecone."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Select an archive or a launcher directory"
+msgstr "Выберите архив или папку лаунчера"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Send one pack to a friend (.pxlconep)"
+msgstr "Отправить сборку другу (.pxlconep)"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Share one pack with a friend, or move several instances to another computer."
+msgstr "Поделитесь сборкой с другом или перенесите несколько сборок на другой компьютер."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Share or transfer your Minecraft setup"
+msgstr "Публикация или перенос окружения Minecraft"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Small — download exact known content on restore"
+msgstr "Компактный — скачать известный контент при восстановлении"
+
+msgctxt "Pxl::TransferDialog"
+msgid "unknown version"
+msgstr "неизвестная версия"
+
+msgctxt "Pxl::TransferDialog"
+msgid "View selected content…"
+msgstr "Показать выбранный контент…"
+
+msgctxt "QObject"
+msgid "%1 instances"
+msgstr "Сборок: %1"
+
+msgctxt "QObject"
+msgid "%1 of %2"
+msgstr "%1 из %2"
+
+msgctxt "QObject"
+msgid "%1, %2"
+msgstr "%1, %2"
+
+msgctxt "QObject"
+msgid "%1, %2, %3"
+msgstr "%1, %2, %3"
+
+msgctxt "QObject"
+msgid "1 instance"
+msgstr "1 сборка"
+
+msgctxt "QObject"
+msgid "Accounts"
+msgstr "Учётные записи"
+
+msgctxt "QObject"
+msgid "Add another instance"
+msgstr "Добавьте ещё одну сборку"
+
+msgctxt "QObject"
+msgid "Advanced"
+msgstr "Расширенные функции"
+
+msgctxt "QObject"
+msgid "All groups"
+msgstr "Все группы"
+
+msgctxt "QObject"
+msgid "Cat"
+msgstr "Кот"
+
+msgctxt "QObject"
+msgid "Classic view and advanced tools"
+msgstr "Классический вид и расширенные функции"
+
+msgctxt "QObject"
+msgid "Configure"
+msgstr "Управление"
+
+msgctxt "QObject"
+msgid "Create an instance or import your Minecraft setup."
+msgstr "Создайте сборку или импортируйте своё окружение Minecraft."
+
+msgctxt "QObject"
+msgid "Enter to open · Ctrl+Enter to play"
+msgstr "Enter — управление · Ctrl+Enter — играть"
+
+msgctxt "QObject"
+msgid "Filter by group"
+msgstr "Фильтр по группе"
+
+msgctxt "QObject"
+msgid "Home"
+msgstr "Главная"
+
+msgctxt "QObject"
+msgid "Import"
+msgstr "Импорт"
+
+msgctxt "QObject"
+msgid "Import packs or another launcher"
+msgstr "Импорт сборок или другого лаунчера"
+
+msgctxt "QObject"
+msgid "Instances. Enter opens settings, Ctrl+Enter plays."
+msgstr "Сборки. Enter — управление, Ctrl+Enter — запуск."
+
+msgctxt "QObject"
+msgid "Last played"
+msgstr "Последний запуск"
+
+msgctxt "QObject"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "QObject"
+msgid "Minecraft"
+msgstr "Minecraft"
+
+msgctxt "QObject"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "QObject"
+msgid "Name"
+msgstr "Название"
+
+msgctxt "QObject"
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgctxt "QObject"
+msgid "New instance"
+msgstr "Новая сборка"
+
+msgctxt "QObject"
+msgid "No matching instances"
+msgstr "Сборки не найдены"
+
+msgctxt "QObject"
+msgid "Not played yet"
+msgstr "Ещё не запускалась"
+
+msgctxt "QObject"
+msgid "Other instances"
+msgstr "Другие сборки"
+
+msgctxt "QObject"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "QObject"
+msgid "Play instance"
+msgstr "Запустить сборку"
+
+msgctxt "QObject"
+msgid "Play last used instance"
+msgstr "Запустить последнюю сборку"
+
+msgctxt "QObject"
+msgid "Played %1 d ago"
+msgstr "Запускалась %1 дн назад"
+
+msgctxt "QObject"
+msgid "Played %1 h ago"
+msgstr "Запускалась %1 ч назад"
+
+msgctxt "QObject"
+msgid "Played %1 min ago"
+msgstr "Запускалась %1 мин назад"
+
+msgctxt "QObject"
+msgid "Played just now"
+msgstr "Только что запущена"
+
+msgctxt "QObject"
+msgid "ready"
+msgstr "готова"
+
+msgctxt "QObject"
+msgid "Recently played"
+msgstr "Недавние игры"
+
+msgctxt "QObject"
+msgid "Running"
+msgstr "запущена"
+
+msgctxt "QObject"
+msgid "Search instances"
+msgstr "Поиск сборок"
+
+msgctxt "QObject"
+msgid "Settings"
+msgstr "Настройки"
+
+msgctxt "QObject"
+msgid "Share or transfer instances"
+msgstr "Поделиться или перенести сборки"
+
+msgctxt "QObject"
+msgid "Sort instances"
+msgstr "Сортировка сборок"
+
+msgctxt "QObject"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "QObject"
+msgid "Stop instance"
+msgstr "Остановить сборку"
+
+msgctxt "QObject"
+msgid "Toggle cat"
+msgstr "Показать или скрыть кота"
+
+msgctxt "QObject"
+msgid "Your library starts here"
+msgstr "Здесь начинается ваша библиотека"
+
+msgctxt "QSortFilterProxyModel"
+msgid "%1 instances"
+msgstr "Сборок: %1"
+
+msgctxt "QSortFilterProxyModel"
+msgid "%1 of %2"
+msgstr "%1 из %2"
+
+msgctxt "QSortFilterProxyModel"
+msgid "%1, %2"
+msgstr "%1, %2"
+
+msgctxt "QSortFilterProxyModel"
+msgid "%1, %2, %3"
+msgstr "%1, %2, %3"
+
+msgctxt "QSortFilterProxyModel"
+msgid "1 instance"
+msgstr "1 сборка"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Accounts"
+msgstr "Учётные записи"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Add another instance"
+msgstr "Добавьте ещё одну сборку"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Advanced"
+msgstr "Расширенные функции"
+
+msgctxt "QSortFilterProxyModel"
+msgid "All groups"
+msgstr "Все группы"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Cat"
+msgstr "Кот"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Classic view and advanced tools"
+msgstr "Классический вид и расширенные функции"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Configure"
+msgstr "Управление"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Create an instance or import your Minecraft setup."
+msgstr "Создайте сборку или импортируйте своё окружение Minecraft."
+
+msgctxt "QSortFilterProxyModel"
+msgid "Enter to open · Ctrl+Enter to play"
+msgstr "Enter — управление · Ctrl+Enter — играть"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Filter by group"
+msgstr "Фильтр по группе"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Home"
+msgstr "Главная"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Import"
+msgstr "Импорт"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Import packs or another launcher"
+msgstr "Импорт сборок или другого лаунчера"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Instances. Enter opens settings, Ctrl+Enter plays."
+msgstr "Сборки. Enter — управление, Ctrl+Enter — запуск."
+
+msgctxt "QSortFilterProxyModel"
+msgid "Last played"
+msgstr "Последний запуск"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Minecraft"
+msgstr "Minecraft"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Name"
+msgstr "Название"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgctxt "QSortFilterProxyModel"
+msgid "New instance"
+msgstr "Новая сборка"
+
+msgctxt "QSortFilterProxyModel"
+msgid "No matching instances"
+msgstr "Сборки не найдены"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Not played yet"
+msgstr "Ещё не запускалась"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Other instances"
+msgstr "Другие сборки"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Play instance"
+msgstr "Запустить сборку"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Play last used instance"
+msgstr "Запустить последнюю сборку"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Played %1 d ago"
+msgstr "Запускалась %1 дн назад"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Played %1 h ago"
+msgstr "Запускалась %1 ч назад"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Played %1 min ago"
+msgstr "Запускалась %1 мин назад"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Played just now"
+msgstr "Только что запущена"
+
+msgctxt "QSortFilterProxyModel"
+msgid "ready"
+msgstr "готова"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Recently played"
+msgstr "Недавние игры"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Running"
+msgstr "запущена"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Search instances"
+msgstr "Поиск сборок"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Settings"
+msgstr "Настройки"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Share or transfer instances"
+msgstr "Поделиться или перенести сборки"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Sort instances"
+msgstr "Сортировка сборок"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Stop instance"
+msgstr "Остановить сборку"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Toggle cat"
+msgstr "Показать или скрыть кота"
+
+msgctxt "QSortFilterProxyModel"
+msgid "Your library starts here"
+msgstr "Здесь начинается ваша библиотека"
+
+msgctxt "QStyledItemDelegate"
+msgid "%1 instances"
+msgstr "Сборок: %1"
+
+msgctxt "QStyledItemDelegate"
+msgid "%1 of %2"
+msgstr "%1 из %2"
+
+msgctxt "QStyledItemDelegate"
+msgid "%1, %2"
+msgstr "%1, %2"
+
+msgctxt "QStyledItemDelegate"
+msgid "%1, %2, %3"
+msgstr "%1, %2, %3"
+
+msgctxt "QStyledItemDelegate"
+msgid "1 instance"
+msgstr "1 сборка"
+
+msgctxt "QStyledItemDelegate"
+msgid "Accounts"
+msgstr "Учётные записи"
+
+msgctxt "QStyledItemDelegate"
+msgid "Add another instance"
+msgstr "Добавьте ещё одну сборку"
+
+msgctxt "QStyledItemDelegate"
+msgid "Advanced"
+msgstr "Расширенные функции"
+
+msgctxt "QStyledItemDelegate"
+msgid "All groups"
+msgstr "Все группы"
+
+msgctxt "QStyledItemDelegate"
+msgid "Cat"
+msgstr "Кот"
+
+msgctxt "QStyledItemDelegate"
+msgid "Classic view and advanced tools"
+msgstr "Классический вид и расширенные функции"
+
+msgctxt "QStyledItemDelegate"
+msgid "Configure"
+msgstr "Управление"
+
+msgctxt "QStyledItemDelegate"
+msgid "Create an instance or import your Minecraft setup."
+msgstr "Создайте сборку или импортируйте своё окружение Minecraft."
+
+msgctxt "QStyledItemDelegate"
+msgid "Enter to open · Ctrl+Enter to play"
+msgstr "Enter — управление · Ctrl+Enter — играть"
+
+msgctxt "QStyledItemDelegate"
+msgid "Filter by group"
+msgstr "Фильтр по группе"
+
+msgctxt "QStyledItemDelegate"
+msgid "Home"
+msgstr "Главная"
+
+msgctxt "QStyledItemDelegate"
+msgid "Import"
+msgstr "Импорт"
+
+msgctxt "QStyledItemDelegate"
+msgid "Import packs or another launcher"
+msgstr "Импорт сборок или другого лаунчера"
+
+msgctxt "QStyledItemDelegate"
+msgid "Instances. Enter opens settings, Ctrl+Enter plays."
+msgstr "Сборки. Enter — управление, Ctrl+Enter — запуск."
+
+msgctxt "QStyledItemDelegate"
+msgid "Last played"
+msgstr "Последний запуск"
+
+msgctxt "QStyledItemDelegate"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "QStyledItemDelegate"
+msgid "Minecraft"
+msgstr "Minecraft"
+
+msgctxt "QStyledItemDelegate"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "QStyledItemDelegate"
+msgid "Name"
+msgstr "Название"
+
+msgctxt "QStyledItemDelegate"
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgctxt "QStyledItemDelegate"
+msgid "New instance"
+msgstr "Новая сборка"
+
+msgctxt "QStyledItemDelegate"
+msgid "No matching instances"
+msgstr "Сборки не найдены"
+
+msgctxt "QStyledItemDelegate"
+msgid "Not played yet"
+msgstr "Ещё не запускалась"
+
+msgctxt "QStyledItemDelegate"
+msgid "Other instances"
+msgstr "Другие сборки"
+
+msgctxt "QStyledItemDelegate"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "QStyledItemDelegate"
+msgid "Play instance"
+msgstr "Запустить сборку"
+
+msgctxt "QStyledItemDelegate"
+msgid "Play last used instance"
+msgstr "Запустить последнюю сборку"
+
+msgctxt "QStyledItemDelegate"
+msgid "Played %1 d ago"
+msgstr "Запускалась %1 дн назад"
+
+msgctxt "QStyledItemDelegate"
+msgid "Played %1 h ago"
+msgstr "Запускалась %1 ч назад"
+
+msgctxt "QStyledItemDelegate"
+msgid "Played %1 min ago"
+msgstr "Запускалась %1 мин назад"
+
+msgctxt "QStyledItemDelegate"
+msgid "Played just now"
+msgstr "Только что запущена"
+
+msgctxt "QStyledItemDelegate"
+msgid "ready"
+msgstr "готова"
+
+msgctxt "QStyledItemDelegate"
+msgid "Recently played"
+msgstr "Недавние игры"
+
+msgctxt "QStyledItemDelegate"
+msgid "Running"
+msgstr "запущена"
+
+msgctxt "QStyledItemDelegate"
+msgid "Search instances"
+msgstr "Поиск сборок"
+
+msgctxt "QStyledItemDelegate"
+msgid "Settings"
+msgstr "Настройки"
+
+msgctxt "QStyledItemDelegate"
+msgid "Share or transfer instances"
+msgstr "Поделиться или перенести сборки"
+
+msgctxt "QStyledItemDelegate"
+msgid "Sort instances"
+msgstr "Сортировка сборок"
+
+msgctxt "QStyledItemDelegate"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "QStyledItemDelegate"
+msgid "Stop instance"
+msgstr "Остановить сборку"
+
+msgctxt "QStyledItemDelegate"
+msgid "Toggle cat"
+msgstr "Показать или скрыть кота"
+
+msgctxt "QStyledItemDelegate"
+msgid "Your library starts here"
+msgstr "Здесь начинается ваша библиотека"
+
+msgctxt "ResourceDownload::ResourceDownloadDialog"
+msgid "Browse %1"
+msgstr "Каталог: %1"
+
+msgctxt "ResourceDownload::ResourceDownloadDialog"
+msgid "Choose a provider, find compatible content and review your selection before installing."
+msgstr "Выберите источник, найдите совместимый контент и проверьте список перед установкой."
+
+msgctxt "ResourceDownload::ResourceDownloadDialog"
+msgid "Review and confirm"
+msgstr "Проверить и подтвердить"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Search content"
+msgstr "Поиск контента"
+
+msgctxt "WorkspacePage"
+msgid "%1 instances"
+msgstr "Сборок: %1"
+
+msgctxt "WorkspacePage"
+msgid "%1 of %2"
+msgstr "%1 из %2"
+
+msgctxt "WorkspacePage"
+msgid "%1, %2"
+msgstr "%1, %2"
+
+msgctxt "WorkspacePage"
+msgid "%1, %2, %3"
+msgstr "%1, %2, %3"
+
+msgctxt "WorkspacePage"
+msgid "1 instance"
+msgstr "1 сборка"
+
+msgctxt "WorkspacePage"
+msgid "Accounts"
+msgstr "Учётные записи"
+
+msgctxt "WorkspacePage"
+msgid "Add another instance"
+msgstr "Добавьте ещё одну сборку"
+
+msgctxt "WorkspacePage"
+msgid "Advanced"
+msgstr "Расширенные функции"
+
+msgctxt "WorkspacePage"
+msgid "All groups"
+msgstr "Все группы"
+
+msgctxt "WorkspacePage"
+msgid "Cat"
+msgstr "Кот"
+
+msgctxt "WorkspacePage"
+msgid "Classic view and advanced tools"
+msgstr "Классический вид и расширенные функции"
+
+msgctxt "WorkspacePage"
+msgid "Configure"
+msgstr "Управление"
+
+msgctxt "WorkspacePage"
+msgid "Create an instance or import your Minecraft setup."
+msgstr "Создайте сборку или импортируйте своё окружение Minecraft."
+
+msgctxt "WorkspacePage"
+msgid "Enter to open · Ctrl+Enter to play"
+msgstr "Enter — управление · Ctrl+Enter — играть"
+
+msgctxt "WorkspacePage"
+msgid "Filter by group"
+msgstr "Фильтр по группе"
+
+msgctxt "WorkspacePage"
+msgid "Home"
+msgstr "Главная"
+
+msgctxt "WorkspacePage"
+msgid "Import"
+msgstr "Импорт"
+
+msgctxt "WorkspacePage"
+msgid "Import packs or another launcher"
+msgstr "Импорт сборок или другого лаунчера"
+
+msgctxt "WorkspacePage"
+msgid "Instances. Enter opens settings, Ctrl+Enter plays."
+msgstr "Сборки. Enter — управление, Ctrl+Enter — запуск."
+
+msgctxt "WorkspacePage"
+msgid "Last played"
+msgstr "Последний запуск"
+
+msgctxt "WorkspacePage"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "WorkspacePage"
+msgid "Minecraft"
+msgstr "Minecraft"
+
+msgctxt "WorkspacePage"
+msgid "Minecraft %1"
+msgstr "Minecraft %1"
+
+msgctxt "WorkspacePage"
+msgid "Name"
+msgstr "Название"
+
+msgctxt "WorkspacePage"
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgctxt "WorkspacePage"
+msgid "New instance"
+msgstr "Новая сборка"
+
+msgctxt "WorkspacePage"
+msgid "No matching instances"
+msgstr "Сборки не найдены"
+
+msgctxt "WorkspacePage"
+msgid "Not played yet"
+msgstr "Ещё не запускалась"
+
+msgctxt "WorkspacePage"
+msgid "Other instances"
+msgstr "Другие сборки"
+
+msgctxt "WorkspacePage"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "WorkspacePage"
+msgid "Play instance"
+msgstr "Запустить сборку"
+
+msgctxt "WorkspacePage"
+msgid "Play last used instance"
+msgstr "Запустить последнюю сборку"
+
+msgctxt "WorkspacePage"
+msgid "Played %1 d ago"
+msgstr "Запускалась %1 дн назад"
+
+msgctxt "WorkspacePage"
+msgid "Played %1 h ago"
+msgstr "Запускалась %1 ч назад"
+
+msgctxt "WorkspacePage"
+msgid "Played %1 min ago"
+msgstr "Запускалась %1 мин назад"
+
+msgctxt "WorkspacePage"
+msgid "Played just now"
+msgstr "Только что запущена"
+
+msgctxt "WorkspacePage"
+msgid "ready"
+msgstr "готова"
+
+msgctxt "WorkspacePage"
+msgid "Recently played"
+msgstr "Недавние игры"
+
+msgctxt "WorkspacePage"
+msgid "Running"
+msgstr "запущена"
+
+msgctxt "WorkspacePage"
+msgid "Search instances"
+msgstr "Поиск сборок"
+
+msgctxt "WorkspacePage"
+msgid "Settings"
+msgstr "Настройки"
+
+msgctxt "WorkspacePage"
+msgid "Share or transfer instances"
+msgstr "Поделиться или перенести сборки"
+
+msgctxt "WorkspacePage"
+msgid "Sort instances"
+msgstr "Сортировка сборок"
+
+msgctxt "WorkspacePage"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "WorkspacePage"
+msgid "Stop instance"
+msgstr "Остановить сборку"
+
+msgctxt "WorkspacePage"
+msgid "Toggle cat"
+msgstr "Показать или скрыть кота"
+
+msgctxt "WorkspacePage"
+msgid "Your library starts here"
+msgstr "Здесь начинается ваша библиотека"
+
+msgctxt "WorkspacePage"
+msgid "Browse mods"
+msgstr "Найти моды"
+
+msgctxt "Pxl::TransferDialog"
+msgid " — running; stop before exporting"
+msgstr " — запущена; остановите перед экспортом"
+
+msgctxt "Pxl::TransferDialog"
+msgid " — unsupported or unreadable instance"
+msgstr " — неподдерживаемая или недоступная сборка"
+
+msgctxt "Pxl::TransferDialog"
+msgid " Select one instance for a pack, or choose a transfer for multiple instances."
+msgstr " Выберите одну сборку для пакета или режим переноса нескольких сборок."
+
+msgctxt "Pxl::TransferDialog"
+msgid "\n%1 bundled files · %2 exact downloads · %3 MiB installed content."
+msgstr "\nФайлов в архиве: %1 · точных загрузок: %2 · объём контента: %3 МиБ."
+
+msgctxt "Pxl::TransferDialog"
+msgid "\nThe next step chooses the archive destination; exports do not change your instances."
+msgstr "\nНа следующем шаге выберите путь архива. Экспорт не изменяет ваши сборки."
+
+msgctxt "Pxl::TransferDialog"
+msgid "\nUse “View selected content” to inspect the complete file list."
+msgstr "\nНажмите «Показать выбранный контент», чтобы увидеть полный список файлов."
+
+msgctxt "Pxl::TransferDialog"
+msgid "%1 — %2 — %3 bytes"
+msgstr "%1 — %2 — %3 байт"
+
+msgctxt "Pxl::TransferDialog"
+msgid "%n instance(s) selected."
+msgstr "Выбрано сборок: %n"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Archive ready"
+msgstr "Архив готов"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Cancelled"
+msgstr "Отменено"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Cannot read import"
+msgstr "Не удалось прочитать источник"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Choose Prism / Pinecone data or instances folder"
+msgstr "Выберите папку данных или сборок Prism / Pinecone"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Copy local content from: %1\nWorlds: %2\nScreenshots: %3"
+msgstr "Копирование локального контента из: %1\nМиры: %2\nСнимки экрана: %3"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Creating Minecraft archive"
+msgstr "Создание архива Minecraft"
+
+msgctxt "Pxl::TransferDialog"
+msgid "download %1 / %2"
+msgstr "скачать %1 / %2"
+
+msgctxt "Pxl::TransferDialog"
+msgid "exact download"
+msgstr "точная загрузка"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Import results"
+msgstr "Результаты импорта"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Imported: %1"
+msgstr "Импортировано: %1"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Imports create new instances. Original files stay in place. Close games in the source launcher before copying. Sign in again in this launcher; account credentials and custom launch commands are not imported."
+msgstr "При импорте создаются новые сборки. Исходные файлы остаются на месте. Закройте игры в исходном лаунчере перед копированием. Войдите в аккаунт заново: данные входа и пользовательские команды запуска не импортируются."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Instance is running"
+msgstr "Сборка запущена"
+
+msgctxt "Pxl::TransferDialog"
+msgid "no worlds"
+msgstr "без миров"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Not imported: %1\n%2"
+msgstr "Не импортировано: %1\n%2"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Open PXL pack or transfer"
+msgstr "Открыть пакет или перенос PXL"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Reading import preview"
+msgstr "Подготовка предварительного просмотра"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Save archive"
+msgstr "Сохранить архив"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Saved to:\n%1"
+msgstr "Сохранено в:\n%1"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Stop Minecraft before exporting this instance."
+msgstr "Остановите Minecraft перед экспортом этой сборки."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Unknown local content is included. Worlds are private: include them only when intended. Minecraft, loaders and Java may still need downloading on the receiving computer."
+msgstr "Неизвестный локальный контент включается в архив. Миры могут содержать личные данные — включайте их осознанно. Minecraft, загрузчики и Java могут потребовать скачивания на принимающем компьютере."
+
+msgctxt "Pxl::TransferDialog"
+msgid "worlds included"
+msgstr "с мирами"
+
+msgctxt "CustomPage"
+msgid "Minecraft version"
+msgstr "Версия Minecraft"
+
+msgctxt "CustomPage"
+msgid "Version filters"
+msgstr "Фильтры версий"
+
+msgctxt "CustomPage"
+msgid "Loader"
+msgstr "Загрузчик"
+
+msgctxt "CustomPage"
+msgid "Loader version"
+msgstr "Версия загрузчика"
+
+msgctxt "CustomPage"
+msgid "Vanilla"
+msgstr "Vanilla"
+
+msgctxt "CustomPage"
+msgid "OptiFine standalone: manual installation"
+msgstr "OptiFine — ручная установка"
+
+msgctxt "CustomPage"
+msgid "Create Vanilla, then add an extracted OptiFine jar mod from the Version page. Steps depend on the OptiFine version."
+msgstr "Создайте Vanilla, затем добавьте извлечённый jar-мод OptiFine на странице версий. Порядок действий зависит от версии OptiFine."
+
+msgctxt "MainWindow"
+msgid "Create instance: %1"
+msgstr "Создание сборки: %1"
+
+msgctxt "NewInstanceDialog"
+msgid "From scratch"
+msgstr "С нуля"
+
+msgctxt "NewInstanceDialog"
+msgid "Ready-made pack"
+msgstr "Готовая сборка"
+
+msgctxt "NewInstanceDialog"
+msgid "New Instance"
+msgstr "Новая сборка"
+
+msgctxt "ProgressDialog"
+msgid "View all tasks"
+msgstr "Показать все задачи"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Downloads & tasks"
+msgstr "Загрузки и задачи"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Task"
+msgstr "Задача"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Task interrupted"
+msgstr "Задача прервана"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Clear completed"
+msgstr "Очистить завершённые"
+
+msgctxt "Pxl::TaskHistory"
+msgid "No tasks yet. Downloads and installations will appear here."
+msgstr "Задач пока нет. Здесь будут показаны загрузки и установки."
+
+msgctxt "Pxl::TaskHistory"
+msgid "Details"
+msgstr "Подробности"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Complete"
+msgstr "Завершено"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Cancelled"
+msgstr "Отменено"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Failed"
+msgstr "Ошибка"
+
+msgctxt "Pxl::TaskHistory"
+msgid "Waiting"
+msgstr "Ожидание"
+
+msgctxt "WorkspacePage"
+msgid "Downloads & tasks"
+msgstr "Загрузки и задачи"
+
+msgctxt "WorkspacePage"
+msgid "Share or transfer instances"
+msgstr "Поделиться или перенести сборки"
+
+msgctxt "WorkspacePage"
+msgid "Back"
+msgstr "Назад"
+
+msgctxt "InstanceWindow"
+msgid "Mods"
+msgstr "Моды"
+
+msgctxt "InstanceWindow"
+msgid "Resource packs"
+msgstr "Ресурспаки"
+
+msgctxt "InstanceWindow"
+msgid "Shaders"
+msgstr "Шейдеры"
+
+msgctxt "InstanceWindow"
+msgid "Worlds"
+msgstr "Миры"
+
+msgctxt "InstanceWindow"
+msgid "Logs"
+msgstr "Логи"
+
+msgctxt "InstanceWindow"
+msgid "Advanced"
+msgstr "Расширенные функции"
+
+msgctxt "InstanceWindow"
+msgid "Browse content"
+msgstr "Найти контент"
+
+msgctxt "InstanceWindow"
+msgid "Add files"
+msgstr "Добавить файлы"
+
+msgctxt "InstanceWindow"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "InstanceWindow"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "NewInstanceDialog"
+msgid "How would you like to create your instance?"
+msgstr "Как вы хотите создать сборку?"
+
+msgctxt "NewInstanceDialog"
+msgid "Choose Minecraft and a loader"
+msgstr "Выберите версию Minecraft и загрузчик"
+
+msgctxt "NewInstanceDialog"
+msgid "Browse modpacks"
+msgstr "Найти готовую сборку"
+
+msgctxt "NewInstanceDialog"
+msgid "Modrinth, CurseForge and other catalogs"
+msgstr "Modrinth, CurseForge и другие каталоги"
+
+msgctxt "NewInstanceDialog"
+msgid "Import a pack file"
+msgstr "Установить из файла"
+
+msgctxt "NewInstanceDialog"
+msgid "Install a local archive or a pack URL"
+msgstr "Выберите архив или вставьте ссылку на сборку"
+
+msgctxt "NewInstanceDialog"
+msgid "Import from another launcher"
+msgstr "Перенести из другого лаунчера"
+
+msgctxt "NewInstanceDialog"
+msgid "Bring your existing instances and worlds"
+msgstr "Импортируйте свои сборки и миры"
+
+msgctxt "NewInstanceDialog"
+msgid "Choose a Minecraft version and loader."
+msgstr "Выберите версию Minecraft и загрузчик."
+
+msgctxt "NewInstanceDialog"
+msgid "Choose a catalog and find your modpack."
+msgstr "Выберите каталог и найдите нужную сборку."
+
+msgctxt "NewInstanceDialog"
+msgid "Choose an archive or paste a pack URL."
+msgstr "Выберите архив или вставьте ссылку на сборку."
+
+msgctxt "NewInstanceDialog"
+msgid "Change icon"
+msgstr "Изменить иконку"
+
+msgctxt "NewInstanceDialog"
+msgid "Group (optional)"
+msgstr "Группа (необязательно)"
+
+msgctxt "NewInstanceDialog"
+msgid "Name"
+msgstr "Название"
+
+msgctxt "CustomPage"
+msgid "OptiFine installation guide"
+msgstr "Инструкция по установке OptiFine"
+
+msgctxt "NewInstanceDialog"
+msgid "Back"
+msgstr "Назад"
+
+msgctxt "CustomPage"
+msgid "More options"
+msgstr "Дополнительно"
+
+msgctxt "CustomPage"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "AppearanceWidget"
+msgid "Choose image…"
+msgstr "Выбрать картинку…"
+
+msgctxt "AppearanceWidget"
+msgid "Use default"
+msgstr "По умолчанию"
+
+msgctxt "AppearanceWidget"
+msgid "Built-in background"
+msgstr "Встроенный фон"
+
+msgctxt "AppearanceWidget"
+msgid "Choose a background image"
+msgstr "Выберите картинку для фона"
+
+msgctxt "AppearanceWidget"
+msgid "Images (*.png *.jpg *.jpeg *.webp *.bmp)"
+msgstr "Изображения (*.png *.jpg *.jpeg *.webp *.bmp)"
+
+msgctxt "AppearanceWidget"
+msgid "Background image"
+msgstr "Фоновое изображение"
+
+msgctxt "AppearanceWidget"
+msgid "Cannot read this image. Choose a PNG, JPEG, WebP or BMP image up to 64 megapixels."
+msgstr "Не удалось прочитать картинку. Выберите PNG, JPEG, WebP или BMP до 64 мегапикселей."
+
+msgctxt "WorkspacePage"
+msgid "Create instance"
+msgstr "Создать сборку"
+
+msgctxt "PageDialog"
+msgid "Search settings"
+msgstr "Поиск настроек"
+
+msgctxt "PageDialog"
+msgid "Apply your changes before leaving."
+msgstr "Изменения сохраняются кнопкой «Применить»."
+
+msgctxt "PageDialog"
+msgid "Apply changes"
+msgstr "Применить"
+
+msgctxt "PageDialog"
+msgid "Unsaved settings"
+msgstr "Несохранённые настройки"
+
+msgctxt "PageDialog"
+msgid "Apply your changes before leaving?"
+msgstr "Сохранить изменения перед выходом?"
+
+msgctxt "MainWindow"
+msgid "Settings"
+msgstr "Настройки"
+
+msgctxt "LauncherPage"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "LauncherPage"
+msgid "Choose how your instances are organised."
+msgstr "Порядок сборок и поведение при переименовании."
+
+msgctxt "LauncherPage"
+msgid "Sort instances"
+msgstr "Сортировка"
+
+msgctxt "LauncherPage"
+msgid "When renaming"
+msgstr "При переименовании"
+
+msgctxt "LauncherPage"
+msgid "Content installation"
+msgstr "Установка контента"
+
+msgctxt "LauncherPage"
+msgid "Defaults used when creating and updating your instances."
+msgstr "Действия при создании и обновлении сборок."
+
+msgctxt "LauncherPage"
+msgid "Storage"
+msgstr "Хранение"
+
+msgctxt "LauncherPage"
+msgid "Choose where PXL Cone keeps your files."
+msgstr "Папки для сборок, загрузок и игровых файлов."
+
+msgctxt "LauncherPage"
+msgid "Other folders"
+msgstr "Остальные папки"
+
+msgctxt "LauncherPage"
+msgid "Advanced options"
+msgstr "Дополнительно"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "JavaSettingsWidget"
+msgid "Automatic Java"
+msgstr "Автоматическая Java"
+
+msgctxt "JavaSettingsWidget"
+msgid "PXL Cone can select and download the runtime required by each Minecraft version."
+msgstr "Лаунчер подберёт и скачает Java, подходящую для выбранной версии Minecraft."
+
+msgctxt "JavaSettingsWidget"
+msgid "Manual runtime"
+msgstr "Ручной выбор Java"
+
+msgctxt "JavaSettingsWidget"
+msgid "Choose an executable when your instance requires a specific Java installation."
+msgstr "Укажите исполняемый файл, если сборке нужна определённая установка Java."
+
+msgctxt "JavaSettingsWidget"
+msgid "Memory"
+msgstr "Память"
+
+msgctxt "JavaSettingsWidget"
+msgid "Memory limits apply to the game. More allocated memory does not always improve performance."
+msgstr "Лимиты памяти для игры. Увеличение объёма не всегда повышает производительность."
+
+msgctxt "JavaSettingsWidget"
+msgid "Minimum memory"
+msgstr "Минимум"
+
+msgctxt "JavaSettingsWidget"
+msgid "Maximum memory"
+msgstr "Максимум"
+
+msgctxt "JavaSettingsWidget"
+msgid "Advanced Java options"
+msgstr "Дополнительные параметры Java"
+
+msgctxt "JavaPage"
+msgid "Runtime"
+msgstr "Среда Java"
+
+msgctxt "JavaPage"
+msgid "Managed runtimes"
+msgstr "Установленные версии"
+
+msgctxt "AppearanceWidget"
+msgid "Workspace"
+msgstr "Рабочее пространство"
+
+msgctxt "AppearanceWidget"
+msgid "Make the launcher comfortable for you."
+msgstr "Настройте фон и расположение навигации."
+
+msgctxt "AppearanceWidget"
+msgid "Navigation"
+msgstr "Навигация"
+
+msgctxt "AppearanceWidget"
+msgid "Background"
+msgstr "Фон"
+
+msgctxt "AppearanceWidget"
+msgid "Icons, console and mascot"
+msgstr "Иконки, консоль и кот"
+
+msgctxt "LanguageSelectionWidget"
+msgid "Interface language"
+msgstr "Язык интерфейса"
+
+msgctxt "LanguageSelectionWidget"
+msgid "Choose the language used by PXL Cone."
+msgstr "Выберите язык PXL Cone."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Import a pack"
+msgstr "Импортировать архив"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Choose a .pxlconep or .pxlt archive"
+msgstr "Файл .pxlconep или .pxlt"
+
+msgctxt "Pxl::TransferDialog"
+msgid "From another launcher"
+msgstr "Из другого лаунчера"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Select a Prism or Pinecone folder"
+msgstr "Папка Prism или Pinecone"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Choose a source above. Your original instances stay in place."
+msgstr "Выберите источник выше. Исходные сборки останутся на месте."
+
+msgctxt "Pxl::TransferDialog"
+msgid "No instances were found in this source. Choose another archive or folder."
+msgstr "Сборки не найдены. Выберите другой архив или папку."
+
+msgctxt "Pxl::TransferDialog"
+msgid "Share a pack"
+msgstr "Поделиться сборкой"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Move to another PC"
+msgstr "Перенести на другой ПК"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Compact archive"
+msgstr "Компактный архив"
+
+msgctxt "WorkspacePage"
+msgid "Find content"
+msgstr "Найти контент"
+
+msgctxt "WorkspacePage"
+msgid "Cards"
+msgstr "Карточки"
+
+msgctxt "WorkspacePage"
+msgid "Switch to list"
+msgstr "Показать списком"
+
+msgctxt "WorkspacePage"
+msgid "Switch to cards"
+msgstr "Показать карточками"
+
+msgctxt "WorkspacePage"
+msgid "List"
+msgstr "Список"
+
+msgctxt "WorkspacePage"
+msgid "%1 h %2 min in total"
+msgstr "Всего %1 ч %2 мин"
+
+msgctxt "QObject"
+msgid "%1 h %2 min played"
+msgstr "В игре %1 ч %2 мин"
+
+msgctxt "QObject"
+msgid "%1 min played"
+msgstr "В игре %1 мин"
+
+msgctxt "QObject"
+msgid "Not recorded"
+msgstr "Не записывалось"
+
+msgctxt "ContentBrowser"
+msgid "Installed content"
+msgstr "Установленный контент"
+
+msgctxt "ContentBrowser"
+msgid "No catalog supports this setup"
+msgstr "Для этого загрузчика нет доступного каталога"
+
+msgctxt "ContentBrowser"
+msgid "The available providers do not support this loader. You can manage local files or review the instance's version settings."
+msgstr "Доступные источники не поддерживают этот загрузчик. Можно добавить локальные файлы или изменить настройки версии сборки."
+
+msgctxt "ContentBrowser"
+msgid "Version settings"
+msgstr "Настройки версии"
+
+msgctxt "ContentBrowser"
+msgid "Mods"
+msgstr "Моды"
+
+msgctxt "ContentBrowser"
+msgid "Resource packs"
+msgstr "Ресурспаки"
+
+msgctxt "ContentBrowser"
+msgid "Shaders"
+msgstr "Шейдеры"
+
+msgctxt "ContentBrowser"
+msgid "Data packs"
+msgstr "Датапаки"
+
+msgctxt "ContentBrowser"
+msgid "A mod loader is needed"
+msgstr "Для модов нужен загрузчик"
+
+msgctxt "ContentBrowser"
+msgid "This instance has no supported mod loader. Choose one in the version settings before adding mods. Resource packs are available without a loader."
+msgstr "В сборке нет поддерживаемого загрузчика модов. Выберите его в настройках версии перед установкой модов. Ресурспаки доступны без загрузчика."
+
+msgctxt "ContentBrowser"
+msgid "Set up a loader"
+msgstr "Настроить загрузчик"
+
+msgctxt "ContentBrowser"
+msgid "Shaders need a compatible renderer"
+msgstr "Для шейдеров нужна поддержка в игре"
+
+msgctxt "ContentBrowser"
+msgid "Downloading a shader pack does not enable shaders. Set up a renderer such as Iris or OptiFine that supports this Minecraft version. The launcher will not install or replace it automatically."
+msgstr "Одного скачивания шейдерпака недостаточно. Настройте Iris, OptiFine или другой совместимый с этой версией Minecraft компонент. Лаунчер не установит и не заменит его автоматически."
+
+msgctxt "ContentBrowser"
+msgid "I have a renderer — browse shaders"
+msgstr "Поддержка настроена — найти шейдеры"
+
+msgctxt "ContentBrowser"
+msgid "Choose a world for data packs"
+msgstr "Выберите мир для датапаков"
+
+msgctxt "ContentBrowser"
+msgid "Data packs are installed for a world. Open Worlds and select the world you want to manage."
+msgstr "Датапаки устанавливаются для конкретного мира. Откройте раздел «Миры» и выберите нужный."
+
+msgctxt "ContentBrowser"
+msgid "Open worlds"
+msgstr "Открыть миры"
+
+msgctxt "ContentBrowser"
+msgid "Install content"
+msgstr "Установка контента"
+
+msgctxt "ContentBrowser"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "ContentBrowser"
+msgid "Content installation failed"
+msgstr "Не удалось установить контент"
+
+msgctxt "ContentBrowser"
+msgid "Installation warnings"
+msgstr "Предупреждения при установке"
+
+msgctxt "ContentBrowser"
+msgid "Leave content browser?"
+msgstr "Выйти из каталога?"
+
+msgctxt "ContentBrowser"
+msgid "Discard selection"
+msgstr "Сбросить выбор"
+
+msgctxt "ContentBrowser"
+msgid "There is content selected for installation. Leave and discard the selection?"
+msgstr "Есть контент, выбранный для установки. Выйти и сбросить выбор?"
+
+msgctxt "VersionSelectWidget"
+msgid "Choose a version"
+msgstr "Выберите версию"
+
+msgctxt "Pxl::MessagePanel"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Pxl::MessagePanel"
+msgid "Done"
+msgstr "Готово"
+
+msgctxt "Pxl::CatalogCardDelegate"
+msgid "Add"
+msgstr "Добавить"
+
+msgctxt "Pxl::CatalogCardDelegate"
+msgid "Added"
+msgstr "Добавлено"
+
+msgctxt "Pxl::CatalogCardDelegate"
+msgid "Details"
+msgstr "Подробнее"
+
+msgctxt "Pxl::CatalogCardDelegate"
+msgid "Installed"
+msgstr "Установлено"
+
+msgctxt "ResourceDownload::ResourceDownloadDialog"
+msgid "Source"
+msgstr "Источник"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Done"
+msgstr "Готово"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Choose another source"
+msgstr "Выбрать другой источник"
+
+msgctxt "VersionSelectWidget"
+msgid "Loading versions…"
+msgstr "Загрузка версий…"
+
+msgctxt "Pxl::TransferDialog"
+msgid "Include selected files"
+msgstr "Включить выбранные файлы"
+
+msgctxt "Pxl::TransferDialog"
+msgid "\nFormat: %1"
+msgstr "\nФормат: %1"
+
+msgctxt "MainWindow"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "MainWindow"
+msgid "Stop"
+msgstr "Остановить"
+
+msgctxt "MainWindow"
+msgid "Manage"
+msgstr "Управление"
+
+msgctxt "MainWindow"
+msgid "Share or transfer"
+msgstr "Поделиться или перенести"
+
+msgctxt "MainWindow"
+msgid "Export formats"
+msgstr "Форматы экспорта"
+
+msgctxt "MainWindow"
+msgid "Duplicate"
+msgstr "Создать копию"
+
+msgctxt "MainWindow"
+msgid "Open folder"
+msgstr "Открыть папку"
+
+msgctxt "MainWindow"
+msgid "Rename"
+msgstr "Переименовать"
+
+msgctxt "MainWindow"
+msgid "Change group"
+msgstr "Изменить группу"
+
+msgctxt "MainWindow"
+msgid "Change icon"
+msgstr "Изменить иконку"
+
+msgctxt "MainWindow"
+msgid "Create shortcut"
+msgstr "Создать ярлык"
+
+msgctxt "MainWindow"
+msgid "Organise"
+msgstr "Оформление и порядок"
+
+msgctxt "MainWindow"
+msgid "Delete"
+msgstr "Удалить"

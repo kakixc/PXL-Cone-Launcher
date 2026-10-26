@@ -41,6 +41,8 @@
  */
 
 #include "Application.h"
+#include <QScreen>
+#include "ui/pxl/WindowGeometry.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -648,6 +650,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // Theming
         m_settings->registerSetting("IconTheme", QString());
         m_settings->registerSetting("ApplicationTheme", QStringLiteral("cone"));
+        m_settings->registerSetting("WorkspaceBackground", QStringLiteral("image"));
+        m_settings->registerSetting("WorkspaceBackgroundImage", QString());
+        m_settings->registerSetting("WorkspaceNavigation", QStringLiteral("side"));
+        m_settings->registerSetting("WorkspaceLibraryView", QStringLiteral("cards"));
+        m_settings->registerSetting("WorkspaceLayoutRevision", 0);
         m_settings->registerSetting("BackgroundCat", QString("kitteh"));
         m_settings->registerSetting("CatButtonVisible", true);
 
@@ -922,7 +929,6 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         {
             m_globalSettingsProvider = std::make_unique<GenericPageProvider>(tr("Settings"));
             m_globalSettingsProvider->addPage<LauncherPage>();
-            m_globalSettingsProvider->addPage<LanguagePage>();
             m_globalSettingsProvider->addPage<AppearancePage>();
             m_globalSettingsProvider->addPage<MinecraftPage>();
             m_globalSettingsProvider->addPage<JavaPage>();
@@ -1665,6 +1671,8 @@ void Application::controllerFinished()
 
 void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
 {
+    if (open_page == "language-settings") open_page = "appearance-settings";
+    if (auto* window = qobject_cast<MainWindow*>(parent); window && window->openWorkspaceSettings(open_page)) return;
     if (!m_globalSettingsProvider) {
         return;
     }
@@ -1677,6 +1685,16 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString open_page)
     }
 }
 
+PageDialog* Application::createGlobalSettingsPage(QWidget* parent, QString open_page)
+{
+    if (open_page == "language-settings") open_page = "appearance-settings";
+    if (!m_globalSettingsProvider) return nullptr;
+    emit globalSettingsAboutToOpen();
+    auto* page = new PageDialog(m_globalSettingsProvider.get(), std::move(open_page), parent, true);
+    connect(page, &PageDialog::applied, this, &Application::globalSettingsApplied);
+    return page;
+}
+
 MainWindow* Application::showMainWindow(bool minimized)
 {
     if (m_mainWindow) {
@@ -1686,7 +1704,13 @@ MainWindow* Application::showMainWindow(bool minimized)
     } else {
         m_mainWindow = new MainWindow();
         m_mainWindow->restoreState(QByteArray::fromBase64(APPLICATION->settings()->get("MainWindowState").toString().toUtf8()));
-        m_mainWindow->restoreGeometry(QByteArray::fromBase64(APPLICATION->settings()->get("MainWindowGeometry").toString().toUtf8()));
+        const bool restored = m_mainWindow->restoreGeometry(QByteArray::fromBase64(APPLICATION->settings()->get("MainWindowGeometry").toString().toUtf8()));
+        if (settings()->get("WorkspaceLayoutRevision").toInt() < 2) {
+            if (!m_mainWindow->isMaximized() && (!restored || m_mainWindow->height() > m_mainWindow->width() * .85))
+                m_mainWindow->resize(Pxl::preferredWorkspaceWindowSize(m_mainWindow->screen()->availableGeometry().size()));
+            settings()->set("WorkspaceLayoutRevision", 2);
+        }
+        m_mainWindow->showWorkspace();
 
         if (minimized) {
             m_mainWindow->showMinimized();

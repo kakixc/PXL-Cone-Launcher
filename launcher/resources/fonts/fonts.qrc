@@ -2,8 +2,36 @@
     <qresource prefix="/fonts">
         <file>Monocraft.ttf</file>
         <file>Monocraft-LICENSE.txt</file>
+        <file>Manrope.ttf</file>
+        <file>Inter.ttf</file>
+        <file>Inter-OFL.txt</file>
+        <file>Manrope-OFL.txt</file>
     </qresource>
     <qresource prefix="/pxl">
         <file alias="cone-icon.svg">../../../program_info/PXLConeLauncher.icon/assets/logo/pxlcone-icon.svg</file>
+        <file alias="cone-dawn-banner.png">../pxl/cone-dawn-banner-v1.png</file>
+        <file alias="workspace-transfer.png">../pxl/workspace-transfer-v1.png</file>
+        <file alias="wallpaper-source.png">../pxl/cone-wallpaper-source.png</file>
+        <file alias="translations/ru.qm">../pxl/translations/upstream-ru.qm</file>
+        <file alias="translations/pxl-ru.po">../pxl/translations/pxl-ru.po</file>
+        <file alias="icons/house.svg">../pxl/icons/house.svg</file>
+        <file alias="icons/squares-four.svg">../pxl/icons/squares-four.svg</file>
+        <file alias="icons/list.svg">../pxl/icons/list.svg</file>
+        <file alias="icons/arrow-square-in.svg">../pxl/icons/arrow-square-in.svg</file>
+        <file alias="icons/user-circle.svg">../pxl/icons/user-circle.svg</file>
+        <file alias="icons/gear-six.svg">../pxl/icons/gear-six.svg</file>
+        <file alias="icons/cat.svg">../pxl/icons/cat.svg</file>
+        <file alias="icons/sliders-horizontal.svg">../pxl/icons/sliders-horizontal.svg</file>
+        <file alias="icons/plus.svg">../pxl/icons/plus.svg</file>
+        <file alias="icons/star.svg">../pxl/icons/star.svg</file>
+        <file alias="icons/import.svg">../pxl/icons/import.svg</file>
+        <file alias="icons/share-network.svg">../pxl/icons/share-network.svg</file>
+        <file alias="icons/play.svg">../pxl/icons/play.svg</file>
+        <file alias="icons/stop.svg">../pxl/icons/stop.svg</file>
+        <file alias="icons/download-simple.svg">../pxl/icons/download-simple.svg</file>
+        <file alias="icons/arrow-left.svg">../pxl/icons/arrow-left.svg</file>
+        <file alias="icons/caret-down.svg">../pxl/icons/caret-down.svg</file>
+        <file alias="icons/magnifying-glass.svg">../pxl/icons/magnifying-glass.svg</file>
+        <file alias="icons/dots-three-vertical.svg">../pxl/icons/dots-three-vertical.svg</file>
     </qresource>
 </RCC>

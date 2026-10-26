@@ -45,10 +45,108 @@
 #include "meta/VersionList.h"
 #include "minecraft/VanillaInstanceCreationTask.h"
 #include "ui/dialogs/NewInstanceDialog.h"
+#include <QDesktopServices>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QStyle>
+#include <QUrl>
+#include <QVBoxLayout>
 
 CustomPage::CustomPage(NewInstanceDialog* dialog, QWidget* parent) : QWidget(parent), dialog(dialog), ui(new Ui::CustomPage)
 {
     ui->setupUi(this);
+    ui->versionList->useCompactPresentation();
+    ui->loaderVersionList->useCompactPresentation();
+    ui->verticalLayout_5->removeWidget(ui->scrollArea);
+    ui->scrollArea->hide();
+    auto* form = new QWidget(this);
+    auto* fields = new QVBoxLayout(form);
+    fields->setContentsMargins(0, 0, 0, 0);
+    fields->setSpacing(16);
+    auto label = [form, fields](const QString& text) {
+        auto* result = new QLabel(text, form);
+        result->setStyleSheet("font-weight: 600;");
+        fields->addWidget(result);
+        return result;
+    };
+    label(tr("Minecraft version"));
+    auto* minecraft = new QHBoxLayout;
+    minecraft->addWidget(ui->versionList, 1);
+    minecraft->addWidget(ui->refreshBtn);
+    fields->addLayout(minecraft);
+    auto* filtersButton = new QPushButton(tr("Version filters"), form);
+    filtersButton->setIcon(QIcon(":/pxl/icons/sliders-horizontal.svg"));
+    filtersButton->setCheckable(true);
+    fields->addWidget(filtersButton, 0, Qt::AlignLeft);
+    auto* filterOptions = new QWidget(form);
+    auto* filters = new QHBoxLayout(filterOptions);
+    filters->setContentsMargins(0, 0, 0, 0);
+    for (auto* filter : {ui->releaseFilter, ui->snapshotFilter, ui->betaFilter, ui->alphaFilter, ui->experimentsFilter})
+        filters->addWidget(filter);
+    filterOptions->hide();
+    connect(filtersButton, &QPushButton::toggled, filterOptions, &QWidget::setVisible);
+    fields->addWidget(filterOptions);
+    auto* loaderLabel = label(tr("Loader"));
+    auto* loaders = new QHBoxLayout;
+    ui->noneFilter->setText(tr("Vanilla"));
+    for (auto* loader : {ui->noneFilter, ui->fabricFilter, ui->forgeFilter, ui->neoForgeFilter, ui->quiltFilter, ui->liteLoaderFilter}) {
+        loader->setProperty("pxlChoice", true);
+        loaders->addWidget(loader);
+    }
+    loaders->addStretch();
+    fields->addLayout(loaders);
+    fields->removeWidget(loaderLabel);
+    fields->removeItem(loaders);
+    fields->insertWidget(0, loaderLabel);
+    fields->insertLayout(1, loaders);
+    auto* loaderOptions = new QWidget(form);
+    auto* loaderFields = new QVBoxLayout(loaderOptions);
+    loaderFields->setContentsMargins(0, 0, 0, 0);
+    loaderFields->setSpacing(12);
+    auto* loaderHeading = new QLabel(tr("Loader version"), loaderOptions);
+    loaderHeading->setStyleSheet("font-weight: 600;");
+    loaderFields->addWidget(loaderHeading);
+    auto* version = new QHBoxLayout;
+    version->addWidget(ui->loaderVersionList, 1);
+    version->addWidget(ui->loaderRefreshBtn);
+    loaderFields->addLayout(version);
+    loaderOptions->setHidden(ui->noneFilter->isChecked());
+    connect(ui->noneFilter, &QRadioButton::toggled, loaderOptions, &QWidget::setHidden);
+    fields->addWidget(loaderOptions);
+    fields->removeWidget(filtersButton);
+    fields->removeWidget(filterOptions);
+    fields->addWidget(filtersButton, 0, Qt::AlignLeft);
+    filtersButton->setText(tr("More options"));
+    filtersButton->setProperty("pxlQuiet", true);
+    fields->addWidget(filterOptions);
+    for (auto* refresh : {ui->refreshBtn, ui->loaderRefreshBtn}) {
+        refresh->setToolTip(tr("Refresh"));
+        refresh->setText(QString());
+        refresh->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+        refresh->setFixedSize(36, 36);
+    }
+    auto* optifine = new QPushButton(tr("OptiFine installation guide"), form);
+    optifine->setIcon(QIcon(":/pxl/icons/arrow-square-in.svg"));
+    optifine->setToolTip(tr("Create Vanilla, then add an extracted OptiFine jar mod from the Version page. Steps depend on the OptiFine version."));
+    connect(optifine, &QPushButton::clicked, this, [] {
+        QDesktopServices::openUrl(QUrl("https://prismlauncher.org/wiki/getting-started/installing-optifine/"));
+    });
+    fields->addWidget(optifine, 0, Qt::AlignLeft);
+    optifine->hide();
+    connect(filtersButton, &QPushButton::toggled, optifine, &QWidget::setVisible);
+    fields->addStretch();
+    auto* scroll = new QScrollArea(this);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setWidget(form);
+    form->setAutoFillBackground(false);
+    scroll->setAutoFillBackground(false);
+    scroll->setStyleSheet("QScrollArea { background: transparent; border: none; } QScrollArea > QWidget > QWidget { background: transparent; }");
+    scroll->viewport()->setAutoFillBackground(false);
+    ui->verticalLayout_5->addWidget(scroll);
     connect(ui->versionList, &VersionSelectWidget::selectedVersionChanged, this, &CustomPage::setSelectedVersion);
     filterChanged();
     connect(ui->alphaFilter, &QCheckBox::stateChanged, this, &CustomPage::filterChanged);
@@ -61,6 +159,7 @@ CustomPage::CustomPage(NewInstanceDialog* dialog, QWidget* parent) : QWidget(par
     connect(ui->loaderVersionList, &VersionSelectWidget::selectedVersionChanged, this, &CustomPage::setSelectedLoaderVersion);
     connect(ui->noneFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
     connect(ui->forgeFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
+    connect(ui->neoForgeFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
     connect(ui->fabricFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
     connect(ui->quiltFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
     connect(ui->liteLoaderFilter, &QRadioButton::toggled, this, &CustomPage::loaderFilterChanged);
@@ -109,6 +208,9 @@ void CustomPage::filterChanged()
 
 void CustomPage::loaderFilterChanged()
 {
+    m_selectedLoaderVersion.reset();
+    ui->loaderVersionList->setEnabled(!ui->noneFilter->isChecked());
+    ui->loaderRefreshBtn->setEnabled(!ui->noneFilter->isChecked());
     QString minecraftVersion;
     if (m_selectedVersion) {
         minecraftVersion = m_selectedVersion->descriptor();
@@ -119,9 +221,11 @@ void CustomPage::loaderFilterChanged()
         return;
     }
     if (ui->noneFilter->isChecked()) {
+        m_selectedLoader.clear();
         ui->loaderVersionList->setExactFilter(BaseVersionList::ParentVersionRole, "AAA");  // empty list
         ui->loaderVersionList->setEmptyString(tr("No mod loader is selected."));
         ui->loaderVersionList->setEmptyMode(VersionListView::String);
+        suggestCurrent();
         return;
     } else if (ui->neoForgeFilter->isChecked()) {
         ui->loaderVersionList->setExactFilter(BaseVersionList::ParentVersionRole, minecraftVersion);
@@ -146,11 +250,17 @@ void CustomPage::loaderFilterChanged()
     } else if (ui->liteLoaderFilter->isChecked()) {
         ui->loaderVersionList->setExactFilter(BaseVersionList::ParentVersionRole, minecraftVersion);
         m_selectedLoader = "com.mumfrey.liteloader";
+    } else {
+        dialog->setSuggestedPack();
+        return;
     }
 
     auto vlist = APPLICATION->metadataIndex()->get(m_selectedLoader);
     ui->loaderVersionList->initialize(vlist.get());
     ui->loaderVersionList->selectRecommended();
+    // A preserved recommendation may keep the same index and emit no change
+    // signal, even though changing Minecraft/loader cleared our selected value.
+    setSelectedLoaderVersion(ui->loaderVersionList->selectedVersion());
     ui->loaderVersionList->setEmptyString(tr("No versions are currently available for Minecraft %1").arg(minecraftVersion));
 }
 
@@ -196,8 +306,12 @@ void CustomPage::suggestCurrent()
     }
 
     // There isn't a selected version if the version list is empty
-    if (ui->loaderVersionList->selectedVersion() == nullptr)
+    if (ui->noneFilter->isChecked())
         dialog->setSuggestedPack(m_selectedVersion->descriptor(), new VanillaCreationTask(m_selectedVersion));
+    else if (!m_selectedLoaderVersion) {
+        dialog->setSuggestedPack();
+        return;
+    }
     else {
         dialog->setSuggestedPack(m_selectedVersion->descriptor(),
                                  new VanillaCreationTask(m_selectedVersion, m_selectedLoader, m_selectedLoaderVersion));

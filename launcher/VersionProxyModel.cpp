@@ -205,7 +205,7 @@ QVariant VersionProxyModel::data(const QModelIndex& index, int role) const
             if (column == Name && hasRecommended) {
                 auto recommenced = sourceModel()->data(parentIndex, BaseVersionList::RecommendedRole);
                 if (recommenced.toBool()) {
-                    return QIcon::fromTheme("star");
+                    return QIcon(":/pxl/icons/star.svg");
                 } else if (hasLatest) {
                     auto latest = sourceModel()->data(parentIndex, BaseVersionList::LatestRole);
                     if (latest.toBool()) {

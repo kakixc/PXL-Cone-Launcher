@@ -39,11 +39,15 @@
 
 #include <QDebug>
 #include <QKeyEvent>
+#include <QLabel>
+#include <QPushButton>
+#include <algorithm>
 #include <limits>
 
 #include "tasks/Task.h"
 
 #include "ui/widgets/SubTaskProgressBar.h"
+#include "ui/pxl/TaskHistory.h"
 
 // map a value in a numeric range of an arbitrary type to between 0 and INT_MAX
 // for getting the best precision out of the qt progress bar
@@ -53,7 +57,8 @@ std::tuple<int, int> map_int_zero_max(T current, T range_max, T range_min)
     int int_max = std::numeric_limits<int>::max();
 
     auto type_range = range_max - range_min;
-    double percentage = static_cast<double>(current - range_min) / static_cast<double>(type_range);
+    if (type_range <= 0) return {0, 0};
+    double percentage = std::clamp(static_cast<double>(current - range_min) / static_cast<double>(type_range), 0.0, 1.0);
     int mapped_current = percentage * int_max;
 
     return { mapped_current, int_max };
@@ -62,6 +67,49 @@ std::tuple<int, int> map_int_zero_max(T current, T range_max, T range_min)
 ProgressDialog::ProgressDialog(QWidget* parent) : QDialog(parent), ui(new Ui::ProgressDialog)
 {
     ui->setupUi(this);
+    setProperty("pxlFlow", true);
+    setWindowTitle(tr("Downloads & tasks"));
+    setWindowIcon(QIcon(":/pxl/cone-icon.svg"));
+    ui->verticalLayout->setContentsMargins(28, 24, 28, 24);
+    ui->verticalLayout->setSpacing(20);
+    auto* header = new QHBoxLayout;
+    auto* brand = new QLabel(this);
+    brand->setPixmap(QIcon(":/pxl/cone-icon.svg").pixmap(36, 36));
+    header->addWidget(brand);
+    auto* title = new QLabel(tr("Downloads & tasks"), this);
+    title->setProperty("pxlFlowTitle", true);
+    header->addWidget(title, 1);
+    auto* tasksButton = new QPushButton(this);
+    tasksButton->setIcon(QIcon(":/pxl/icons/download-simple.svg"));
+    tasksButton->setToolTip(tr("View all tasks"));
+    tasksButton->setAccessibleName(tr("View all tasks"));
+    tasksButton->setFixedSize(40, 36);
+    header->addWidget(tasksButton);
+    connect(tasksButton, &QPushButton::clicked, this, [this] { Pxl::TaskHistory::instance()->showTasks(this); });
+    m_percentage = new QLabel(this);
+    m_percentage->setStyleSheet("font-size: 20px; font-weight: 700;");
+    header->addWidget(m_percentage);
+    ui->verticalLayout->insertLayout(0, header);
+    ui->globalStatusLabel->clear();
+    ui->globalStatusDetailsLabel->clear();
+    ui->globalStatusDetailsLabel->setWordWrap(true);
+    ui->globalStatusDetailsLabel->setProperty("pxlFlowHint", true);
+    ui->globalProgressBar->setTextVisible(false);
+    ui->globalProgressBar->setFixedHeight(10);
+    ui->taskProgressScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->taskProgressLayout->setContentsMargins(0, 0, 0, 0);
+    ui->taskProgressLayout->setSpacing(12);
+    m_detailsButton = new QPushButton(tr("Show details"), this);
+    m_detailsButton->setProperty("pxlQuiet", true);
+    m_detailsButton->setCheckable(true);
+    m_detailsButton->setVisible(false);
+    ui->verticalLayout->insertWidget(3, m_detailsButton, 0, Qt::AlignLeft);
+    connect(m_detailsButton, &QPushButton::toggled, this, [this](bool show) {
+        m_showDetails = show;
+        m_detailsButton->setText(show ? tr("Hide details") : tr("Show details"));
+        ui->taskProgressScrollArea->setVisible(show && m_is_multi_step);
+        updateSize();
+    });
     ui->taskProgressScrollArea->setHidden(true);
     this->setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setAttribute(Qt::WidgetAttribute::WA_QuitOnClose, true);
@@ -84,7 +132,7 @@ void ProgressDialog::setSkipButton(bool present, QString label)
 void ProgressDialog::on_skipButton_clicked(bool checked)
 {
     Q_UNUSED(checked);
-    if (ui->skipButton->isEnabled())  // prevent other triggers from aborting
+    if (m_task && ui->skipButton->isEnabled())  // prevent other triggers from aborting
         m_task->abort();
 }
 
@@ -107,7 +155,7 @@ void ProgressDialog::updateSize(bool recenterParent)
     if (ui->skipButton->isVisible())
         minHeight += ui->skipButton->height() + ui->verticalLayout->spacing();
     minHeight = std::max(minHeight, 60);
-    QSize minSize = QSize(480, minHeight);
+    QSize minSize = QSize(560, qMax(minHeight, m_showDetails ? 360 : 220));
 
     setMinimumSize(minSize);
     adjustSize();
@@ -136,6 +184,7 @@ int ProgressDialog::execWithTask(Task* task)
         qDebug() << "Programmer error: Progress dialog created with null task.";
         return QDialog::DialogCode::Accepted;
     }
+    Pxl::TaskHistory::instance()->watch(task, windowTitle(), windowIcon());
 
     QDialog::DialogCode result{};
     if (handleImmediateResult(result)) {
@@ -155,7 +204,8 @@ int ProgressDialog::execWithTask(Task* task)
     this->m_taskConnections.push_back(connect(task, &Task::abortButtonTextChanged, ui->skipButton, &QPushButton::setText));
 
     m_is_multi_step = task->isMultiStep();
-    ui->taskProgressScrollArea->setHidden(!m_is_multi_step);
+    m_detailsButton->setVisible(m_is_multi_step);
+    ui->taskProgressScrollArea->setVisible(m_is_multi_step && m_showDetails);
     updateSize();
 
     // It's a good idea to start the task after we entered the dialog's event loop :^)
@@ -215,6 +265,7 @@ void ProgressDialog::onTaskSucceeded()
 
 void ProgressDialog::changeStatus([[maybe_unused]] const QString& status)
 {
+    if (!m_task) return;
     ui->globalStatusLabel->setText(m_task->getStatus());
     ui->globalStatusLabel->adjustSize();
     ui->globalStatusDetailsLabel->setText(m_task->getDetails());
@@ -233,8 +284,9 @@ void ProgressDialog::addTaskProgress(TaskStepProgress const& progress)
 void ProgressDialog::changeStepProgress(TaskStepProgress const& task_progress)
 {
     m_is_multi_step = true;
-    if (ui->taskProgressScrollArea->isHidden()) {
-        ui->taskProgressScrollArea->setHidden(false);
+    m_detailsButton->setVisible(true);
+    if (m_showDetails && ui->taskProgressScrollArea->isHidden()) {
+        ui->taskProgressScrollArea->setVisible(true);
         updateSize();
     }
 
@@ -257,8 +309,11 @@ void ProgressDialog::changeStepProgress(TaskStepProgress const& task_progress)
 
 void ProgressDialog::changeProgress(qint64 current, qint64 total)
 {
-    ui->globalProgressBar->setMaximum(total);
-    ui->globalProgressBar->setValue(current);
+    const auto [value, maximum] = map_int_zero_max<qint64>(qBound<qint64>(0, current, qMax<qint64>(0, total)), total, 0);
+    ui->globalProgressBar->setRange(0, maximum);
+    ui->globalProgressBar->setValue(value);
+    if (m_percentage)
+        m_percentage->setText(total > 0 ? QString::number(int(std::clamp(100.0 * current / total, 0.0, 100.0))) + "%" : tr("Working…"));
 }
 
 void ProgressDialog::keyPressEvent(QKeyEvent* e)

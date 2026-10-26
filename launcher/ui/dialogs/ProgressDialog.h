@@ -47,6 +47,8 @@
 
 class Task;
 class SequentialTask;
+class QPushButton;
+class QLabel;
 
 namespace Ui {
 class ProgressDialog;
@@ -92,7 +94,10 @@ class ProgressDialog : public QDialog {
    private:
     Ui::ProgressDialog* ui;
 
-    Task* m_task;
+    Task* m_task = nullptr;
+    QPushButton* m_detailsButton = nullptr;
+    QLabel* m_percentage = nullptr;
+    bool m_showDetails = false;
 
     QList<QMetaObject::Connection> m_taskConnections;
 

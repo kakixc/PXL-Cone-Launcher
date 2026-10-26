@@ -46,6 +46,7 @@ class VersionProxyModel;
 class VersionListView;
 class QVBoxLayout;
 class QProgressBar;
+class QComboBox;
 
 class VersionSelectWidget : public QWidget {
     Q_OBJECT
@@ -75,6 +76,7 @@ class VersionSelectWidget : public QWidget {
     void setEmptyErrorString(QString emptyErrorString);
     void setEmptyMode(VersionListView::EmptyMode mode);
     void setResizeOn(int column);
+    void useCompactPresentation();
 
     bool eventFilter(QObject* watched, QEvent* event) override;
 
@@ -92,9 +94,11 @@ class VersionSelectWidget : public QWidget {
 
    private:
     void preselect();
+    void syncCompactSelection();
 
    private:
     QString m_currentVersion;
+    QString m_emptyString;
     BaseVersionList* m_vlist = nullptr;
     VersionProxyModel* m_proxyModel = nullptr;
     int resizeOnColumn = 0;
@@ -105,4 +109,5 @@ class VersionSelectWidget : public QWidget {
     VersionListView* listView = nullptr;
     QLineEdit* search;
     QProgressBar* sneakyProgressBar = nullptr;
+    QComboBox* m_compactCombo = nullptr;
 };

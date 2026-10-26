@@ -21,6 +21,7 @@
 #include <QList>
 
 #include <QPushButton>
+#include <QLabel>
 #include <algorithm>
 #include <utility>
 
@@ -47,6 +48,12 @@
 #include "modplatform/flame/FlameAPI.h"
 #include "modplatform/modrinth/ModrinthAPI.h"
 #include "ui/widgets/PageContainer.h"
+#include "ui/pxl/DialogOverlay.h"
+#include <QComboBox>
+#include <QHBoxLayout>
+#include <QSignalBlocker>
+#include <QGridLayout>
+#include "ui/pxl/LibraryControls.h"
 
 namespace ResourceDownload {
 
@@ -58,10 +65,11 @@ ResourceDownloadDialog::ResourceDownloadDialog(QWidget* parent, ResourceFolderMo
     , m_suppressInitialSearch(suppressInitialSearch)
 {
     setObjectName(QStringLiteral("ResourceDownloadDialog"));
+    setProperty("pxlFlow", true);
 
     resize(static_cast<int>(std::max(0.5 * parent->width(), 400.0)), static_cast<int>(std::max(0.75 * parent->height(), 400.0)));
 
-    setWindowIcon(QIcon::fromTheme("new"));
+    setWindowIcon(QIcon(":/pxl/cone-icon.svg"));
 
 // small margins look ugly on macOS on modal windows
 #ifndef Q_OS_MACOS
@@ -74,6 +82,7 @@ ResourceDownloadDialog::ResourceDownloadDialog(QWidget* parent, ResourceFolderMo
     okButton->setDefault(true);
     okButton->setAutoDefault(true);
     okButton->setText(tr("Review and confirm"));
+    okButton->setProperty("pxlPrimary", true);
     okButton->setShortcut(tr("Ctrl+Return"));
 
     auto* cancelButton = m_buttons.button(QDialogButtonBox::Cancel);
@@ -89,7 +98,7 @@ ResourceDownloadDialog::ResourceDownloadDialog(QWidget* parent, ResourceFolderMo
 
 void ResourceDownloadDialog::accept()
 {
-    if (!geometrySaveKey().isEmpty()) {
+    if (!m_embedded && !geometrySaveKey().isEmpty()) {
         APPLICATION->settings()->set(geometrySaveKey(), QString::fromUtf8(saveGeometry().toBase64()));
     }
 
@@ -98,6 +107,10 @@ void ResourceDownloadDialog::accept()
 
 void ResourceDownloadDialog::reject()
 {
+    if (m_embedded) {
+        emit embeddedCloseRequested();
+        return;
+    }
     auto selected = getTasks();
     if (selected.count() > 0) {
         auto reply = CustomMessageBox::selectable(this, tr("Confirmation Needed"),
@@ -124,13 +137,23 @@ void ResourceDownloadDialog::initializeContainer()
 {
 // small margins look ugly on macOS on modal windows
 #ifndef Q_OS_MACOS
-    layout()->setContentsMargins(0, 0, 0, 0);
+    layout()->setContentsMargins(24, 24, 24, 24);
 #endif
 
     m_container = new PageContainer(this, {}, this);
+    m_container->useConeStyle();
     m_container->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
     m_container->layout()->setContentsMargins(0, 0, 0, 0);
-    m_vertical_layout.addWidget(m_container);
+    m_vertical_layout.setSpacing(20);
+    auto* heading = new QLabel(tr("Browse %1").arg(resourcesString()), this);
+    heading->setProperty("pxlFlowTitle", true);
+    m_vertical_layout.addWidget(heading);
+    auto* hint = new QLabel(tr("Choose a provider, find compatible content and review your selection before installing."), this);
+    hint->setProperty("pxlFlowHint", true);
+    hint->setWordWrap(true);
+    m_vertical_layout.addWidget(hint);
+    m_vertical_layout.addWidget(m_container, 1);
+    resize(qMax(width(), 1000), qMax(height(), 700));
 
     m_container->addButtons(&m_buttons);
 
@@ -149,6 +172,58 @@ void ResourceDownloadDialog::connectButtons()
 
     auto* helpButton = m_buttons.button(QDialogButtonBox::Help);
     connect(helpButton, &QPushButton::clicked, m_container, &PageContainer::help);
+}
+
+void ResourceDownloadDialog::useEmbeddedPresentation()
+{
+    m_embedded = true;
+    setWindowFlags(Qt::Widget);
+    setWindowModality(Qt::NonModal);
+    setMinimumSize(0, 0);
+    setStyleSheet("QDialog#ResourceDownloadDialog { background: transparent; }");
+    m_vertical_layout.setContentsMargins(0, 0, 0, 0);
+    m_vertical_layout.setSpacing(12);
+    for (auto* label : findChildren<QLabel*>(QString(), Qt::FindDirectChildrenOnly)) label->hide();
+    m_buttons.button(QDialogButtonBox::Cancel)->hide();
+    m_buttons.button(QDialogButtonBox::Help)->hide();
+    m_buttons.button(QDialogButtonBox::Ok)->setAutoDefault(false);
+    m_buttons.button(QDialogButtonBox::Ok)->setDefault(false);
+    m_container->setPageHeadingVisible(false);
+    m_container->hidePageList();
+    if (auto* grid = qobject_cast<QGridLayout*>(m_container->layout())) {
+        grid->setRowStretch(1, 1);
+        grid->setVerticalSpacing(0);
+    }
+    auto* sources = new QWidget(this);
+    sources->setObjectName("catalogSourceRow");
+    sources->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    auto* sourceRow = new QHBoxLayout(sources);
+    sourceRow->setContentsMargins(0, 0, 0, 0);
+    sourceRow->addWidget(new QLabel(tr("Source"), sources));
+    auto* choice = new Pxl::ChoiceChip(sources);
+    choice->setObjectName("contentProviderChoice");
+    choice->setMinimumWidth(180);
+    for (auto* page : m_container->getPages()) {
+        choice->addItem(page->icon(), page->displayName(), page->id());
+        if (auto* resourcePage = dynamic_cast<ResourcePage*>(page)) resourcePage->useCardPresentation();
+    }
+    sourceRow->addWidget(choice);
+    sourceRow->addStretch();
+    m_vertical_layout.insertWidget(0, sources);
+    connect(choice, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, choice](int index) {
+        selectPage(choice->itemData(index).toString());
+    });
+    connect(m_container, &PageContainer::selectedPageChanged, choice, [choice](BasePage*, BasePage* selected) {
+        if (!selected) return;
+        const QSignalBlocker block(choice);
+        choice->setCurrentIndex(choice->findData(selected->id()));
+    });
+    if (auto* selected = m_container->selectedPage()) choice->setCurrentIndex(choice->findData(selected->id()));
+}
+
+bool ResourceDownloadDialog::hasProviders() const
+{
+    return !m_container->getPages().isEmpty();
 }
 
 void ResourceDownloadDialog::confirm()
@@ -205,7 +280,8 @@ void ResourceDownloadDialog::confirm()
                                         .enabled = !extraInfo.maybe_installed });
     }
 
-    if (confirmDialog->exec() != 0) {
+    const int confirmation = m_embedded ? Pxl::DialogOverlay::run(confirmDialog, window()) : confirmDialog->exec();
+    if (confirmation != 0) {
         auto deselected = confirmDialog->deselectedResources();
         for (auto* page : m_container->getPages()) {
             auto* res = static_cast<ResourcePage*>(page);

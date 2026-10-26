@@ -90,6 +90,7 @@ class ResourcePage : public QWidget, public BasePage {
     virtual void openProject(const QVariant& projectID);
 
     void setSuppressInitialSearch(bool suppress);
+    void useCardPresentation();
 
    protected slots:
     virtual void triggerSearch() = 0;
@@ -98,6 +99,7 @@ class ResourcePage : public QWidget, public BasePage {
     void onVersionSelectionChanged(int index);
     void onResourceSelected();
     void onResourceToggle(const QModelIndex& index);
+    void showProjectDetails(const QModelIndex& index);
 
     /** Associates regex expressions to pages in the order they're given in the map. */
     virtual QMap<QString, QString> urlHandlers() const = 0;
@@ -124,6 +126,7 @@ class ResourcePage : public QWidget, public BasePage {
     QSet<int> m_enableQueue;
 
    private:
+    bool m_cardPresentation = false;
     bool m_suppressInitialSearch = false;
 };
 

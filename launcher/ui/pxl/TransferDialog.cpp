@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "TransferDialog.h"
+#include "DialogOverlay.h"
+#include "MessagePanel.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -31,28 +33,75 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
     : QDialog(parent), m_mode(mode), m_archive(archive)
 {
     setWindowTitle(mode == Import ? tr("Import your Minecraft setup") : tr("Share or transfer your Minecraft setup"));
+    setProperty("pxlFlow", true);
+    setProperty("pxlPreferredSize", QSize(760, 680));
     resize(680, 560);
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(24, 24, 24, 24);
     layout->setSpacing(14);
+    auto* title = new QLabel(windowTitle(), this);
+    title->setProperty("pxlFlowTitle", true);
+    layout->addWidget(title);
     auto intro = new QLabel(mode == Import ? tr("Restore a PXL pack or copy instances from Prism / Pinecone.") :
                                             tr("Share one pack with a friend, or move several instances to another computer."), this);
     intro->setWordWrap(true);
+    intro->setProperty("pxlFlowHint", true);
     layout->addWidget(intro);
     if (mode == Import) {
-        auto row = new QHBoxLayout;
+        m_sourceChoices = new QWidget(this);
+        auto row = new QVBoxLayout(m_sourceChoices);
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(10);
         m_source = new QLineEdit(this);
         m_source->setAccessibleName(tr("Archive or launcher directory"));
         m_source->setPlaceholderText(tr("Select an archive or a launcher directory"));
-        row->addWidget(m_source, 1);
-        auto file = new QPushButton(tr("Open pack…"), this);
-        auto folder = new QPushButton(tr("Launcher folder…"), this);
+        m_source->hide();
+        auto sourceButton = [this](const QString& titleText, const QString& hint, const QString& iconName) {
+            auto* button = new QPushButton(this);
+            button->setAutoDefault(false);
+            button->setAccessibleName(titleText + ". " + hint);
+            button->setMinimumHeight(76);
+            button->setStyleSheet("QPushButton { background: rgba(255,255,255,10); border: 1px solid rgba(213,221,233,24); border-radius: 12px; }"
+                                 "QPushButton:hover { background: rgba(255,255,255,20); border-color: rgba(242,163,101,100); }");
+            button->setCursor(Qt::PointingHandCursor);
+            auto* body = new QHBoxLayout(button);
+            body->setContentsMargins(16, 14, 16, 14);
+            body->setSpacing(12);
+            auto* icon = new QLabel(button);
+            icon->setPixmap(QIcon(":/pxl/icons/" + iconName + ".svg").pixmap(28, 28));
+            body->addWidget(icon);
+            auto* copy = new QVBoxLayout;
+            copy->setSpacing(5);
+            auto* name = new QLabel(titleText, button);
+            name->setStyleSheet("font-size: 15px; font-weight: 600; background: transparent;");
+            auto* description = new QLabel(hint, button);
+            description->setWordWrap(true);
+            description->setStyleSheet("font-size: 12px; font-weight: 400; color: #a4adba; background: transparent;");
+            copy->addWidget(name);
+            copy->addWidget(description);
+            body->addLayout(copy, 1);
+            for (auto* label : {icon, name, description}) label->setAttribute(Qt::WA_TransparentForMouseEvents);
+            return button;
+        };
+        auto* file = sourceButton(tr("Import a pack"), tr("Choose a .pxlconep or .pxlt archive"), "import");
+        auto* folder = sourceButton(tr("From another launcher"), tr("Select a Prism or Pinecone folder"), "squares-four");
         row->addWidget(file);
         row->addWidget(folder);
         connect(file, &QPushButton::clicked, this, [this] { chooseSource(false); });
         connect(folder, &QPushButton::clicked, this, [this] { chooseSource(true); });
         connect(m_source, &QLineEdit::returnPressed, this, &TransferDialog::loadSource);
-        layout->addLayout(row);
+        layout->addWidget(m_sourceChoices);
+        layout->addWidget(m_source);
+        m_changeSource = new QPushButton(tr("Choose another source"), this);
+        m_changeSource->setProperty("pxlQuiet", true);
+        layout->addWidget(m_changeSource, 0, Qt::AlignLeft);
+        connect(m_changeSource, &QPushButton::clicked, this, [this] {
+            m_archive.clear();
+            m_previewSource.clear();
+            m_source->clear();
+            m_workspaces.clear();
+            populate();
+        });
         const auto locations = launcherLocations();
         if (!locations.isEmpty()) {
             auto detected = new QComboBox(this);
@@ -69,12 +118,12 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
     } else {
         auto row = new QHBoxLayout;
         m_format = new QComboBox(this);
-        m_format->addItem(tr("Send one pack to a friend (.pxlconep)"), "pxlconep");
-        m_format->addItem(tr("Move instances to another computer (.pxlt)"), "pxlt");
+        m_format->addItem(tr("Share a pack"), "pxlconep");
+        m_format->addItem(tr("Move to another PC"), "pxlt");
         m_format->setAccessibleName(tr("Export purpose"));
         m_storage = new QComboBox(this);
-        m_storage->addItem(tr("Small — download exact known content on restore"), "smart");
-        m_storage->addItem(tr("Offline — include selected content files"), "offline");
+        m_storage->addItem(tr("Compact archive"), "smart");
+        m_storage->addItem(tr("Include selected files"), "offline");
         m_storage->setAccessibleName(tr("Content storage"));
         row->addWidget(m_format, 1);
         row->addWidget(m_storage, 1);
@@ -104,6 +153,13 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
         connect(m_screenshots, &QCheckBox::toggled, this, &TransferDialog::updateSummary);
     }
     m_list = new QListWidget(this);
+    m_list->setObjectName("transferInstances");
+    m_list->setStyleSheet("QListWidget { background: #25282e; border: 1px solid #3a414b; border-radius: 10px; padding: 8px; } QListWidget::item { padding: 10px 6px; }");
+    auto listPalette = m_list->viewport()->palette();
+    listPalette.setColor(QPalette::Base, QColor("#25282e"));
+    listPalette.setColor(QPalette::Window, QColor("#25282e"));
+    m_list->viewport()->setPalette(listPalette);
+    m_list->viewport()->setAutoFillBackground(true);
     m_list->setAccessibleName(tr("Instances to import or export"));
     m_list->setSelectionMode(QAbstractItemView::NoSelection);
     layout->addWidget(m_list, 1);
@@ -114,6 +170,7 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
     layout->addWidget(m_summary);
     if (mode == Import) {
         auto details = new QPushButton(tr("View selected content…"), this);
+        m_details = details;
         connect(details, &QPushButton::clicked, this, [this] {
             QDialog preview(this);
             preview.setWindowTitle(tr("Import content preview"));
@@ -142,7 +199,7 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
             auto close = new QDialogButtonBox(QDialogButtonBox::Close, &preview);
             connect(close, &QDialogButtonBox::rejected, &preview, &QDialog::reject);
             box->addWidget(close);
-            preview.exec();
+            Pxl::DialogOverlay::run(&preview, this);
         });
         layout->addWidget(details);
     }
@@ -152,12 +209,21 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
         tr("Unknown local content is included. Worlds are private: include them only when intended. "
            "Minecraft, loaders and Java may still need downloading on the receiving computer."), this);
     privacy->setWordWrap(true);
+    privacy->setProperty("pxlFlowHint", true);
+    m_privacy = privacy;
     layout->addWidget(privacy);
     auto buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
+    buttons->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     m_run = buttons->addButton(mode == Import ? tr("Import selected") : tr("Export selected…"), QDialogButtonBox::AcceptRole);
+    m_run->setObjectName("transferRun");
+    m_run->setDefault(false);
+    m_run->setAutoDefault(false);
+    m_run->setProperty("pxlPrimary", true);
     if (m_source) {
         connect(m_source, &QLineEdit::textChanged, this, [this](const QString& source) {
             if (source.trimmed() == m_previewSource) return;
+            m_previewSource.clear();
+            m_archive.clear();
             m_workspaces.clear();
             populate();
             m_summary->setText(tr("Press Enter or choose a source to load a new preview."));
@@ -183,6 +249,9 @@ void TransferDialog::populate()
             label += tr(" — Minecraft %1 · %2").arg(workspace.minecraftVersion.isEmpty() ? tr("unknown version") : workspace.minecraftVersion,
                                                    workspace.worldsPresent ? tr("worlds included") : tr("no worlds"));
         auto item = new QListWidgetItem(label, m_list);
+        const auto icon = QIcon(workspace.iconPath);
+        item->setIcon(icon.isNull() ? QIcon(":/pxl/cone-icon.svg") : icon);
+        item->setSizeHint(QSize(0, 58));
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(m_mode == Import || workspace.settings["pxl-selected"].toBool() ? Qt::Checked : Qt::Unchecked);
         const bool unavailable = m_mode == Import ? workspace.components.isEmpty() : workspace.settings["pxl-running"].toBool();
@@ -221,7 +290,7 @@ void TransferDialog::loadSource()
     ProgressDialog progress(this);
     if (progress.execWithTask(&task) != QDialog::Accepted) {
         if (!task.wasSuccessful() && task.getState() != Task::State::AbortedByUser)
-            QMessageBox::warning(this, tr("Cannot read import"), task.failReason());
+            showNotice(this, tr("Cannot read import"), task.failReason());
         m_workspaces.clear();
         populate();
         return;
@@ -247,7 +316,22 @@ void TransferDialog::updateSummary()
     }
     const bool singlePack = m_mode == Export && m_format->currentData().toString() == "pxlconep";
     m_run->setEnabled(selected > 0 && (!singlePack || selected == 1));
+    if (m_mode == Import) {
+        const bool hasRows = !m_workspaces.isEmpty();
+        m_sourceChoices->setVisible(!hasRows);
+        m_changeSource->setVisible(hasRows);
+        m_run->setVisible(hasRows);
+        m_list->setVisible(hasRows);
+        m_source->setVisible(!m_source->text().isEmpty());
+        m_details->setVisible(hasRows);
+        m_details->setEnabled(selected > 0);
+        m_privacy->setVisible(hasRows);
+        setProperty("pxlPreferredSize", hasRows ? QSize(760, 700) : QSize(620, 440));
+        QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
+    }
     QString summary = tr("%n instance(s) selected.", "", selected);
+    if (m_mode == Import && m_workspaces.isEmpty())
+        summary = m_previewSource.isEmpty() ? tr("Choose a source above. Your original instances stay in place.") : tr("No instances were found in this source. Choose another archive or folder.");
     if (singlePack && selected > 1) summary += tr(" Select one instance for a pack, or choose a transfer for multiple instances.");
     if (m_mode == Import && !m_archive.isEmpty()) {
         summary += tr("\n%1 bundled files · %2 exact downloads · %3 MiB installed content.")
@@ -264,6 +348,9 @@ void TransferDialog::updateSummary()
     }
     if (m_mode == Export) summary += tr("\nThe next step chooses the archive destination; exports do not change your instances.");
     m_summary->setText(summary);
+    if (m_mode == Export)
+        m_summary->setText(summary + tr("\nFormat: %1").arg(singlePack ? ".pxlconep" : ".pxlt"));
+    m_list->setMaximumHeight(320);
 }
 
 void TransferDialog::runOperation()
@@ -287,7 +374,7 @@ void TransferDialog::runOperation()
             for (int i = 0; i < APPLICATION->instances()->count(); ++i) {
                 const auto current = APPLICATION->instances()->at(i);
                 if (current->instanceRoot() == workspace.root && current->isRunning()) {
-                    QMessageBox::warning(this, tr("Instance is running"), tr("Stop Minecraft before exporting this instance."));
+                    showNotice(this, tr("Instance is running"), tr("Stop Minecraft before exporting this instance."));
                     return;
                 }
             }
@@ -299,7 +386,7 @@ void TransferDialog::runOperation()
         });
         ProgressDialog progress(this);
         if (progress.execWithTask(&task) == QDialog::Accepted) {
-            QMessageBox::information(this, tr("Archive ready"), tr("Saved to:\n%1").arg(path));
+            showNotice(this, tr("Archive ready"), tr("Saved to:\n%1").arg(path));
             accept();
         }
         return;
@@ -324,7 +411,7 @@ void TransferDialog::runOperation()
             if (task->getState() == Task::State::AbortedByUser) break;
         }
     }
-    QMessageBox::information(this, tr("Import results"), results.join("\n\n"));
+    showNotice(this, tr("Import results"), results.join("\n\n"));
     if (!failed) accept();
 }
 }  // namespace Pxl

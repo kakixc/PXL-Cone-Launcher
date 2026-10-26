@@ -56,6 +56,12 @@
 
 #include <QApplication>
 #include <QProcess>
+#include <QComboBox>
+#include <QFrame>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSignalBlocker>
+#include "ui/pxl/SettingsCards.h"
 
 // FIXME: possibly move elsewhere
 enum InstSortMode {
@@ -78,6 +84,105 @@ LauncherPage::LauncherPage(QWidget* parent) : QWidget(parent), ui(new Ui::Launch
     loadSettings();
 
     ui->updateSettingsBox->setHidden(!APPLICATION->updater());
+
+    // Reuse the original controls and apply handlers, with a new everyday layout.
+    auto* content = ui->scrollAreaWidgetContents;
+    const auto groups = content->findChildren<QGroupBox*>(QString(), Qt::FindDirectChildrenOnly);
+    for (auto* group : groups) group->hide();
+    while (auto* item = ui->verticalLayout_8->takeAt(0)) delete item;
+    ui->verticalLayout_8->setContentsMargins(0, 0, 8, 0);
+    ui->verticalLayout_8->setSpacing(16);
+    content->setAutoFillBackground(false);
+    ui->scrollArea->viewport()->setAutoFillBackground(false);
+    ui->scrollArea->setStyleSheet("QScrollArea { border: none; background: transparent; } QScrollArea > QWidget > QWidget { background: transparent; }");
+
+    auto addCard = [this, content](const QString& title, const QString& description) {
+        auto* card = Pxl::settingsCard(content, title, description);
+        ui->verticalLayout_8->addWidget(card);
+        return card;
+    };
+    auto* library = addCard(tr("Library"), tr("Choose how your instances are organised."));
+    auto* libraryLayout = static_cast<QVBoxLayout*>(library->layout());
+    auto choices = [library, libraryLayout](const QString& title, const QList<QRadioButton*>& buttons) {
+        auto* combo = new QComboBox(library);
+        int selected = 0;
+        for (int index = 0; index < buttons.size(); ++index) {
+            combo->addItem(QString(buttons[index]->text()).remove('&'));
+            if (buttons[index]->isChecked()) selected = index;
+            buttons[index]->hide();
+            QObject::connect(buttons[index], &QRadioButton::toggled, combo, [combo, index](bool checked) {
+                if (checked) { const QSignalBlocker blocker(combo); combo->setCurrentIndex(index); }
+            });
+        }
+        combo->setCurrentIndex(selected);
+        QObject::connect(combo, qOverload<int>(&QComboBox::activated), combo, [buttons](int index) { buttons.at(index)->setChecked(true); });
+        libraryLayout->addWidget(Pxl::settingsRow(library, title, combo));
+    };
+    choices(tr("Sort instances"), {ui->sortByNameBtn, ui->sortLastLaunchedBtn, ui->sortByPlaytimeBtn});
+    choices(tr("When renaming"), {ui->askToRenameDirBtn, ui->alwaysRenameDirBtn, ui->neverRenameDirBtn});
+    ui->instanceSortingLabel->hide();
+    ui->renamingBehaviorLabel->hide();
+
+    auto* installs = addCard(tr("Content installation"), tr("Defaults used when creating and updating your instances."));
+    auto* installLayout = static_cast<QVBoxLayout*>(installs->layout());
+    for (auto* control : {ui->downloadGameFilesBtn, ui->dependenciesEnableBtn, ui->metadataEnableBtn}) {
+        installLayout->addWidget(control);
+        control->show();
+    }
+    installLayout->addWidget(ui->metadataWarningLabel);
+    ui->metadataWarningLabel->setVisible(!ui->metadataEnableBtn->isChecked());
+    connect(ui->metadataEnableBtn, &QCheckBox::toggled, ui->metadataWarningLabel, &QWidget::setHidden, Qt::UniqueConnection);
+
+    auto* storage = addCard(tr("Storage"), tr("Choose where PXL Cone keeps your files."));
+    auto* storageLayout = static_cast<QVBoxLayout*>(storage->layout());
+    auto folderRow = [](QWidget* parentWidget, QLabel* originalLabel, QLineEdit* path, QPushButton* browse) {
+        auto* controls = new QWidget(parentWidget);
+        auto* row = new QHBoxLayout(controls);
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(8);
+        row->addWidget(path, 1);
+        row->addWidget(browse);
+        path->show();
+        browse->show();
+        auto* field = Pxl::settingsRow(parentWidget, QString(originalLabel->text()).remove('&').remove(':'), controls);
+        static_cast<QVBoxLayout*>(parentWidget->layout())->addWidget(field);
+    };
+    folderRow(storage, ui->labelInstDir, ui->instDirTextBox, ui->instDirBrowseBtn);
+    folderRow(storage, ui->labelDownloadsDir, ui->downloadsDirTextBox, ui->downloadsDirBrowseBtn);
+    auto* moreFolders = new QPushButton(tr("Other folders"), storage);
+    moreFolders->setCheckable(true);
+    moreFolders->setProperty("pxlDisclosure", true);
+    moreFolders->setProperty("pxlQuiet", true);
+    storageLayout->addWidget(moreFolders, 0, Qt::AlignLeft);
+    auto* folders = new QWidget(storage);
+    auto* foldersLayout = new QVBoxLayout(folders);
+    foldersLayout->setContentsMargins(0, 0, 0, 0);
+    foldersLayout->setSpacing(12);
+    folderRow(folders, ui->labelModsDir, ui->modsDirTextBox, ui->modsDirBrowseBtn);
+    folderRow(folders, ui->labelIconsDir, ui->iconsDirTextBox, ui->iconsDirBrowseBtn);
+    folderRow(folders, ui->labelJavaDir, ui->javaDirTextBox, ui->javaDirBrowseBtn);
+    folderRow(folders, ui->labelSkinsDir, ui->skinsDirTextBox, ui->skinsDirBrowseBtn);
+    folders->hide();
+    storageLayout->addWidget(folders);
+    connect(moreFolders, &QPushButton::toggled, folders, &QWidget::setVisible);
+
+    auto* advancedButton = new QPushButton(tr("Advanced options"), content);
+    advancedButton->setCheckable(true);
+    advancedButton->setProperty("pxlDisclosure", true);
+    advancedButton->setIcon(QIcon(":/pxl/icons/sliders-horizontal.svg"));
+    ui->verticalLayout_8->addWidget(advancedButton, 0, Qt::AlignLeft);
+    auto* advanced = new QWidget(content);
+    auto* advancedLayout = new QVBoxLayout(advanced);
+    advancedLayout->setContentsMargins(0, 0, 0, 0);
+    advancedLayout->setSpacing(16);
+    for (auto* group : {ui->userInterfaceBox, ui->modsBox, ui->groupBox_2, ui->tasksBox, ui->updateSettingsBox}) {
+        advancedLayout->addWidget(group);
+        group->setVisible(group != ui->updateSettingsBox || APPLICATION->updater());
+    }
+    advanced->hide();
+    ui->verticalLayout_8->addWidget(advanced);
+    ui->verticalLayout_8->addStretch();
+    connect(advancedButton, &QPushButton::toggled, advanced, &QWidget::setVisible);
 }
 
 LauncherPage::~LauncherPage()

@@ -29,6 +29,9 @@ unique_qobject_ptr<SubTaskProgressBar> SubTaskProgressBar::create(QWidget* paren
 SubTaskProgressBar::SubTaskProgressBar(QWidget* parent) : QWidget(parent), ui(new Ui::SubTaskProgressBar)
 {
     ui->setupUi(this);
+    ui->verticalLayout->setContentsMargins(0, 8, 0, 8);
+    ui->verticalLayout->setSpacing(8);
+    ui->progressBar->setTextVisible(false);
 }
 SubTaskProgressBar::~SubTaskProgressBar()
 {

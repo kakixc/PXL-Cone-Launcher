@@ -63,6 +63,7 @@ class PageContainer : public QWidget, public BasePageContainer {
     void addButtons(QLayout* buttons);
 
     void useSidebarStyle(bool sidebar);
+    void useConeStyle();
 
     /*
      * Save any unsaved state and prepare to be closed.
@@ -91,6 +92,10 @@ class PageContainer : public QWidget, public BasePageContainer {
     void changeEvent(QEvent*) override;
 
     void hidePageList() { m_pageList->hide(); }
+    void setPageListVisible(bool visible) { m_pageList->setVisible(visible); }
+    void setPageHeadingVisible(bool visible);
+    void setExcludedPage(const QString& id);
+    void setSearchText(const QString& text);
 
    private:
     void createUI();

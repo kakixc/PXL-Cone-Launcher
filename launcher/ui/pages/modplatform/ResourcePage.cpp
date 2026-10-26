@@ -54,6 +54,10 @@
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/pages/modplatform/ResourceModel.h"
 #include "ui/widgets/ProjectItem.h"
+#include "ui/pxl/CatalogCardDelegate.h"
+#include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/LibraryControls.h"
+#include <QSignalBlocker>
 
 namespace ResourceDownload {
 
@@ -61,6 +65,14 @@ ResourcePage::ResourcePage(ResourceDownloadDialog* parent, BaseInstance& baseIns
     : QWidget(parent), m_baseInstance(baseInstance), m_ui(new Ui::ResourcePage), m_parentDialog(parent), m_fetchProgress(this, false)
 {
     m_ui->setupUi(this);
+    m_ui->verticalLayout->setSpacing(16);
+    m_ui->searchEdit->setPlaceholderText(tr("Search content"));
+    m_ui->searchEdit->setClearButtonEnabled(true);
+    m_ui->searchEdit->addAction(QIcon(":/pxl/icons/magnifying-glass.svg"), QLineEdit::LeadingPosition);
+    m_ui->resourceFilterButton->setIcon(QIcon(":/pxl/icons/sliders-horizontal.svg"));
+    m_ui->packView->setAlternatingRowColors(false);
+    m_ui->packView->setSpacing(4);
+    m_ui->splitter->setHandleWidth(16);
 
     m_ui->searchEdit->installEventFilter(this);
 
@@ -96,6 +108,90 @@ ResourcePage::~ResourcePage()
 {
     delete m_ui;
     delete m_model;
+}
+
+void ResourcePage::useCardPresentation()
+{
+    if (m_cardPresentation) return;
+    m_cardPresentation = true;
+    auto* delegate = new Pxl::CatalogCardDelegate(this,
+        [this](const QModelIndex& index) { onResourceToggle(index); },
+        [this](const QModelIndex& index) { showProjectDetails(index); });
+    m_ui->packView->setItemDelegate(delegate);
+    m_ui->packView->setMouseTracking(true);
+    m_ui->packView->setSpacing(5);
+    m_ui->packView->setStyleSheet("QListView { background: transparent; border: none; outline: none; }");
+    m_ui->packView->viewport()->setAutoFillBackground(false);
+    m_ui->packDescription->hide();
+    m_ui->label->hide();
+    m_ui->versionSelectionBox->hide();
+    m_ui->resourceSelectionButton->hide();
+    auto* sorting = new QWidget(this);
+    sorting->setObjectName("catalogSortingRow");
+    sorting->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    auto* row = new QHBoxLayout(sorting);
+    row->setContentsMargins(0, 0, 0, 0);
+    auto* sort = new Pxl::ChoiceChip(sorting);
+    sort->setObjectName("catalogSortChoice");
+    sort->setAccessibleName(tr("Sort results"));
+    sort->setMaximumWidth(320);
+    // Keep provider-specific handlers on the original control and share its model.
+    sort->setModel(m_ui->sortByBox->model());
+    sort->setCurrentIndex(m_ui->sortByBox->currentIndex());
+    connect(sort, qOverload<int>(&QComboBox::currentIndexChanged), m_ui->sortByBox, &QComboBox::setCurrentIndex);
+    connect(m_ui->sortByBox, qOverload<int>(&QComboBox::currentIndexChanged), sort, [sort](int index) {
+        const QSignalBlocker block(sort);
+        sort->setCurrentIndex(index);
+    });
+    m_ui->sortByBox->hide();
+    row->addWidget(sort);
+    row->addStretch();
+    m_ui->verticalLayout->insertWidget(1, sorting);
+    m_ui->verticalLayout->setContentsMargins(0, 0, 0, 0);
+    m_ui->verticalLayout->setSpacing(12);
+    for (int i = 0; i < m_ui->verticalLayout->count(); ++i) m_ui->verticalLayout->setStretch(i, 0);
+    m_ui->verticalLayout->setStretchFactor(m_ui->splitter, 1);
+    Pxl::applySearchSurface(m_ui->searchEdit);
+    disconnect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::onResourceToggle);
+    connect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::showProjectDetails);
+}
+
+void ResourcePage::showProjectDetails(const QModelIndex& index)
+{
+    if (!index.isValid()) return;
+    m_ui->packView->setCurrentIndex(index);
+    const auto pack = getCurrentPack();
+    if (!pack) return;
+    QDialog details(this);
+    details.setProperty("pxlFlow", true);
+    details.setProperty("pxlPreferredSize", QSize(760, 640));
+    auto* layout = new QVBoxLayout(&details);
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(16);
+    auto* title = new QLabel(pack->name, &details);
+    title->setTextFormat(Qt::PlainText);
+    title->setProperty("pxlFlowTitle", true);
+    layout->addWidget(title);
+    layout->addWidget(m_ui->packDescription, 1);
+    m_ui->packDescription->show();
+    auto* versionRow = new QHBoxLayout;
+    versionRow->addWidget(m_ui->versionSelectionBox, 1);
+    versionRow->addWidget(m_ui->resourceSelectionButton);
+    m_ui->versionSelectionBox->show();
+    m_ui->resourceSelectionButton->show();
+    layout->addLayout(versionRow);
+    auto* close = new QPushButton(tr("Done"), &details);
+    connect(close, &QPushButton::clicked, &details, &QDialog::accept);
+    layout->addWidget(close, 0, Qt::AlignRight);
+    const QPointer<ResourcePage> alive(this);
+    Pxl::DialogOverlay::run(&details, window());
+    if (!alive) return;
+    m_ui->splitter->addWidget(m_ui->packDescription);
+    m_ui->gridLayout_4->addWidget(m_ui->versionSelectionBox, 0, 2);
+    m_ui->gridLayout_4->addWidget(m_ui->resourceSelectionButton, 1, 2);
+    m_ui->packDescription->hide();
+    m_ui->versionSelectionBox->hide();
+    m_ui->resourceSelectionButton->hide();
 }
 
 void ResourcePage::retranslate()
@@ -421,7 +517,7 @@ void ResourcePage::onResourceSelected()
     }
 
     auto currentPack = getCurrentPack();
-    if (!currentPack || !currentPack->versionsLoaded || currentPack->versions.size() < m_selectedVersionIndex) {
+    if (!currentPack || !currentPack->versionsLoaded || m_selectedVersionIndex >= currentPack->versions.size()) {
         return;
     }
 
@@ -445,8 +541,10 @@ void ResourcePage::onResourceSelected()
 
 void ResourcePage::onResourceToggle(const QModelIndex& index)
 {
+    if (!index.isValid() || !m_model) return;
     const bool isSelected = index == m_ui->packView->currentIndex();
     auto pack = m_model->data(index, Qt::UserRole).value<ModPlatform::IndexedPack::Ptr>();
+    if (!pack) return;
 
     if (pack->versionsLoaded) {
         if (pack->isAnyVersionSelected()) {

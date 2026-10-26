@@ -55,6 +55,8 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
 
     void initializeContainer();
     void connectButtons();
+    void useEmbeddedPresentation();
+    bool hasProviders() const;
 
     //: String that gets appended to the download dialog title ("Download " + resourcesString())
     virtual QString resourcesString() const { return tr("resources"); }
@@ -75,6 +77,9 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
    public slots:
     void accept() override;
     void reject() override;
+
+   signals:
+    void embeddedCloseRequested();
 
    protected slots:
     void selectedPageChanged(BasePage* previous, BasePage* selected);
@@ -97,6 +102,7 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
 
    protected:
     bool m_suppressInitialSearch = false;
+    bool m_embedded = false;
 };
 
 class ModDownloadDialog final : public ResourceDownloadDialog {

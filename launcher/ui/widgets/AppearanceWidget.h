@@ -26,6 +26,7 @@
 
 class QTextCharFormat;
 class SettingsObject;
+class LanguageSelectionWidget;
 
 namespace Ui {
 class AppearanceWidget;
@@ -55,4 +56,6 @@ class AppearanceWidget : public QWidget {
     Ui::AppearanceWidget* m_ui;
     QTextCharFormat m_defaultFormat;
     bool m_themesOnly;
+    QString m_backgroundImagePath;
+    LanguageSelectionWidget* m_languageWidget = nullptr;
 };

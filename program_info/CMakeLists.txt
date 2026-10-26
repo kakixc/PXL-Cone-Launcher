@@ -9,7 +9,7 @@ if(UNIX)
 endif()
 
 set(Launcher_CommonName "ElyPrismLauncher")
-set(Launcher_DisplayName "PineconeMC")
+set(Launcher_DisplayName "PXL Cone Launcher")
 set(Launcher_AppID "io.github.elyprismlauncher.ElyPrismLauncher")
 set(Launcher_Domain "pineconemc.ru")
 set(Launcher_Git "https://github.com/ElyPrismLauncher/Launcher")

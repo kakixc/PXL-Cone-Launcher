@@ -38,6 +38,7 @@
 #include "PageContainer.h"
 #include "BuildConfig.h"
 #include "PageContainer_p.h"
+#include "ui/pxl/Animations.h"
 
 #include <QDialogButtonBox>
 #include <QGridLayout>
@@ -49,6 +50,8 @@
 #include <QStackedLayout>
 #include <QStyledItemDelegate>
 #include <QUrl>
+#include <QAbstractButton>
+#include <QGroupBox>
 #include <utility>
 
 #include "settings/SettingsObject.h"
@@ -61,6 +64,20 @@
 class PageEntryFilterModel : public QSortFilterProxyModel {
    public:
     explicit PageEntryFilterModel(QObject* parent = nullptr) : QSortFilterProxyModel(parent) {}
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
+    {
+        if (index.isValid() && role == Qt::DecorationRole && property("pxlIcons").toBool()) {
+            auto* model = static_cast<PageModel*>(sourceModel());
+            const auto id = model->pages().at(mapToSource(index).row())->id();
+            static const QHash<QString, QString> icons{
+                {"launcher-settings", "gear-six"}, {"language-settings", "sliders-horizontal"},
+                {"appearance-settings", "sliders-horizontal"}, {"minecraft-settings", "squares-four"},
+                {"java-settings", "sliders-horizontal"}, {"accounts", "user-circle"},
+                {"apis", "share-network"}, {"external-tools", "sliders-horizontal"}, {"proxy-settings", "share-network"}};
+            if (icons.contains(id)) return QIcon(":/pxl/icons/" + icons.value(id) + ".svg");
+        }
+        return QSortFilterProxyModel::data(index, role);
+    }
 
    protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
@@ -68,8 +85,19 @@ class PageEntryFilterModel : public QSortFilterProxyModel {
         const QString pattern = filterRegularExpression().pattern();
         auto* const model = static_cast<PageModel*>(sourceModel());
         auto* const page = model->pages().at(sourceRow);
+        if (page->id() == property("pxlExcludedPage").toString()) return false;
         if (!page->shouldDisplay()) {
             return false;
+        }
+        const auto query = property("pxlSearchText").toString().trimmed();
+        if (!query.isEmpty()) {
+            QString text = page->displayName() + " " + page->id();
+            if (auto* widget = dynamic_cast<QWidget*>(page)) {
+                for (auto* label : widget->findChildren<QLabel*>()) text += " " + label->text();
+                for (auto* button : widget->findChildren<QAbstractButton*>()) text += " " + button->text();
+                for (auto* group : widget->findChildren<QGroupBox*>()) text += " " + group->title();
+            }
+            return text.contains(query, Qt::CaseInsensitive);
         }
         // Regular contents check, then check page-filter.
         return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
@@ -176,7 +204,7 @@ void PageContainer::createUI()
     m_header->setFont(headerLabelFont);
 
     auto* headerHLayout = new QHBoxLayout;
-    const int leftMargin = APPLICATION->style()->pixelMetric(QStyle::PM_LayoutLeftMargin);
+    const int leftMargin = QApplication::style()->pixelMetric(QStyle::PM_LayoutLeftMargin);
     headerHLayout->addSpacerItem(new QSpacerItem(leftMargin, 0, QSizePolicy::Fixed, QSizePolicy::Ignored));
     headerHLayout->addWidget(m_header);
     headerHLayout->setContentsMargins(0, 6, 0, 0);
@@ -219,10 +247,45 @@ void PageContainer::useSidebarStyle(bool sidebar)
     m_pageList->setProperty("_kde_side_panel_view", sidebar);
 }
 
+void PageContainer::useConeStyle()
+{
+    setProperty("pxlFlow", true);
+    m_proxyModel->setProperty("pxlIcons", true);
+    useSidebarStyle(false);
+    m_pageList->setObjectName("conePageNavigation");
+    m_pageList->setIconSize(QSize(22, 22));
+    m_pageList->setMinimumWidth(180);
+    m_pageList->setMaximumWidth(230);
+    m_pageList->setFrameShape(QFrame::NoFrame);
+    m_header->setObjectName("conePageHeading");
+    m_layout->setHorizontalSpacing(20);
+    m_layout->setVerticalSpacing(16);
+}
+
+void PageContainer::setExcludedPage(const QString& id)
+{
+    m_proxyModel->setProperty("pxlExcludedPage", id);
+    m_proxyModel->invalidate();
+}
+
+void PageContainer::setPageHeadingVisible(bool visible)
+{
+    m_header->setVisible(visible);
+}
+
+void PageContainer::setSearchText(const QString& text)
+{
+    m_proxyModel->setProperty("pxlSearchText", text);
+    m_proxyModel->invalidate();
+    if (m_proxyModel->rowCount() > 0 && !m_pageList->currentIndex().isValid())
+        m_pageList->setCurrentIndex(m_proxyModel->index(0, 0));
+}
+
 void PageContainer::showPage(int row)
 {
     if (m_currentPage) {
         m_currentPage->closed();
+        if (auto* widget = dynamic_cast<QWidget*>(m_currentPage)) widget->hide();
     }
     if (row != -1) {
         m_currentPage = m_model->pages().at(row);
@@ -233,6 +296,10 @@ void PageContainer::showPage(int row)
         m_pageStack->setCurrentIndex(m_currentPage->stackIndex);
         m_header->setText(m_currentPage->displayName());
         m_currentPage->opened();
+        if (auto* widget = dynamic_cast<QWidget*>(m_currentPage)) {
+            widget->show();
+            widget->update();
+        }
     } else {
         m_pageStack->setCurrentIndex(0);
         m_header->setText(QString());
@@ -253,6 +320,11 @@ void PageContainer::help()
 void PageContainer::currentChanged(const QModelIndex& current)
 {
     int selectedIndex = current.isValid() ? m_proxyModel->mapToSource(current).row() : -1;
+
+    if (selectedIndex < 0 || selectedIndex >= m_model->pages().size()) {
+        showPage(-1);
+        return;
+    }
 
     auto* selected = m_model->pages().at(selectedIndex);
     auto* previous = m_currentPage;

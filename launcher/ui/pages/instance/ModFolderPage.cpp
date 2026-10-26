@@ -162,6 +162,11 @@ void ModFolderPage::removeItems(const QItemSelection& selection)
 
 void ModFolderPage::downloadMods()
 {
+    if (m_downloadDialog && m_downloadDialog->isVisible()) {
+        m_downloadDialog->raise();
+        m_downloadDialog->activateWindow();
+        return;
+    }
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }
