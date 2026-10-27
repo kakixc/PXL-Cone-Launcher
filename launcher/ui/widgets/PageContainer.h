@@ -95,6 +95,7 @@ class PageContainer : public QWidget, public BasePageContainer {
     void setPageListVisible(bool visible) { m_pageList->setVisible(visible); }
     void setPageHeadingVisible(bool visible);
     void setExcludedPage(const QString& id);
+    void setAdvancedMode(bool advanced);
     void setSearchText(const QString& text);
 
    private:

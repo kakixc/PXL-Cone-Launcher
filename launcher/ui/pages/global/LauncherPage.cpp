@@ -37,6 +37,7 @@
  */
 
 #include "LauncherPage.h"
+#include "ui/pxl/SettingsMode.h"
 #include "ui_LauncherPage.h"
 
 #include <QDir>
@@ -150,11 +151,13 @@ LauncherPage::LauncherPage(QWidget* parent) : QWidget(parent), ui(new Ui::Launch
     folderRow(storage, ui->labelInstDir, ui->instDirTextBox, ui->instDirBrowseBtn);
     folderRow(storage, ui->labelDownloadsDir, ui->downloadsDirTextBox, ui->downloadsDirBrowseBtn);
     auto* moreFolders = new QPushButton(tr("Other folders"), storage);
+    Pxl::markAdvancedSetting(moreFolders);
     moreFolders->setCheckable(true);
     moreFolders->setProperty("pxlDisclosure", true);
     moreFolders->setProperty("pxlQuiet", true);
     storageLayout->addWidget(moreFolders, 0, Qt::AlignLeft);
     auto* folders = new QWidget(storage);
+    Pxl::markAdvancedSetting(folders, moreFolders);
     auto* foldersLayout = new QVBoxLayout(folders);
     foldersLayout->setContentsMargins(0, 0, 0, 0);
     foldersLayout->setSpacing(12);
@@ -167,11 +170,13 @@ LauncherPage::LauncherPage(QWidget* parent) : QWidget(parent), ui(new Ui::Launch
     connect(moreFolders, &QPushButton::toggled, folders, &QWidget::setVisible);
 
     auto* advancedButton = new QPushButton(tr("Advanced options"), content);
+    Pxl::markAdvancedSetting(advancedButton);
     advancedButton->setCheckable(true);
     advancedButton->setProperty("pxlDisclosure", true);
     advancedButton->setIcon(QIcon(":/pxl/icons/sliders-horizontal.svg"));
     ui->verticalLayout_8->addWidget(advancedButton, 0, Qt::AlignLeft);
     auto* advanced = new QWidget(content);
+    Pxl::markAdvancedSetting(advanced, advancedButton);
     auto* advancedLayout = new QVBoxLayout(advanced);
     advancedLayout->setContentsMargins(0, 0, 0, 0);
     advancedLayout->setSpacing(16);

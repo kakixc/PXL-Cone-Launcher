@@ -49,7 +49,7 @@ public:
             auto* action=new QToolButton(slot); action->setObjectName(deleting ? "pxlRemoveProfile" : "pxlEditProfile");
             action->setIcon(QIcon(deleting ? ":/pxl/icons/trash.svg" : ":/pxl/icons/pencil.svg")); action->setFixedSize(28,28); action->setIconSize(QSize(17,17));
             action->setToolTip(deleting ? accountText("Remove profile") : accountText("Edit profile")); action->setAccessibleName(action->toolTip()); action->setEnabled(enabled);
-            action->setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 8px; } QToolButton:hover { background: rgba(255,255,255,30); }");
+            action->setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 8px; padding: 0; } QToolButton:hover { background: rgba(255,255,255,30); }");
             connect(action,&QToolButton::clicked,row,deleting ? remove : edit); layout->addWidget(action);
         }
         slot->setFixedSize(60,28); slot->hide(); row->installEventFilter(this);
@@ -171,7 +171,10 @@ public:
         if (!contains(account) || account->isActive() || account->isInUse()) return;
         if (account->accountType()==AccountType::Offline) {
             ChooseOfflineNameDialog dialog(accountText("Change your offline profile name. A different name creates a different Minecraft player identity; worlds may show a different inventory."),this);
-            dialog.setUsername(account->profileName()); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(560,360));
+            dialog.setUsername(account->profileName()); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(520,300));
+            auto* heading = new QLabel(accountText("Edit offline profile"), &dialog);
+            heading->setProperty("pxlFlowTitle", true);
+            static_cast<QVBoxLayout*>(dialog.layout())->insertWidget(0, heading);
             const QPointer<AccountsPage> alive(this);
             if (DialogOverlay::run(&dialog,window())!=QDialog::Accepted || !alive || !contains(account)) return;
             const auto name=dialog.getUsername();

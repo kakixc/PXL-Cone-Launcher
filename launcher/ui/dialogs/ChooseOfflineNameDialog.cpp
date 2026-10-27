@@ -28,6 +28,11 @@ ChooseOfflineNameDialog::ChooseOfflineNameDialog(const QString& message, QWidget
 {
     ui->setupUi(this);
     ui->label->setText(message);
+    ui->label->setTextFormat(Qt::PlainText);
+    ui->label->setWordWrap(true);
+    ui->label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    ui->verticalLayout->setContentsMargins(24, 24, 24, 24);
+    ui->verticalLayout->setSpacing(16);
 
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
     ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));

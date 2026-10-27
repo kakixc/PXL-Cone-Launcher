@@ -40,6 +40,7 @@
 #include "ui/widgets/PageContainer.h"
 #include "ui/pxl/DialogOverlay.h"
 #include "ui/pxl/LibraryControls.h"
+#include "ui/pxl/ToggleSwitch.h"
 
 PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidget* parent, bool embedded) : QDialog(parent), m_embedded(embedded)
 {
@@ -61,12 +62,26 @@ PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidge
             area->viewport()->setAutoFillBackground(false);
             if (area->widget()) area->widget()->setAutoFillBackground(false);
         }
-        mainLayout->setContentsMargins(4, 4, 12, 12);
+        mainLayout->setContentsMargins(24, 8, 24, 20);
         mainLayout->setSpacing(16);
         auto* search = new Pxl::LibrarySearch(this);
         search->setPlaceholderText(tr("Search settings"));
         search->setClearButtonEnabled(true);
-        mainLayout->addWidget(search);
+        auto* toolbar = new QHBoxLayout;
+        toolbar->setSpacing(16);
+        toolbar->addWidget(search, 1);
+        auto* advancedMode = new Pxl::ToggleSwitch(tr("Advanced mode"), this);
+        advancedMode->setObjectName("pxlAdvancedSettingsMode");
+        advancedMode->setProperty("pxlDisclosure", true);
+        advancedMode->setToolTip(tr("Show technical settings, services, tools and proxy configuration."));
+        advancedMode->setChecked(APPLICATION_DYN && APPLICATION_DYN->settings()->get("WorkspaceAdvancedSettings").toBool());
+        toolbar->addWidget(advancedMode);
+        mainLayout->addLayout(toolbar);
+        m_container->setAdvancedMode(advancedMode->isChecked());
+        connect(advancedMode, &QCheckBox::toggled, this, [this](bool advanced) {
+            m_container->setAdvancedMode(advanced);
+            if (auto* app = APPLICATION_DYN) app->settings()->set("WorkspaceAdvancedSettings", advanced);
+        });
         connect(search, &QLineEdit::textChanged, m_container, &PageContainer::setSearchText);
         mainLayout->addWidget(m_container, 1);
         auto* footer = new QHBoxLayout;

@@ -36,6 +36,7 @@
  */
 
 #include "PageContainer.h"
+#include "ui/pxl/SettingsMode.h"
 #include "BuildConfig.h"
 #include "PageContainer_p.h"
 #include "ui/pxl/Animations.h"
@@ -86,6 +87,8 @@ class PageEntryFilterModel : public QSortFilterProxyModel {
         auto* const model = static_cast<PageModel*>(sourceModel());
         auto* const page = model->pages().at(sourceRow);
         if (page->id() == property("pxlExcludedPage").toString()) return false;
+        if (property("pxlBasicSettings").toBool() && QStringList{"apis", "external-tools", "proxy-settings"}.contains(page->id()))
+            return false;
         if (!page->shouldDisplay()) {
             return false;
         }
@@ -93,9 +96,15 @@ class PageEntryFilterModel : public QSortFilterProxyModel {
         if (!query.isEmpty()) {
             QString text = page->displayName() + " " + page->id();
             if (auto* widget = dynamic_cast<QWidget*>(page)) {
-                for (auto* label : widget->findChildren<QLabel*>()) text += " " + label->text();
-                for (auto* button : widget->findChildren<QAbstractButton*>()) text += " " + button->text();
-                for (auto* group : widget->findChildren<QGroupBox*>()) text += " " + group->title();
+                auto searchable = [this, widget](QWidget* control) {
+                    if (!property("pxlBasicSettings").toBool()) return true;
+                    for (auto* ancestor = control; ancestor && ancestor != widget; ancestor = ancestor->parentWidget())
+                        if (ancestor->property("pxlAdvancedSetting").toBool() || ancestor->property("pxlAdvancedTab").toBool()) return false;
+                    return true;
+                };
+                for (auto* label : widget->findChildren<QLabel*>()) if (searchable(label)) text += " " + label->text();
+                for (auto* button : widget->findChildren<QAbstractButton*>()) if (searchable(button)) text += " " + button->text();
+                for (auto* group : widget->findChildren<QGroupBox*>()) if (searchable(group)) text += " " + group->title();
             }
             return text.contains(query, Qt::CaseInsensitive);
         }
@@ -266,6 +275,17 @@ void PageContainer::setExcludedPage(const QString& id)
 {
     m_proxyModel->setProperty("pxlExcludedPage", id);
     m_proxyModel->invalidate();
+}
+
+void PageContainer::setAdvancedMode(bool advanced)
+{
+    const bool selectedAdvanced = m_currentPage && QStringList{"apis", "external-tools", "proxy-settings"}.contains(m_currentPage->id());
+    Pxl::applySettingsMode(this, advanced);
+    m_proxyModel->setProperty("pxlBasicSettings", !advanced);
+    m_proxyModel->invalidate();
+    if (!advanced && selectedAdvanced) selectPage("launcher-settings");
+    if (m_proxyModel->rowCount() > 0 && !m_pageList->currentIndex().isValid())
+        m_pageList->setCurrentIndex(m_proxyModel->index(0, 0));
 }
 
 void PageContainer::setPageHeadingVisible(bool visible)

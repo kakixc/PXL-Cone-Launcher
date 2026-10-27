@@ -31,6 +31,8 @@
 #include <ui/pxl/TransferDialog.h>
 #include <ui/pxl/ContentBrowser.h>
 #include <ui/dialogs/ResourceDownloadDialog.h>
+#include <ui/dialogs/ReviewMessageBox.h>
+#include <QTreeWidget>
 #include <BaseVersionList.h>
 #include <QStandardItemModel>
 #include <ui/pxl/FrostedSurface.h>
@@ -44,6 +46,7 @@
 #include <ui/pxl/AccountsPage.h>
 #include <ui/pxl/InstalledContentView.h>
 #include <ui/pxl/MinecraftPreferences.h>
+#include <ui/pxl/SettingsMode.h>
 #include <ui/pages/modplatform/ResourcePage.h>
 
 class CatalogTestVersion final : public BaseVersion {
@@ -145,7 +148,7 @@ private:
     BaseInstance& m_instance;
 };
 
-class PreviewSettingsPage final : public QWidget, public BasePage {
+class PreviewSettingsPage : public QWidget, public BasePage {
 public:
     PreviewSettingsPage()
     {
@@ -247,6 +250,122 @@ class WorkspacePageTest : public QObject {
             QVERIFY(font.supportsCharacter(QChar(u'И')));
             QVERIFY(font.supportsCharacter(QChar(u'ё')));
         }
+    }
+
+    void downloadReviewKeepsExplanationSeparateAndDependencyActionExplicit()
+    {
+        POTranslator russian(":/pxl/translations/pxl-ru.po");
+        qApp->installTranslator(&russian);
+        std::unique_ptr<ReviewMessageBox> dialog(ReviewMessageBox::create(nullptr, QString("Review")));
+        dialog->retranslateUi("mods");
+        auto* tree = dialog->findChild<QTreeWidget*>("modTreeWidget");
+        auto* dependencies = dialog->findChild<QPushButton*>("toggleDepsButton");
+        auto* explanation = dialog->findChild<QLabel*>("onlyCheckedLabel");
+        auto* buttons = dialog->findChild<QDialogButtonBox*>("buttonBox");
+        QVERIFY(tree && dependencies && explanation && buttons);
+        QVERIFY(dependencies->isHidden());
+        QVERIFY(!buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        dialog->appendResource({.name="Iris", .filename="iris.jar", .provider="Modrinth"});
+        dialog->appendResource({.name="Sodium", .filename="sodium.jar", .provider="Modrinth", .required_by={"Iris"}});
+        dialog->resize(620, 460);
+        dialog->show();
+        QTest::qWait(30);
+        QCOMPARE(dependencies->text(), QString::fromUtf8("Снять выбор зависимостей"));
+        QCOMPARE(buttons->button(QDialogButtonBox::Ok)->text(), QString::fromUtf8("Установить выбранное"));
+        QCOMPARE(explanation->text(), QString::fromUtf8("Будут загружены только отмеченные дополнения."));
+        QVERIFY(explanation->wordWrap());
+        QVERIFY(explanation->geometry().bottom() < buttons->geometry().top());
+        QVERIFY(dependencies->geometry().right() < buttons->geometry().left());
+        QTest::mouseClick(dependencies, Qt::LeftButton);
+        QCOMPARE(dialog->deselectedResources(), QStringList{"Sodium"});
+        QCOMPARE(dependencies->text(), QString::fromUtf8("Выбрать все зависимости"));
+        tree->topLevelItem(1)->setCheckState(0, Qt::Checked);
+        QCOMPARE(dependencies->text(), QString::fromUtf8("Снять выбор зависимостей"));
+        tree->topLevelItem(0)->setCheckState(0, Qt::Unchecked);
+        tree->topLevelItem(1)->setCheckState(0, Qt::Unchecked);
+        QVERIFY(!buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        QTest::mouseClick(dependencies, Qt::LeftButton);
+        QVERIFY(buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        QCOMPARE(dialog->deselectedResources(), QStringList{"Iris"});
+        dialog->usePxlPresentation("Create Survival", QIcon(":/pxl/icons/squares-four.svg"), {});
+        dialog->resize(dialog->property("pxlPreferredSize").toSize());
+        QTest::qWait(30);
+        QVERIFY(dialog->findChild<QWidget*>("reviewInstanceCard"));
+        const auto row = tree->visualItemRect(tree->topLevelItem(0));
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, row.center());
+        QVERIFY(dialog->deselectedResources().isEmpty());
+        QTest::keyClick(tree, Qt::Key_Space);
+        QCOMPARE(dialog->deselectedResources(), QStringList{"Iris"});
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(dialog->grab().save(QDir(screenshots).filePath("download-review-footer.png")));
+        qApp->removeTranslator(&russian);
+    }
+
+    void profileHoverIconsPaintInsideSmallButtons()
+    {
+        QWidget row;
+        row.resize(300, 60);
+        auto* slot = new QWidget(&row);
+        new Pxl::ProfileHoverActions(&row, slot, true, [] {}, [] {}, true);
+        row.show();
+        QEnterEvent enter(QPointF(1, 1), QPointF(1, 1), QPointF(1, 1));
+        qApp->sendEvent(&row, &enter);
+        QTest::qWait(20);
+        for (const auto& name : {"pxlEditProfile", "pxlRemoveProfile"}) {
+            auto* action = row.findChild<QToolButton*>(name);
+            QVERIFY(action && action->isVisible());
+            const auto image = action->grab().toImage();
+            int brightPixels = 0;
+            for (int y = 0; y < image.height(); ++y)
+                for (int x = 0; x < image.width(); ++x)
+                    if (image.pixelColor(x, y).lightness() > 150) ++brightPixels;
+            QVERIFY2(brightPixels > 20, name);
+        }
+    }
+
+    void basicSettingsKeepAdvancedValuesAndRestoreNavigation()
+    {
+        struct SettingsFixture final : PreviewSettingsPage {
+            explicit SettingsFixture(QString value) : key(std::move(value)) {}
+            QString id() const override { return key; }
+            QString key;
+        };
+        GenericPageProvider provider("Settings");
+        SettingsFixture* general = nullptr;
+        provider.addPageCreator([&] { general = new SettingsFixture("launcher-settings"); return general; });
+        for (const auto& key : {"apis", "external-tools", "proxy-settings"})
+            provider.addPageCreator([key] { return new SettingsFixture(key); });
+        PageDialog dialog(&provider, "launcher-settings", nullptr, true);
+        dialog.resize(1040, 700);
+        dialog.show();
+        auto* advanced = dialog.findChild<QCheckBox*>("pxlAdvancedSettingsMode");
+        auto* container = dialog.findChild<PageContainer*>();
+        auto* navigation = dialog.findChild<QListView*>("conePageNavigation");
+        QVERIFY(advanced && container && navigation);
+        QVERIFY(!advanced->isChecked());
+        QCOMPARE(navigation->model()->rowCount(), 1);
+        auto* technical = new QLineEdit("retained value", general);
+        general->layout()->addWidget(technical);
+        Pxl::markAdvancedSetting(technical);
+        auto* tabs = new QTabWidget(general);
+        tabs->addTab(new QWidget(tabs), "General");
+        auto* extra = new QWidget(tabs);
+        extra->setProperty("pxlAdvancedTab", true);
+        tabs->addTab(extra, "Technical");
+        general->layout()->addWidget(tabs);
+        container->setAdvancedMode(false);
+        QVERIFY(technical->isHidden());
+        QVERIFY(!tabs->isTabVisible(1));
+        advanced->click();
+        QCOMPARE(navigation->model()->rowCount(), 4);
+        QVERIFY(!technical->isHidden());
+        QVERIFY(tabs->isTabVisible(1));
+        QVERIFY(container->selectPage("proxy-settings"));
+        advanced->click();
+        QCOMPARE(navigation->model()->rowCount(), 1);
+        QCOMPARE(container->selectedPage()->id(), QString("launcher-settings"));
+        QCOMPARE(technical->text(), QString("retained value"));
+        QVERIFY(technical->isHidden());
     }
 
     void accountHeaderAndProfilesUseExistingAccountModel()

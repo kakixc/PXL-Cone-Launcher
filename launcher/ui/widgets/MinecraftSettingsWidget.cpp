@@ -157,6 +157,8 @@ MinecraftSettingsWidget::MinecraftSettingsWidget(MinecraftInstance* instance, QW
         m_ui->settingsTabs->setTabText(m_ui->settingsTabs->indexOf(m_ui->customCommandsPage),Pxl::minecraftPreferenceText("Launch commands"));
         m_ui->settingsTabs->setTabText(m_ui->settingsTabs->indexOf(m_ui->environmentVariablesPage),Pxl::minecraftPreferenceText("Environment variables"));
         m_ui->settingsTabs->setCurrentIndex(0);
+        for (auto* page : {m_ui->tweaksPage, m_ui->customCommandsPage, m_ui->environmentVariablesPage})
+            page->setProperty("pxlAdvancedTab", true);
         m_ui->settingsTabs->setStyleSheet("QTabWidget::pane { background: transparent; border: none; } QTabBar::tab { color: #e5e9ef; background: rgba(42,46,52,170); border: 1px solid transparent; border-radius: 9px; padding: 9px 15px; margin-right: 6px; margin-bottom: 8px; font-weight: 600; } QTabBar::tab:selected { color: #f5bb90; background: rgba(242,163,101,30); border-color: rgba(242,163,101,90); } QTabBar::tab:hover { background: rgba(76,68,61,180); }");
     }
 }

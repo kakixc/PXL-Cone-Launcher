@@ -653,6 +653,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("WorkspaceBackground", QStringLiteral("image"));
         m_settings->registerSetting("WorkspaceBackgroundImage", QString());
         m_settings->registerSetting("WorkspaceNavigation", QStringLiteral("side"));
+        m_settings->registerSetting("WorkspaceAdvancedSettings", false);
         m_settings->registerSetting("WorkspaceLibraryView", QStringLiteral("covers"));
         m_settings->registerSetting("WorkspaceLayoutRevision", 0);
         m_settings->registerSetting("BackgroundCat", QString("kitteh"));

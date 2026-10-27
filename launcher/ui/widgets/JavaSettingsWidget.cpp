@@ -36,6 +36,7 @@
  */
 
 #include "JavaSettingsWidget.h"
+#include "ui/pxl/SettingsMode.h"
 
 #include <QFileDialog>
 #include <QFileInfo>
@@ -131,6 +132,7 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
         m_ui->verticalLayout->addWidget(automatic);
 
         auto* runtime = Pxl::settingsCard(this, tr("Manual runtime"), tr("Choose an executable when your instance requires a specific Java installation."));
+        Pxl::markAdvancedSetting(runtime);
         auto* runtimeLayout = static_cast<QVBoxLayout*>(runtime->layout());
         runtimeLayout->addWidget(m_ui->javaPathTextBox);
         m_ui->javaPathTextBox->show();
@@ -155,10 +157,12 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
         m_ui->verticalLayout->addWidget(memory);
 
         auto* advancedButton = new QPushButton(tr("Advanced Java options"), this);
+        Pxl::markAdvancedSetting(advancedButton);
         advancedButton->setCheckable(true);
         advancedButton->setProperty("pxlDisclosure", true);
         m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);
         auto* advanced = new QWidget(this);
+        Pxl::markAdvancedSetting(advanced, advancedButton);
         auto* advancedLayout = new QVBoxLayout(advanced);
         advancedLayout->setContentsMargins(0, 0, 0, 0);
         for (auto* group : {m_ui->javaInstallationGroupBox, m_ui->memoryGroupBox, m_ui->javaArgumentsGroupBox}) {
