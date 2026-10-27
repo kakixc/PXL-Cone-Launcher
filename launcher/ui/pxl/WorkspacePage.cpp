@@ -6,6 +6,7 @@
 #include "Backdrop.h"
 #include "LibraryControls.h"
 #include "InstanceLibraryDelegate.h"
+#include "ScreenshotGallery.h"
 
 #include <algorithm>
 
@@ -26,6 +27,10 @@
 #include <QGraphicsScene>
 #include <settings/SettingsObject.h>
 #include <QDateTime>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QMouseEvent>
 #include <QCursor>
 #include <QKeyEvent>
@@ -218,13 +223,34 @@ class WorkspaceInstanceModel final : public QSortFilterProxyModel {
                     if (minecraftVersion.isEmpty()) {
                         if (const auto component = profile->getComponent("net.minecraft")) minecraftVersion = component->m_version;
                     }
-                    const auto loaders = profile->getModLoadersList();
                     QStringList loaderNames;
-                    for (const auto loader : loaders) {
-                        auto name = ModPlatform::getModLoaderAsString(loader);
+                    // The profile is loaded lazily. Read its declared local components
+                    // for display without resolving/downloading or mutating the instance.
+                    QMap<QString,QString> declared;
+                    if (profile->rowCount() > 0) {
+                        for (auto it = Component::KNOWN_MODLOADERS.cbegin(); it != Component::KNOWN_MODLOADERS.cend(); ++it)
+                            if (const auto component = profile->getComponent(it.key()); component && component->isEnabled())
+                                declared.insert(it.key(),component->m_version);
+                    } else {
+                        QFile file(QDir(minecraft->instanceRoot()).filePath("mmc-pack.json"));
+                        if (file.size() <= 1024 * 1024 && file.open(QIODevice::ReadOnly)) {
+                            const auto document = QJsonDocument::fromJson(file.readAll()).object();
+                            if (document.value("formatVersion").toInt() == 1)
+                                for (const auto value : document.value("components").toArray()) {
+                                    const auto component = value.toObject();
+                                    if (!component.value("disabled").toBool())
+                                        declared.insert(component.value("uid").toString(),component.value("version").toString());
+                                }
+                        }
+                        minecraftVersion = declared.value("net.minecraft");
+                    }
+                    for (auto it = Component::KNOWN_MODLOADERS.cbegin(); it != Component::KNOWN_MODLOADERS.cend(); ++it) {
+                        if (!declared.contains(it.key())) continue;
+                        auto name = ModPlatform::getModLoaderAsString(it.value().type);
                         if (!name.isEmpty()) name[0] = name[0].toUpper();
                         loaderNames.append(name);
                     }
+                    if (loaderNames.isEmpty() && !minecraftVersion.isEmpty()) loaderNames.append(tr("Vanilla"));
                     detail = minecraftVersion.isEmpty() ? tr("Minecraft") : tr("Minecraft %1").arg(minecraftVersion);
                     if (!loaderNames.isEmpty())
                         detail.append(" · " + loaderNames.join(", "));
@@ -409,6 +435,16 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_libraryButton = navButton("workspaceLibrary", tr("Library"), "minecraft");
     m_homeButton->setCheckable(true);
     m_libraryButton->setCheckable(true);
+    auto* screenshots = navButton("workspaceScreenshots", tr("Screenshots"), "image");
+    screenshots->setCheckable(true);
+    connect(screenshots,&QPushButton::clicked,this,[this] {
+        if (!m_screenshotGallery) {
+            auto* gallery=new Pxl::ScreenshotGallery(m_instances,this);
+            gallery->coverChanged=[this] { refresh(); };
+            m_screenshotGallery=gallery;
+        }
+        presentInstanceView(m_screenshotGallery,tr("Screenshots"),[] { return true; });
+    });
     auto* import = navButton("workspaceImport", tr("Import packs or another launcher"), "copy");
     import->setText(tr("Import"));
     auto* downloads = navButton("workspaceDownloads", tr("Downloads & tasks"), "download-simple");
@@ -1086,7 +1122,7 @@ void WorkspacePage::changeEvent(QEvent* event)
 
 void WorkspacePage::retranslateUi()
 {
-    const char* labels[] = {"Home", "Library", "Import", "Downloads & tasks", "Cat", "Advanced", "Accounts", "Settings"};
+    const char* labels[] = {"Home", "Library", "Screenshots", "Import", "Downloads & tasks", "Cat", "Advanced", "Accounts", "Settings"};
     for (int i = 0; i < m_navigationButtons.size(); ++i) {
         auto* button = m_navigationButtons[i];
         const auto text = tr(labels[i]);

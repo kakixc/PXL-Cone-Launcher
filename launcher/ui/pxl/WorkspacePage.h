@@ -109,6 +109,7 @@ class WorkspacePage final : public QWidget {
     QScrollArea* m_scroll = nullptr;
     QStackedWidget* m_contentStack = nullptr;
     QPointer<QWidget> m_instanceView;
+    QPointer<QWidget> m_screenshotGallery;
     QString m_instanceViewTitle;
     std::function<bool()> m_leaveInstanceGuard;
     QPushButton* m_backButton = nullptr;

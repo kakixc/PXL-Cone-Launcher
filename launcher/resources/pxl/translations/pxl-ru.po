@@ -1875,3 +1875,127 @@ msgstr "Не удалось сохранить обложку"
 msgctxt "Pxl::CoverPicker"
 msgid "Could not remove the saved cover."
 msgstr "Не удалось удалить сохранённую обложку."
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Close"
+msgstr "Закрыть"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Content version"
+msgstr "Версия контента"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Add to selection"
+msgstr "Добавить к загрузке"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Remove from selection"
+msgstr "Убрать из загрузки"
+
+msgctxt "WorkspacePage"
+msgid "Vanilla"
+msgstr "Vanilla"
+
+msgctxt "MainWindow"
+msgid "Share or transfer pack…"
+msgstr "Поделиться или перенести сборку…"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Filter screenshots by instance"
+msgstr "Фильтр скриншотов по сборке"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "All instances"
+msgstr "Все сборки"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Screenshots: %1"
+msgstr "Скриншотов: %1"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "No screenshots yet. Take one in Minecraft with F2."
+msgstr "Скриншотов пока нет. Сделайте снимок в Minecraft клавишей F2."
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Loading screenshots…"
+msgstr "Загрузка скриншотов…"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Close"
+msgstr "Закрыть"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Set instance banner"
+msgstr "Баннер сборки"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Use this screenshot as the banner for %1?"
+msgstr "Использовать этот скриншот как баннер сборки «%1»?"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Use banner"
+msgstr "Использовать баннер"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Could not save banner"
+msgstr "Не удалось сохранить баннер"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Make banner for this instance"
+msgstr "Сделать баннером этой сборки"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Make banner for another instance…"
+msgstr "Сделать баннером другой сборки…"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Export to folder…"
+msgstr "Экспортировать в папку…"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Export screenshots to folder"
+msgstr "Папка для экспорта скриншотов"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Screenshot export"
+msgstr "Экспорт скриншотов"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Screenshots copied. Originals are unchanged."
+msgstr "Скриншоты скопированы. Исходные файлы сохранены."
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Could not copy these files:"
+msgstr "Не удалось скопировать файлы:"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Open screenshots folder"
+msgstr "Открыть папку скриншотов"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Choose a screenshot"
+msgstr "Выберите скриншот"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Use screenshot"
+msgstr "Выбрать скриншот"
+
+msgctxt "Pxl::CoverPicker"
+msgid "From screenshots…"
+msgstr "Из скриншотов…"
+
+msgctxt "WorkspacePage"
+msgid "Screenshots"
+msgstr "Скриншоты"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Screenshot preview. Escape closes."
+msgstr "Просмотр скриншота. Esc — закрыть."

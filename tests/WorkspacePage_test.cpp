@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #include <QSignalSpy>
+#include <QTextBrowser>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QLineEdit>
@@ -35,6 +36,7 @@
 #include <ui/pxl/CatalogCardDelegate.h>
 #include <ui/pxl/InstanceCovers.h>
 #include <ui/pxl/CoverPicker.h>
+#include <ui/pxl/CheckListDelegate.h>
 #include <ui/pxl/InstanceLibraryDelegate.h>
 #include <ui/pxl/LibraryControls.h>
 #include <ui/pxl/ActionMenu.h>
@@ -120,6 +122,7 @@ public:
         findChild<QPushButton*>("resourceFilterButton")->hide();
         findChild<QLineEdit*>("searchEdit")->setPlaceholderText("Search resource packs");
     }
+    void previewFirst() { showProjectDetails(findChild<QListView*>("packView")->model()->index(0,0)); }
     int sortChanges = 0;
 protected:
     void triggerSearch() override {}
@@ -296,11 +299,128 @@ class WorkspacePageTest : public QObject {
         QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::CatalogCardDelegate::actionRect(row).center());
         QCOMPARE(selections, 1);
         QCOMPARE(details, 0);
-        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::CatalogCardDelegate::detailsRect(row).center());
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, row.center());
         QCOMPARE(selections, 1);
         QCOMPARE(details, 1);
         const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
         if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("catalog-cards.png")));
+    }
+
+    void transferRowsToggleFromBodyCheckboxAndKeyboard()
+    {
+        QListWidget view;
+        view.setItemDelegate(new Pxl::CheckListDelegate(&view));
+        view.setSelectionMode(QAbstractItemView::NoSelection);
+        auto* item=new QListWidgetItem("Survival World",&view);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
+        view.resize(500,180); view.show();
+        QCoreApplication::processEvents();
+        const auto row=view.visualItemRect(item);
+        QTest::mouseClick(view.viewport(),Qt::LeftButton,Qt::NoModifier,row.center());
+        QCOMPARE(item->checkState(),Qt::Checked);
+        QTest::mouseClick(view.viewport(),Qt::LeftButton,Qt::NoModifier,QPoint(row.left()+22,row.center().y()));
+        QCOMPARE(item->checkState(),Qt::Unchecked);
+        view.setCurrentItem(item);
+        QTest::keyClick(&view,Qt::Key_Space);
+        QCOMPARE(item->checkState(),Qt::Checked);
+    }
+
+    void libraryReadsDeclaredVersionsBeforeProfileIsOpened()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings=settings(temporary);
+        const auto root=temporary.filePath("instances");
+        QVERIFY(QDir().mkpath(root+"/pack"));
+        QFile config(root+"/pack/instance.cfg");
+        QVERIFY(config.open(QIODevice::WriteOnly));
+        config.write("[General]\nInstanceType=OneSix\nname=User name is not a version\n"); config.close();
+        QFile pack(root+"/pack/mmc-pack.json");
+        QVERIFY(pack.open(QIODevice::WriteOnly));
+        const QByteArray declared=R"({"formatVersion":1,"components":[{"uid":"net.minecraft","version":"1.20.1"},{"uid":"net.fabricmc.fabric-loader","version":"0.16.14"}]})";
+        pack.write(declared); pack.close();
+        InstanceList instances(globalSettings.get(),root); instances.loadList();
+        WorkspacePage page(&instances);
+        page.findChild<QPushButton*>("workspaceLibrary")->click();
+        const auto index=page.findChild<QListView*>("workspaceCards")->model()->index(0,0);
+        QCOMPARE(index.data(Qt::UserRole+0x5a).toString(),QString("Minecraft 1.20.1 · Fabric"));
+        QVERIFY(pack.open(QIODevice::ReadOnly)); QCOMPARE(pack.readAll(),declared);
+    }
+
+    void screenshotGalleryKeepsInstancesAndExportsWithoutOverwrite()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings=settings(temporary);
+        const auto root=temporary.filePath("instances");
+        for (int i=0;i<2;++i) {
+            const auto folder=root+"/pack"+QString::number(i);
+            QVERIFY(QDir().mkpath(folder));
+            QFile config(folder+"/instance.cfg"); QVERIFY(config.open(QIODevice::WriteOnly));
+            config.write(QString("[General]\nInstanceType=OneSix\nname=World %1\n").arg(i).toUtf8());
+        }
+        InstanceList instances(globalSettings.get(),root); instances.loadList();
+        for (int i=0;i<2;++i) {
+            const auto shots=QDir(instances.at(i)->gameRoot()).filePath("screenshots/session");
+            QVERIFY(QDir().mkpath(shots));
+            QImage image(320,180,QImage::Format_RGB32); image.fill(i ? QColor("#366b65") : QColor("#a67752"));
+            QVERIFY(image.save(shots+"/same-name.png"));
+        }
+        Pxl::ScreenshotGallery gallery(&instances);
+        gallery.resize(1000,660); gallery.show();
+        QTRY_COMPARE(gallery.view()->model()->rowCount(),2);
+        gallery.filterInstance("pack0");
+        QCOMPARE(gallery.view()->model()->rowCount(),1);
+        gallery.view()->setCurrentIndex(gallery.view()->model()->index(0,0));
+        const auto source=gallery.selectedFile();
+        QVERIFY(!source.isEmpty());
+        Pxl::ScreenshotEntry entry{source,"pack0","World 0",instances.at(0)->instanceRoot(),QFileInfo(source).absolutePath(),0};
+        const auto destination=temporary.filePath("export");
+        QVERIFY(Pxl::exportScreenshots({entry},destination).isEmpty());
+        QVERIFY(Pxl::exportScreenshots({entry},destination).isEmpty());
+        QDir exported(destination+"/PXL-World 0-pack0");
+        QCOMPARE(exported.entryList({"*.png"},QDir::Files).size(),2);
+        QVERIFY(QFileInfo::exists(source));
+        auto outside=entry; outside.instanceRoot=temporary.filePath("different-instance");
+        QVERIFY(QDir().mkpath(outside.instanceRoot));
+        QVERIFY(Pxl::scanScreenshots({outside}).isEmpty());
+        gallery.findChild<QComboBox*>("screenshotInstances")->setCurrentIndex(0);
+        const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        QTest::qWait(80);
+        if (!screenshots.isEmpty()) QVERIFY(gallery.grab().save(QDir(screenshots).filePath("screenshot-gallery.png")));
+        QTimer::singleShot(50,&gallery,[&] {
+            auto* preview=gallery.findChild<QWidget*>("pxlScreenshotPreview");
+            QVERIFY(preview); QVERIFY(preview->width()>800); QVERIFY(preview->height()>500);
+            if (!screenshots.isEmpty()) QVERIFY(gallery.grab().save(QDir(screenshots).filePath("screenshot-preview.png")));
+            QTest::keyClick(preview,Qt::Key_Escape);
+        });
+        QTest::mouseClick(gallery.view()->viewport(),Qt::LeftButton,Qt::NoModifier,gallery.view()->visualRect(gallery.view()->model()->index(0,0)).center());
+    }
+
+    void contentPreviewUsesOwnHeaderAndControls()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings=settings(temporary);
+        const auto root=temporary.filePath("pack"); QVERIFY(QDir().mkpath(root));
+        QFile config(root+"/instance.cfg"); QVERIFY(config.open(QIODevice::WriteOnly)); config.write("[General]\nInstanceType=OneSix\nname=Preview test\n"); config.close();
+        InstanceList instances(globalSettings.get(),temporary.path()); instances.loadList();
+        auto* instance=dynamic_cast<MinecraftInstance*>(instances.getInstanceById("pack")); QVERIFY(instance);
+        QWidget surface; surface.resize(1080,740); surface.show();
+        LayoutCatalogDialog dialog(&surface,*instance);
+        dialog.useEmbeddedPresentation();
+        auto* page=dynamic_cast<LayoutCatalogPage*>(dialog.findChild<PageContainer*>()->selectedPage());
+        QVERIFY(page);
+        page->findChild<QTextBrowser*>("packDescription")->setHtml("<h2>A detailed project description</h2><p>Project content and screenshots appear here.</p>");
+        QTimer::singleShot(50,&dialog,[&] {
+            auto* preview=surface.findChild<QDialog*>("pxlProjectPreview");
+            if (!preview) preview=dialog.findChild<QDialog*>("pxlProjectPreview");
+            QVERIFY(preview);
+            QVERIFY(preview->findChild<QComboBox*>());
+            QCOMPARE(preview->findChildren<QTextBrowser*>().size(),1);
+            const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("content-preview.png")));
+            preview->accept();
+        });
+        page->previewFirst();
     }
 
     void loaderVersionsBecomeSelectableAfterModelReload()

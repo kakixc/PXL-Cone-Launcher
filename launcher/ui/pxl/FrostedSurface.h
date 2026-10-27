@@ -5,6 +5,7 @@
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
 #include <QMenu>
+#include <QPointer>
 #include <QPainter>
 #include <QPainterPath>
 #include <QWidget>
@@ -87,7 +88,7 @@ protected:
         QMenu::paintEvent(event);
     }
 private:
-    QWidget* m_source;
+    QPointer<QWidget> m_source;
     QPixmap m_backdrop;
 };
 } // namespace Pxl

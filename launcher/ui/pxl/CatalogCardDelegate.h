@@ -73,8 +73,6 @@ public:
         painter->drawRoundedRect(action, 9, 9);
         painter->setPen(selected ? QColor("#f2b27f") : QColor("#231a13"));
         painter->drawText(action, Qt::AlignCenter, selected ? label("Added") : label("Add"));
-        painter->setPen(QColor("#c2cad5"));
-        painter->drawText(detailsRect(option.rect), Qt::AlignCenter, label("Details"));
         if (index.data(UserDataTypes::INSTALLED).toBool()) {
             painter->setPen(QColor("#aebbaa"));
             painter->drawText(QRect(action.left(), area.bottom() - 26, action.width(), 20), Qt::AlignCenter, label("Installed"));
@@ -88,8 +86,7 @@ public:
         auto* mouse = static_cast<QMouseEvent*>(event);
         if (mouse->button() != Qt::LeftButton) return false;
         const bool action = actionRect(option.rect).contains(mouse->pos());
-        const bool details = detailsRect(option.rect).contains(mouse->pos());
-        if (!action && !details) return false;
+        if (!option.rect.contains(mouse->pos())) return false;
         if (event->type() == QEvent::MouseButtonRelease) {
             if (action) m_select(index);
             else m_details(index);

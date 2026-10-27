@@ -3,6 +3,7 @@
 #include "DialogOverlay.h"
 #include "InstanceCovers.h"
 #include "MessagePanel.h"
+#include "ScreenshotGallery.h"
 #include <QDialog>
 #include <QFileDialog>
 #include <QGridLayout>
@@ -11,7 +12,7 @@
 #include <QVBoxLayout>
 
 namespace Pxl {
-inline bool editInstanceCover(QWidget* surface, const QString& root)
+inline bool editInstanceCover(QWidget* surface, const QString& root, InstanceList* instances = nullptr)
 {
     auto tr = [](const char* text) { return QCoreApplication::translate("Pxl::CoverPicker",text); };
     QDialog panel(surface);
@@ -56,6 +57,18 @@ inline bool editInstanceCover(QWidget* surface, const QString& root)
         if (image.isNull()) { showNotice(&panel,tr("Could not open image"),tr("Choose a valid image up to 16384 pixels and 64 megapixels.")); return; }
         selected = image; neutral = false; changed = true; updatePreview();
     });
+    if (instances) {
+        auto* screenshots=new QPushButton(tr("From screenshots…"),&panel);
+        screenshots->setIcon(QIcon(":/pxl/icons/image.svg"));
+        layout->addWidget(screenshots);
+        QObject::connect(screenshots,&QPushButton::clicked,&panel,[&] {
+            const auto file=chooseScreenshot(&panel,instances);
+            if (file.isEmpty()) return;
+            const auto image=loadBackdropImage(file);
+            if (image.isNull()) return;
+            selected=image; neutral=false; changed=true; updatePreview();
+        });
+    }
     auto* choices = new QGridLayout;
     choices->setSpacing(10);
     const QList<QPair<QString,QString>> presets{{tr("Neutral"),QString()}, {tr("PXL dawn"),":/pxl/cone-dawn-banner.png"},

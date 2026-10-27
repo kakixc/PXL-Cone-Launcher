@@ -14,6 +14,8 @@
         <file alias="wallpaper-source.png">../pxl/cone-wallpaper-source.png</file>
         <file alias="translations/ru.qm">../pxl/translations/upstream-ru.qm</file>
         <file alias="translations/pxl-ru.po">../pxl/translations/pxl-ru.po</file>
+        <file alias="icons/image.svg">../pxl/icons/image.svg</file>
+        <file alias="icons/check.svg">../pxl/icons/check.svg</file>
         <file alias="icons/house.svg">../pxl/icons/house.svg</file>
         <file alias="icons/squares-four.svg">../pxl/icons/squares-four.svg</file>
         <file alias="icons/list.svg">../pxl/icons/list.svg</file>

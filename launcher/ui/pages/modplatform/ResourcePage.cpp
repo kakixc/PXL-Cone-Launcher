@@ -153,7 +153,7 @@ void ResourcePage::useCardPresentation()
     m_ui->verticalLayout->setStretchFactor(m_ui->splitter, 1);
     Pxl::applySearchSurface(m_ui->searchEdit);
     disconnect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::onResourceToggle);
-    connect(m_ui->packView, &QAbstractItemView::doubleClicked, this, &ResourcePage::showProjectDetails);
+    // Card body activation is owned by the delegate; avoid opening twice on double-click.
 }
 
 void ResourcePage::showProjectDetails(const QModelIndex& index)
@@ -163,35 +163,83 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
     const auto pack = getCurrentPack();
     if (!pack) return;
     QDialog details(this);
+    details.setObjectName("pxlProjectPreview");
+    const QPointer<ResourcePage> pageGuard(this);
+    connect(this,&QObject::destroyed,&details,&QDialog::reject);
     details.setProperty("pxlFlow", true);
-    details.setProperty("pxlPreferredSize", QSize(760, 640));
+    details.setProperty("pxlPreferredSize", QSize(820, 680));
     auto* layout = new QVBoxLayout(&details);
-    layout->setContentsMargins(24, 24, 24, 24);
-    layout->setSpacing(16);
-    auto* title = new QLabel(pack->name, &details);
+    layout->setContentsMargins(24,24,24,24);
+    layout->setSpacing(18);
+    auto* header = new QHBoxLayout;
+    header->setSpacing(14);
+    auto* icon = new QLabel(&details);
+    auto artwork = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+    if (artwork.isNull()) artwork = QIcon(":/pxl/icons/squares-four.svg");
+    icon->setPixmap(artwork.pixmap(56,56));
+    icon->setFixedSize(56,56);
+    header->addWidget(icon);
+    auto* identity = new QVBoxLayout;
+    identity->setSpacing(5);
+    auto* title = new QLabel(pack->name,&details);
     title->setTextFormat(Qt::PlainText);
-    title->setProperty("pxlFlowTitle", true);
-    layout->addWidget(title);
-    layout->addWidget(m_ui->packDescription, 1);
-    m_ui->packDescription->show();
-    auto* versionRow = new QHBoxLayout;
-    versionRow->addWidget(m_ui->versionSelectionBox, 1);
-    versionRow->addWidget(m_ui->resourceSelectionButton);
-    m_ui->versionSelectionBox->show();
-    m_ui->resourceSelectionButton->show();
-    layout->addLayout(versionRow);
-    auto* close = new QPushButton(tr("Done"), &details);
-    connect(close, &QPushButton::clicked, &details, &QDialog::accept);
-    layout->addWidget(close, 0, Qt::AlignRight);
-    const QPointer<ResourcePage> alive(this);
-    Pxl::DialogOverlay::run(&details, window());
-    if (!alive) return;
-    m_ui->splitter->addWidget(m_ui->packDescription);
-    m_ui->gridLayout_4->addWidget(m_ui->versionSelectionBox, 0, 2);
-    m_ui->gridLayout_4->addWidget(m_ui->resourceSelectionButton, 1, 2);
-    m_ui->packDescription->hide();
-    m_ui->versionSelectionBox->hide();
-    m_ui->resourceSelectionButton->hide();
+    title->setWordWrap(true);
+    title->setProperty("pxlFlowTitle",true);
+    identity->addWidget(title);
+    QStringList authors;
+    for (const auto& author : pack->authors) authors.append(author.name);
+    auto* author = new QLabel(authors.join(", "),&details);
+    author->setTextFormat(Qt::PlainText);
+    author->setProperty("pxlFlowHint",true);
+    author->setWordWrap(true);
+    identity->addWidget(author);
+    header->addLayout(identity,1);
+    auto* close = new QPushButton(tr("Close"),&details);
+    close->setAutoDefault(false);
+    connect(close,&QPushButton::clicked,&details,&QDialog::accept);
+    header->addWidget(close,0,Qt::AlignTop);
+    layout->addLayout(header);
+    // New presentation, shared document/data pipeline: network image loading,
+    // provider links and asynchronous metadata continue to use the existing engine.
+    auto* description = new QTextBrowser(&details);
+    description->setDocument(m_ui->packDescription->document());
+    description->setOpenLinks(false);
+    description->setOpenExternalLinks(false);
+    description->setFrameShape(QFrame::NoFrame);
+    description->setStyleSheet("QTextBrowser { background: rgba(17,21,26,110); border: 1px solid rgba(188,200,216,25); border-radius: 12px; padding: 12px; }");
+    description->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    connect(description,&QTextBrowser::anchorClicked,this,&ResourcePage::openUrl);
+    layout->addWidget(description,1);
+    auto* footer = new QHBoxLayout;
+    footer->setSpacing(12);
+    auto* versions = new Pxl::ChoiceChip(&details);
+    versions->setAccessibleName(tr("Content version"));
+    versions->setModel(m_ui->versionSelectionBox->model());
+    versions->setCurrentIndex(m_ui->versionSelectionBox->currentIndex());
+    connect(versions,qOverload<int>(&QComboBox::currentIndexChanged),m_ui->versionSelectionBox,&QComboBox::setCurrentIndex);
+    connect(m_ui->versionSelectionBox,qOverload<int>(&QComboBox::currentIndexChanged),versions,[versions](int current) {
+        const QSignalBlocker blocker(versions); versions->setCurrentIndex(current);
+    });
+    footer->addWidget(versions,1);
+    auto* select = new QPushButton(&details);
+    select->setProperty("pxlPrimary",true);
+    select->setAutoDefault(false);
+    auto updateAction = [pageGuard,select] {
+        if (!pageGuard) { select->setEnabled(false); return; }
+        const auto current=pageGuard->getCurrentPack();
+        select->setEnabled(pageGuard->m_selectedVersionIndex>=0 && pageGuard->m_ui->resourceSelectionButton->isEnabled());
+        select->setText(current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
+    };
+    connect(select,&QPushButton::clicked,&details,[pageGuard,updateAction] { if (pageGuard) pageGuard->m_ui->resourceSelectionButton->click(); updateAction(); });
+    auto deferAction = [&details,updateAction] { QTimer::singleShot(0,&details,updateAction); };
+    connect(m_ui->versionSelectionBox,qOverload<int>(&QComboBox::currentIndexChanged),&details,deferAction);
+    connect(versions->model(),&QAbstractItemModel::rowsInserted,&details,deferAction);
+    connect(versions->model(),&QAbstractItemModel::modelReset,&details,deferAction);
+    updateAction();
+    footer->addWidget(select);
+    layout->addLayout(footer);
+    Pxl::DialogOverlay::run(&details,window());
+
 }
 
 void ResourcePage::retranslate()
@@ -243,7 +291,8 @@ auto ResourcePage::eventFilter(QObject* watched, QEvent* event) -> bool
         } else if (watched == m_ui->packView) {
             // stop the event from going to the confirm button
             if (keyEvent->key() == Qt::Key_Return) {
-                onResourceToggle(m_ui->packView->currentIndex());
+                if (m_cardPresentation) showProjectDetails(m_ui->packView->currentIndex());
+                else onResourceToggle(m_ui->packView->currentIndex());
                 keyEvent->accept();
                 return true;
             }
@@ -291,7 +340,7 @@ bool ResourcePage::setCurrentPack(ModPlatform::IndexedPack::Ptr pack)
 
 ModPlatform::IndexedPack::Ptr ResourcePage::getCurrentPack() const
 {
-    return m_model->data(m_ui->packView->currentIndex(), Qt::UserRole).value<ModPlatform::IndexedPack::Ptr>();
+    return m_ui->packView->currentIndex().data(Qt::UserRole).value<ModPlatform::IndexedPack::Ptr>();
 }
 
 void ResourcePage::updateUi(const QModelIndex& index)
@@ -328,6 +377,8 @@ void ResourcePage::updateUi(const QModelIndex& index)
         }
         text += "<br>" + tr(" by ") + authorStrs.join(", ");
     }
+
+    if (m_cardPresentation) text.clear(); // Identity is presented once in the PXL header.
 
     if (currentPack->extraDataLoaded) {
         if (currentPack->extraData.status == "archived") {
@@ -366,7 +417,7 @@ void ResourcePage::updateUi(const QModelIndex& index)
         }
     }
 
-    text += "<hr>";
+    if (!text.isEmpty()) text += "<hr>";
 
     m_ui->packDescription->setHtml(StringUtils::htmlListPatch(
         text + (currentPack->extraData.body.isEmpty() ? currentPack->description : markdownToHTML(currentPack->extraData.body))));

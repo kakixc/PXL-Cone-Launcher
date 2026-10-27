@@ -2,6 +2,8 @@
 #include "TransferDialog.h"
 #include "DialogOverlay.h"
 #include "MessagePanel.h"
+#include "CheckListDelegate.h"
+#include "LibraryControls.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -117,11 +119,11 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
         }
     } else {
         auto row = new QHBoxLayout;
-        m_format = new QComboBox(this);
+        m_format = new Pxl::ChoiceChip(this);
         m_format->addItem(tr("Share a pack"), "pxlconep");
         m_format->addItem(tr("Move to another PC"), "pxlt");
         m_format->setAccessibleName(tr("Export purpose"));
-        m_storage = new QComboBox(this);
+        m_storage = new Pxl::ChoiceChip(this);
         m_storage->addItem(tr("Compact archive"), "smart");
         m_storage->addItem(tr("Include selected files"), "offline");
         m_storage->setAccessibleName(tr("Content storage"));
@@ -130,6 +132,8 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
         layout->addLayout(row);
         m_worlds = new QCheckBox(tr("Include worlds"), this);
         m_screenshots = new QCheckBox(tr("Include screenshots"), this);
+        for (auto* option : {m_worlds,m_screenshots})
+            option->setStyleSheet("QCheckBox { spacing: 8px; padding: 6px 0; } QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #8c97a6; border-radius: 5px; background: #20252c; } QCheckBox::indicator:checked { background: #f2a365; image: url(:/pxl/icons/check.svg); }");
         auto options = new QHBoxLayout;
         options->addWidget(m_worlds);
         options->addWidget(m_screenshots);
@@ -154,12 +158,14 @@ TransferDialog::TransferDialog(Mode mode, QWidget* parent, const QString& select
     }
     m_list = new QListWidget(this);
     m_list->setObjectName("transferInstances");
-    m_list->setStyleSheet("QListWidget { background: #25282e; border: 1px solid #3a414b; border-radius: 10px; padding: 8px; } QListWidget::item { padding: 10px 6px; }");
+    m_list->setItemDelegate(new Pxl::CheckListDelegate(m_list));
+    m_list->setMouseTracking(true);
+    m_list->setStyleSheet("QListWidget { background: transparent; border: none; padding: 0; outline: none; }");
     auto listPalette = m_list->viewport()->palette();
     listPalette.setColor(QPalette::Base, QColor("#25282e"));
     listPalette.setColor(QPalette::Window, QColor("#25282e"));
     m_list->viewport()->setPalette(listPalette);
-    m_list->viewport()->setAutoFillBackground(true);
+    m_list->viewport()->setAutoFillBackground(false);
     m_list->setAccessibleName(tr("Instances to import or export"));
     m_list->setSelectionMode(QAbstractItemView::NoSelection);
     layout->addWidget(m_list, 1);

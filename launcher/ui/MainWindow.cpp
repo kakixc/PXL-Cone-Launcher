@@ -219,6 +219,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         accountMenuButton->setPopupMode(QToolButton::InstantPopup);
 
         auto exportInstanceMenu = new Pxl::FrostedMenu(this);
+        ui->actionExportInstanceZip->setIcon(QIcon(":/icons/multimc/scalable/instances/prismlauncher.svg"));
         exportInstanceMenu->addAction(ui->actionExportInstanceZip);
         exportInstanceMenu->addAction(ui->actionExportInstanceMrPack);
         exportInstanceMenu->addAction(ui->actionExportInstanceFlamePack);
@@ -391,7 +392,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             if (m_workspaceViews->currentWidget() == m_workspacePage) Pxl::DialogOverlay::run(&dialog, m_workspacePage);
             else dialog.exec();
         });
-        auto exportAction = new QAction(tr("Share / transfer PXL setup…"), this);
+        auto exportAction = new QAction(QIcon(":/pxl/cone-icon.svg"), tr("Share or transfer pack…"), this);
         exportAction->setShortcut(QKeySequence(tr("Ctrl+Shift+E")));
         connect(exportAction, &QAction::triggered, this, [this] {
             Pxl::TransferDialog dialog(Pxl::TransferDialog::Export, this,
@@ -425,7 +426,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             auto* changeCover = organise.addAction(tr("Change cover…"));
             connect(changeCover, &QAction::triggered, this, [this, id] {
                 auto* instance = APPLICATION->instances()->getInstanceById(id);
-                if (instance && Pxl::editInstanceCover(this,instance->instanceRoot())) m_workspacePage->refresh();
+                if (instance && Pxl::editInstanceCover(this,instance->instanceRoot(),APPLICATION->instances())) m_workspacePage->refresh();
             });
             Pxl::forwardMenuAction(&organise, ui->actionCreateInstanceShortcut, tr("Create shortcut"));
             auto* organiseAction = menu.addMenu(&organise);
