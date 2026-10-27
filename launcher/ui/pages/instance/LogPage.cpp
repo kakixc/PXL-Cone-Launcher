@@ -36,6 +36,7 @@
  */
 
 #include "LogPage.h"
+#include "ui/pxl/LogSurface.h"
 #include "ui_LogPage.h"
 
 #include "Application.h"
@@ -168,6 +169,36 @@ LogPage::LogPage(BaseInstance* instance, QWidget* parent) : QWidget(parent), ui(
 LogPage::~LogPage()
 {
     delete ui;
+}
+
+void LogPage::usePxlPresentation()
+{
+    if (m_pxlPresentation) return;
+    m_pxlPresentation = true;
+    const bool tracking = ui->trackLogCheckbox->isChecked();
+    const bool wrapping = ui->wrapCheckbox->isChecked();
+    const bool coloring = ui->colorCheckbox->isChecked();
+    auto* oldView = ui->text;
+    oldView->setModel(nullptr);
+    delete layout();
+    for (auto* widget : findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly)) widget->hide();
+    auto* surface = new Pxl::LogSurface(m_proxy, tracking, wrapping, coloring, this);
+    auto* root = new QVBoxLayout(this); root->setContentsMargins(0, 0, 0, 0); root->addWidget(surface);
+    ui->text = surface->view;
+    ui->searchBar = surface->search;
+    ui->trackLogCheckbox = surface->follow;
+    ui->wrapCheckbox = surface->wrap;
+    ui->colorCheckbox = surface->colors;
+    connect(surface->follow, &QCheckBox::clicked, this, &LogPage::on_trackLogCheckbox_clicked);
+    connect(surface->wrap, &QCheckBox::clicked, this, &LogPage::on_wrapCheckbox_clicked);
+    connect(surface->colors, &QCheckBox::clicked, this, &LogPage::on_colorCheckbox_clicked);
+    connect(surface->copyButton, &QPushButton::clicked, this, &LogPage::on_btnCopy_clicked);
+    connect(surface->shareButton, &QPushButton::clicked, this, &LogPage::on_btnPaste_clicked);
+    connect(surface->clearButton, &QPushButton::clicked, this, &LogPage::on_btnClear_clicked);
+    connect(surface->findButton, &QPushButton::clicked, this, &LogPage::on_findButton_clicked);
+    connect(surface->bottomButton, &QPushButton::clicked, this, &LogPage::on_btnBottom_clicked);
+    connect(surface->search, &QLineEdit::returnPressed, this, &LogPage::on_findButton_clicked);
+    oldView->deleteLater();
 }
 
 void LogPage::modelStateToUI()

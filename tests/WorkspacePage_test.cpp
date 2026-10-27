@@ -50,6 +50,8 @@
 #include <ui/pxl/ScrollableSettings.h>
 #include <ui/pxl/NoWheelSelection.h>
 #include <ui/pxl/ComponentView.h>
+#include <ui/pxl/WorldsView.h>
+#include <ui/pxl/LogSurface.h>
 #include <QIdentityProxyModel>
 #include <ui/pages/modplatform/ResourcePage.h>
 
@@ -511,6 +513,71 @@ class WorkspacePageTest : public QObject {
         search->clear();
         const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
         if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("component-view.png")));
+    }
+
+    void worldsViewPreservesSelectionSortingActionsAndEmptyStates()
+    {
+        QStandardItemModel source(2, 5);
+        source.setHorizontalHeaderLabels({"World", "Mode", "Last played", "Size", "Info"});
+        source.setData(source.index(0, 0), "Survival Valley"); source.setData(source.index(1, 0), "Linked Workshop");
+        for (int row = 0; row < 2; ++row) {
+            source.setData(source.index(row, 1), "Survival"); source.setData(source.index(row, 2), QDateTime::currentDateTime());
+            source.setData(source.index(row, 3), "128 MB");
+        }
+        source.setData(source.index(1, 4), "Linked world: edits affect the original.");
+        QSortFilterProxyModel proxy; proxy.setSourceModel(&source); proxy.setFilterCaseSensitivity(Qt::CaseInsensitive);
+        QItemSelectionModel selection(&proxy);
+        QAction add("Import", &source); add.setObjectName("actionAdd");
+        QAction remove("Delete", &source); remove.setObjectName("actionRemove");
+        QAction refresh("Refresh", &source); refresh.setObjectName("actionRefresh");
+        QAction folder("Open folder", &source); folder.setObjectName("actionView_Folder");
+        QSignalSpy additions(&add, &QAction::triggered), removals(&remove, &QAction::triggered);
+        Pxl::WorldsView view(&proxy, &selection, {&add, &remove, &refresh, &folder}, nullptr);
+        view.resize(980, 560); view.show(); QTest::qWait(20);
+        auto* list = view.findChild<QListView*>("worldRows"); auto* search = view.findChild<QLineEdit*>("worldSearch");
+        auto* sorting = view.findChild<QComboBox*>("worldSorting"); QVERIFY(list && search && sorting);
+        view.findChild<QPushButton*>("actionAdd")->click(); QCOMPARE(additions.count(), 1);
+        search->setText("Linked"); QTest::qWait(20);
+        QCOMPARE(proxy.rowCount(), 1);
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, list->visualRect(proxy.index(0, 0)).center());
+        QCOMPARE(proxy.mapToSource(selection.currentIndex()).row(), 1);
+        QCOMPARE(selection.selectedRows().size(), 1);
+        QTest::keyClick(list, Qt::Key_Delete); QCOMPARE(removals.count(), 1);
+        sorting->setCurrentIndex(3); QMetaObject::invokeMethod(sorting, "activated", Q_ARG(int, 3));
+        QCOMPARE(proxy.sortColumn(), 1); QCOMPARE(proxy.sortOrder(), Qt::DescendingOrder);
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        search->clear(); QTest::qWait(20);
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("worlds-view.png")));
+        search->setText("missing");
+        QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No matching worlds"));
+        search->clear(); source.removeRows(0, source.rowCount()); QTest::qWait(20);
+        QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No worlds yet"));
+    }
+
+    void logSurfaceUsesExistingStreamViewAndClearEmptyState()
+    {
+        QStandardItemModel stream;
+        Pxl::LogSurface surface(&stream, true, true, true, nullptr);
+        surface.resize(980, 560); surface.show();
+        QCOMPARE(surface.view->model(), &stream);
+        QVERIFY(surface.findChild<QLabel*>("logEmptyTitle")->isVisible());
+        QVERIFY(!surface.copyButton->isEnabled());
+        auto* started = new QStandardItem("[INFO] Minecraft started");
+        started->setData(QFont("Consolas", 11), Qt::FontRole); stream.appendRow(started);
+        stream.appendRow(new QStandardItem("[ERROR] Example diagnostic message"));
+        QTest::qWait(20);
+        QVERIFY(surface.view->toPlainText().contains("Minecraft started"));
+        QVERIFY(surface.view->toPlainText().contains("Example diagnostic message"));
+        QVERIFY(surface.copyButton->isEnabled());
+        QVERIFY(!surface.findChild<QLabel*>("logEmptyTitle")->isVisible());
+        surface.view->moveCursor(QTextCursor::Start);
+        surface.view->findNext("Example", false);
+        QCOMPARE(surface.view->textCursor().selectedText(), QString("Example"));
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("log-surface.png")));
+        stream.removeRows(0, stream.rowCount()); QTest::qWait(20);
+        QVERIFY(surface.findChild<QLabel*>("logEmptyTitle")->isVisible());
+        QVERIFY(!surface.shareButton->isEnabled());
     }
 
     void accountHeaderAndProfilesUseExistingAccountModel()

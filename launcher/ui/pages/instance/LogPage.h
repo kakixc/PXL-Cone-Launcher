@@ -72,6 +72,7 @@ class LogPage : public QWidget, public BasePage {
     virtual QString helpPage() const override { return "Minecraft-Logs"; }
     virtual bool shouldDisplay() const override;
     void retranslate() override;
+    void usePxlPresentation();
 
    private slots:
     void on_btnPaste_clicked();
@@ -102,4 +103,5 @@ class LogPage : public QWidget, public BasePage {
 
     LogFormatProxyModel* m_proxy;
     shared_qobject_ptr<LogModel> m_model;
+    bool m_pxlPresentation = false;
 };

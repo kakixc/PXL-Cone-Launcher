@@ -2331,3 +2331,87 @@ msgstr "Другие действия"
 msgctxt "Pxl::ComponentView"
 msgid "Core components stay enabled. Select a row to change its version or open its actions."
 msgstr "Основные компоненты остаются включёнными. Выберите строку, чтобы изменить версию или открыть её действия."
+
+msgctxt "Pxl::WorldsView"
+msgid "Not played yet"
+msgstr "Ещё не запускался"
+
+msgctxt "Pxl::WorldsView"
+msgid "Search worlds"
+msgstr "Поиск миров"
+
+msgctxt "Pxl::WorldsView"
+msgid "Import world"
+msgstr "Импорт мира"
+
+msgctxt "Pxl::WorldsView"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "Pxl::WorldsView"
+msgid "Open folder"
+msgstr "Открыть папку"
+
+msgctxt "Pxl::WorldsView"
+msgid "Play world"
+msgstr "Играть в мире"
+
+msgctxt "Pxl::WorldsView"
+msgid "Create a world in Minecraft or import a world archive."
+msgstr "Создайте мир в Minecraft или импортируйте архив мира."
+
+msgctxt "Pxl::WorldsView"
+msgid "No matching worlds"
+msgstr "Ничего не найдено"
+
+msgctxt "Pxl::WorldsView"
+msgid "No worlds yet"
+msgstr "Миров пока нет"
+
+msgctxt "Pxl::LogSurface"
+msgid "Follow output"
+msgstr "Следить за выводом"
+
+msgctxt "Pxl::LogSurface"
+msgid "Wrap lines"
+msgstr "Перенос строк"
+
+msgctxt "Pxl::LogSurface"
+msgid "Color levels"
+msgstr "Цветные уровни"
+
+msgctxt "Pxl::LogSurface"
+msgid "No log output yet"
+msgstr "Журнал пока пуст"
+
+msgctxt "Pxl::LogSurface"
+msgid "Launch this instance to see its output and error details here."
+msgstr "Запустите эту сборку — здесь появятся сообщения игры и сведения об ошибках."
+
+msgctxt "Pxl::LogSurface"
+msgid "Find in log"
+msgstr "Поиск в журнале"
+
+msgctxt "Pxl::LogSurface"
+msgid "Find next"
+msgstr "Найти далее"
+
+msgctxt "Pxl::LogSurface"
+msgid "Latest output"
+msgstr "К последним строкам"
+
+msgctxt "Pxl::LogSurface"
+msgid "Review the log before sharing it."
+msgstr "Перед отправкой проверьте содержимое журнала."
+
+msgctxt "Pxl::LogSurface"
+msgid "Copy log"
+msgstr "Копировать журнал"
+
+msgctxt "Pxl::LogSurface"
+msgid "Share log"
+msgstr "Поделиться журналом"
+
+msgctxt "Pxl::LogSurface"
+msgid "Clear"
+msgstr "Очистить"

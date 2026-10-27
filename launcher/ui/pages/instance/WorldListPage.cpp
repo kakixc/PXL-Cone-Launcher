@@ -36,6 +36,7 @@
  */
 
 #include "WorldListPage.h"
+#include "ui/pxl/WorldsView.h"
 #include "minecraft/WorldList.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui_WorldListPage.h"
@@ -116,6 +117,7 @@ WorldListPage::WorldListPage(MinecraftInstance* inst, WorldList* worlds, QWidget
 void WorldListPage::openedImpl()
 {
     m_worlds->startWatching();
+    if (m_pxlPresentation) return;
 
     if (!m_inst || !m_inst->traits().contains("feature:is_quick_play_singleplayer")) {
         ui->toolBar->removeAction(ui->actionJoin);
@@ -130,7 +132,7 @@ void WorldListPage::openedImpl()
 void WorldListPage::closedImpl()
 {
     m_worlds->stopWatching();
-
+    if (m_pxlPresentation) return;
     m_wide_bar_setting->set(QString::fromUtf8(ui->toolBar->getVisibilityState().toBase64()));
 }
 
@@ -138,6 +140,19 @@ WorldListPage::~WorldListPage()
 {
     m_worlds->stopWatching();
     delete ui;
+}
+
+void WorldListPage::usePxlPresentation()
+{
+    if (m_pxlPresentation) return;
+    m_pxlPresentation = true;
+    auto* legacy = takeCentralWidget(); legacy->setParent(this); legacy->hide();
+    ui->toolBar->hide();
+    auto* model = static_cast<QSortFilterProxyModel*>(ui->worldTreeView->model());
+    model->setFilterCaseSensitivity(Qt::CaseInsensitive);
+    auto commands = ui->toolBar->actions();
+    if (!m_inst || !m_inst->traits().contains("feature:is_quick_play_singleplayer")) commands.removeAll(ui->actionJoin);
+    setCentralWidget(new Pxl::WorldsView(model, ui->worldTreeView->selectionModel(), commands, this));
 }
 
 void WorldListPage::ShowContextMenu(const QPoint& pos)

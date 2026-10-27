@@ -64,6 +64,7 @@ class WorldListPage : public QMainWindow, public BasePage {
 
     virtual void openedImpl() override;
     virtual void closedImpl() override;
+    void usePxlPresentation();
 
    protected:
     bool eventFilter(QObject* obj, QEvent* ev) override;
@@ -84,6 +85,7 @@ class WorldListPage : public QMainWindow, public BasePage {
     WorldList* m_worlds;
     unique_qobject_ptr<LoggedProcess> m_mceditProcess;
     bool m_mceditStarting = false;
+    bool m_pxlPresentation = false;
 
     std::shared_ptr<Setting> m_wide_bar_setting = nullptr;
     std::unique_ptr<DataPackFolderModel> m_datapackModel;
