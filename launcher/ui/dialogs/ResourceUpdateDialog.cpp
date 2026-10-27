@@ -23,6 +23,7 @@
 #include "modplatform/modrinth/ModrinthCheckUpdate.h"
 
 #include <QClipboard>
+#include <QPushButton>
 #include <QShortcut>
 #include <QTextBrowser>
 #include <QTreeWidgetItem>
@@ -55,6 +56,7 @@ ResourceUpdateDialog::ResourceUpdateDialog(QWidget* parent,
 
     ui->explainLabel->setText(tr("You're about to update the following resources:"));
     ui->onlyCheckedLabel->setText(tr("Only resources with a check will be updated!"));
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Update selected"));
 }
 
 void ResourceUpdateDialog::checkCandidates()
@@ -493,6 +495,7 @@ void ResourceUpdateDialog::appendResource(const CheckUpdateTask::Update& info, Q
 
         ui->toggleDepsButton->show();
         m_deps << itemTop;
+        updateSelectionActions();
     }
 
     auto* changelogItem = new QTreeWidgetItem(itemTop);
@@ -515,6 +518,7 @@ void ResourceUpdateDialog::appendResource(const CheckUpdateTask::Update& info, Q
     ui->modTreeWidget->setItemWidget(changelog, 0, changelogArea);
 
     ui->modTreeWidget->addTopLevelItem(itemTop);
+    updateSelectionActions();
 }
 
 auto ResourceUpdateDialog::getTasks() -> const QList<ResourceDownloadTask::Ptr>

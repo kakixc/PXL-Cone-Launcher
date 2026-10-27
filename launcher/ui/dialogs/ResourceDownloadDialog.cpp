@@ -22,6 +22,7 @@
 
 #include <QPushButton>
 #include <QLabel>
+#include <QPixmapCache>
 #include <algorithm>
 #include <utility>
 
@@ -272,13 +273,19 @@ void ResourceDownloadDialog::confirm()
     });
     for (auto& task : selected) {
         auto extraInfo = dependencyExtraInfo.value(task->getPack()->addonId.toString());
+        QPixmap artwork;
+        QPixmapCache::find(task->getPack()->logoUrl, &artwork);
         confirmDialog->appendResource({ .name = task->getName(),
                                         .filename = task->getFilename(),
                                         .provider = ModPlatform::ProviderCapabilities::name(task->getProvider()),
                                         .required_by = extraInfo.required_by,
                                         .version_type = task->getVersion().version_type.toString(),
-                                        .enabled = !extraInfo.maybe_installed });
+                                        .enabled = !extraInfo.maybe_installed,
+                                        .icon = QIcon(artwork) });
     }
+
+    if (m_embedded) confirmDialog->usePxlPresentation(property("pxlReviewInstanceName").toString(),
+        qvariant_cast<QIcon>(property("pxlReviewInstanceIcon")), property("pxlReviewInstanceCover").toString());
 
     const int confirmation = m_embedded ? Pxl::DialogOverlay::run(confirmDialog, window()) : confirmDialog->exec();
     if (confirmation != 0) {

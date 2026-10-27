@@ -2,6 +2,7 @@
 
 #include <QDialog>
 #include <QTreeWidgetItem>
+#include <QIcon>
 
 namespace Ui {
 class ReviewMessageBox;
@@ -20,12 +21,14 @@ class ReviewMessageBox : public QDialog {
         QStringList required_by;
         QString version_type;
         bool enabled = true;
+        QIcon icon;
     };
 
     void appendResource(ResourceInformation&& info);
     auto deselectedResources() -> QStringList;
 
     void retranslateUi(QString resources_name);
+    void usePxlPresentation(const QString& instanceName, const QIcon& instanceIcon, const QString& coverPath);
 
     ~ReviewMessageBox() override;
 
@@ -38,5 +41,5 @@ class ReviewMessageBox : public QDialog {
     Ui::ReviewMessageBox* ui;
 
     QList<QTreeWidgetItem*> m_deps;
-    bool m_deps_checked = true;
+    void updateSelectionActions();
 };

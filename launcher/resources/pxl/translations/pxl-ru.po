@@ -2263,3 +2263,47 @@ msgstr "Переменные окружения"
 msgctxt "Pxl::MinecraftPreferences"
 msgid "Maximized launch is simulated and may behave differently between Minecraft versions."
 msgstr "Развёрнутый запуск имитируется лаунчером и может работать по-разному в разных версиях Minecraft."
+
+msgctxt "ReviewMessageBox"
+msgid "Install selected"
+msgstr "Установить выбранное"
+
+msgctxt "ReviewMessageBox"
+msgid "Only selected add-ons will be downloaded."
+msgstr "Будут загружены только отмеченные дополнения."
+
+msgctxt "ReviewMessageBox"
+msgid "Deselect all dependencies"
+msgstr "Снять выбор зависимостей"
+
+msgctxt "ReviewMessageBox"
+msgid "Select all dependencies"
+msgstr "Выбрать все зависимости"
+
+msgctxt "ResourceUpdateDialog"
+msgid "Update selected"
+msgstr "Обновить выбранное"
+
+msgctxt "PageDialog"
+msgid "Advanced mode"
+msgstr "Продвинутый режим"
+
+msgctxt "PageDialog"
+msgid "Show technical settings, services, tools and proxy configuration."
+msgstr "Показать технические настройки, службы, инструменты и прокси."
+
+msgctxt "ReviewMessageBox"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "ReviewMessageBox"
+msgid "Choose add-ons to install"
+msgstr "Выберите дополнения для установки"
+
+msgctxt "ReviewMessageBox"
+msgid "Required by: %1"
+msgstr "Нужно для: %1"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Edit offline profile"
+msgstr "Изменить офлайн-профиль"

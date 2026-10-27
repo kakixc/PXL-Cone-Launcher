@@ -10,6 +10,8 @@
 #include <QVBoxLayout>
 
 #include "Application.h"
+#include "icons/IconList.h"
+#include "ui/pxl/InstanceCovers.h"
 #include "ResourceDownloadTask.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
@@ -162,6 +164,9 @@ void ContentBrowser::showCategory(const QString& category)
         return;
     }
     dialog->useEmbeddedPresentation();
+    dialog->setProperty("pxlReviewInstanceName", m_instance->name());
+    dialog->setProperty("pxlReviewInstanceIcon", APPLICATION->icons()->getIcon(m_instance->iconKey()));
+    dialog->setProperty("pxlReviewInstanceCover", Pxl::instanceCoverPath(m_instance->instanceRoot()));
     m_catalogs.insert(category, dialog);
     m_stack->addWidget(dialog);
     m_stack->setCurrentWidget(dialog);
