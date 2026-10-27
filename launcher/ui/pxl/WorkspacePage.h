@@ -41,6 +41,7 @@ class WorkspacePage final : public QWidget {
 
     void setSelectedInstance(const QString& id);
     void refresh();
+    void setAccountSummary(const QString& name, const QPixmap& face = {});
     void setPaintCat(bool visible);
     void setCatButtonVisible(bool visible);
     void setImageBackground(bool enabled, const QString& path = {});
@@ -60,6 +61,7 @@ class WorkspacePage final : public QWidget {
     void importRequested();
     void exportRequested();
     void accountsRequested();
+    void accountMenuRequested(QPoint global);
     void settingsRequested();
     void classicRequested();
     void catRequested();
@@ -82,6 +84,7 @@ class WorkspacePage final : public QWidget {
     void updateLayout();
     void showHome(bool home);
     void retranslateUi();
+    QString homeTitle() const;
 
     InstanceList* m_instances = nullptr;
     QSortFilterProxyModel* m_recentModel = nullptr;
@@ -101,6 +104,8 @@ class WorkspacePage final : public QWidget {
     QBoxLayout* m_navigationLayout = nullptr;
     QList<QPushButton*> m_navigationButtons;
     QLabel* m_heading = nullptr;
+    QPushButton* m_profileButton = nullptr;
+    QString m_profileName;
     QLabel* m_count = nullptr;
     QLabel* m_featuredName = nullptr;
     QLabel* m_featuredDetail = nullptr;

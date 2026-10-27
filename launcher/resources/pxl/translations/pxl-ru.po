@@ -1999,3 +1999,123 @@ msgstr "Скриншоты"
 msgctxt "Pxl::ScreenshotGallery"
 msgid "Screenshot preview. Escape closes."
 msgstr "Просмотр скриншота. Esc — закрыть."
+
+msgctxt "WorkspacePage"
+msgid "Welcome!"
+msgstr "Добро пожаловать!"
+
+msgctxt "WorkspacePage"
+msgid "Good morning, %1!"
+msgstr "Доброе утро, %1!"
+
+msgctxt "WorkspacePage"
+msgid "Good afternoon, %1!"
+msgstr "Добрый день, %1!"
+
+msgctxt "WorkspacePage"
+msgid "Good evening, %1!"
+msgstr "Добрый вечер, %1!"
+
+msgctxt "WorkspacePage"
+msgid "Good night, %1!"
+msgstr "Доброй ночи, %1!"
+
+msgctxt "WorkspacePage"
+msgid "Account"
+msgstr "Аккаунт"
+
+msgctxt "WorkspacePage"
+msgid "Choose account"
+msgstr "Выбрать аккаунт"
+
+msgctxt "WorkspacePage"
+msgid "Switch account: %1"
+msgstr "Сменить аккаунт: %1"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Choose the profile used to launch Minecraft. Your accounts stay on this computer."
+msgstr "Выберите профиль для запуска Minecraft. Аккаунты хранятся на этом компьютере."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Sign in with Microsoft"
+msgstr "Войти через Microsoft"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Sign in with Ely.by"
+msgstr "Войти через Ely.by"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Offline profile"
+msgstr "Офлайн-профиль"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Offline"
+msgstr "Офлайн"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Add an account that owns Minecraft before creating an offline profile."
+msgstr "Для создания офлайн-профиля сначала добавьте аккаунт с приобретённой Minecraft."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Choose a name for your offline profile."
+msgstr "Выберите имя офлайн-профиля."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Your adventure starts with a profile"
+msgstr "Приключение начинается с профиля"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Sign in above to add your first account."
+msgstr "Войдите одним из способов выше, чтобы добавить первый аккаунт."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Active profile"
+msgstr "Активный профиль"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Use profile"
+msgstr "Выбрать профиль"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Profile actions"
+msgstr "Действия с профилем"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Refresh session"
+msgstr "Обновить сессию"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Manage skin"
+msgstr "Управление скином"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Clear active profile"
+msgstr "Снять выбор профиля"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Move up"
+msgstr "Переместить выше"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Move down"
+msgstr "Переместить ниже"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Remove profile"
+msgstr "Удалить профиль"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Remove profile?"
+msgstr "Удалить профиль?"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Remove %1 from this launcher? Your Minecraft files will stay on this computer."
+msgstr "Удалить %1 из лаунчера? Файлы Minecraft останутся на этом компьютере."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Remove"
+msgstr "Удалить"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Add account"
+msgstr "Добавить аккаунт"

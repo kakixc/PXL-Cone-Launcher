@@ -19,6 +19,7 @@
 #include <QLabel>
 #include <QProgressBar>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QTimer>
 #include <QStringListModel>
 #include <QWheelEvent>
@@ -40,6 +41,7 @@
 #include <ui/pxl/InstanceLibraryDelegate.h>
 #include <ui/pxl/LibraryControls.h>
 #include <ui/pxl/ActionMenu.h>
+#include <ui/pxl/AccountsPage.h>
 #include <ui/pages/modplatform/ResourcePage.h>
 
 class CatalogTestVersion final : public BaseVersion {
@@ -245,6 +247,78 @@ class WorkspacePageTest : public QObject {
         }
     }
 
+    void accountHeaderAndProfilesUseExistingAccountModel()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings=settings(temporary);
+        InstanceList instances(globalSettings.get(),temporary.filePath("instances"));
+        WorkspacePage surface(&instances);
+        surface.resize(1080,740); surface.show();
+        auto* title=surface.findChild<QLabel*>("workspacePageTitle");
+        QCOMPARE(title->text(),QString("Welcome!"));
+        surface.setAccountSummary("Alex");
+        QVERIFY(title->text().contains("Alex"));
+        QSignalSpy quickSwitch(&surface,&WorkspacePage::accountMenuRequested);
+        surface.findChild<QPushButton*>("workspaceProfile")->click();
+        QCOMPARE(quickSwitch.count(),1);
+        surface.findChild<QPushButton*>("workspaceLibrary")->click();
+        surface.setAccountSummary("Sam");
+        QCOMPARE(title->text(),QString("Library"));
+        AccountList accounts;
+        auto* page=new Pxl::AccountsPage(&accounts,false);
+        QVERIFY(surface.presentInstanceView(page,"Accounts",{}));
+        QVERIFY(surface.findChild<QPushButton*>("workspaceAccounts")->isChecked());
+        QVERIFY(page->findChildren<QFrame*>("pxlAccountRow").isEmpty());
+        auto first=MinecraftAccount::createOffline("Alex");
+        auto second=MinecraftAccount::createOffline("Sam");
+        accounts.addAccount(first); accounts.addAccount(second); accounts.setDefaultAccount(first);
+        QTRY_COMPARE(page->findChildren<QFrame*>("pxlAccountRow").size(),2);
+        QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+        auto controls=page->findChildren<QPushButton*>("pxlUseProfile");
+        QCOMPARE(controls.size(),2);
+        QVERIFY(!controls[0]->isEnabled()); QVERIFY(controls[1]->isEnabled());
+        controls[1]->click(); QCOMPARE(accounts.defaultAccount(),second);
+        QCoreApplication::processEvents(); QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+        QTest::qWait(80);
+        const auto accountRows=page->findChildren<QFrame*>("pxlAccountRow");
+        QCOMPARE(accountRows.size(),2);
+        QVERIFY(accountRows[0]->isVisible()); QVERIFY(accountRows[0]->height()>=70);
+        const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("accounts-page.png")));
+        QVERIFY(surface.leaveInstanceView());
+        surface.findChild<QPushButton*>("workspaceHome")->click();
+        surface.setAccountSummary({}); QCOMPARE(title->text(),QString("Welcome!"));
+    }
+
+    void quickAccountPopupKeepsAddActionOutsideScrollingProfiles()
+    {
+        QWidget surface; surface.resize(900,600); surface.show();
+        AccountList accounts;
+        for (int i=0;i<12;++i) accounts.addAccount(MinecraftAccount::createOffline(QString("Player%1").arg(i)));
+        bool manage=false;
+        QPointer<Pxl::AccountPopup> popup=new Pxl::AccountPopup(&accounts,&surface,surface.mapToGlobal(QPoint(890,70)),[&] { manage=true; });
+        popup->show(); QCoreApplication::processEvents();
+        QVERIFY(popup->height()<=360);
+        QVERIFY(surface.frameGeometry().contains(popup->geometry()));
+        auto* scroll=popup->findChild<QScrollArea*>("pxlAccountChoices");
+        QVERIFY(scroll->verticalScrollBar()->maximum()>0);
+        auto* add=popup->findChild<QPushButton*>("pxlQuickAddAccount");
+        QVERIFY(add->isVisible()); QVERIFY(add->parentWidget()==popup);
+        auto choices=popup->findChildren<QPushButton*>("pxlQuickProfile");
+        QCOMPARE(choices.size(),12);
+        const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(popup->grab().save(QDir(screenshots).filePath("account-switcher.png")));
+        choices[1]->click(); QCOMPARE(accounts.defaultAccount(),accounts.at(1));
+        QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete); QVERIFY(!popup);
+        AccountList empty;
+        popup=new Pxl::AccountPopup(&empty,&surface,surface.mapToGlobal(QPoint(890,70)),[&] { manage=true; });
+        popup->show();
+        QVERIFY(popup->findChildren<QPushButton*>("pxlQuickProfile").isEmpty());
+        QVERIFY(popup->height()<100);
+        popup->findChild<QPushButton*>("pxlQuickAddAccount")->click(); QVERIFY(manage);
+        QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+    }
+
     void frostedSurfaceBlursTheApplicationBackdrop()
     {
         QImage pattern(4, 4, QImage::Format_RGB32);
@@ -387,13 +461,42 @@ class WorkspacePageTest : public QObject {
         const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
         QTest::qWait(80);
         if (!screenshots.isEmpty()) QVERIFY(gallery.grab().save(QDir(screenshots).filePath("screenshot-gallery.png")));
-        QTimer::singleShot(50,&gallery,[&] {
+        QTimer::singleShot(230,&gallery,[&] {
             auto* preview=gallery.findChild<QWidget*>("pxlScreenshotPreview");
             QVERIFY(preview); QVERIFY(preview->width()>800); QVERIFY(preview->height()>500);
             if (!screenshots.isEmpty()) QVERIFY(gallery.grab().save(QDir(screenshots).filePath("screenshot-preview.png")));
             QTest::keyClick(preview,Qt::Key_Escape);
         });
         QTest::mouseClick(gallery.view()->viewport(),Qt::LeftButton,Qt::NoModifier,gallery.view()->visualRect(gallery.view()->model()->index(0,0)).center());
+    }
+
+    void screenshotLightboxAnimatesAndSupportsImmediateClose()
+    {
+        QTemporaryDir temporary;
+        QImage image(640,360,QImage::Format_RGB32); image.fill(QColor("#566e7d"));
+        const auto file=temporary.filePath("frame.png"); QVERIFY(image.save(file));
+        QWidget surface; surface.resize(900,600);
+        QPushButton background("Behind image",&surface); background.show(); surface.show();
+        const bool previous=QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+        const bool previousGeneral=QApplication::isEffectEnabled(Qt::UI_General);
+        QApplication::setEffectEnabled(Qt::UI_General,true);
+        for (bool animated : {true,false}) {
+            QApplication::setEffectEnabled(Qt::UI_AnimateMenu,animated);
+            const bool enabled=QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+            bool inspected=false;
+            QTimer::singleShot(animated ? 220 : 0,&surface,[&] {
+                auto* layer=surface.findChild<QWidget*>("pxlScreenshotPreview");
+                QVERIFY(layer); QVERIFY(!layer->isWindow()); QVERIFY(!background.isEnabled());
+                QTest::keyClick(layer,Qt::Key_Escape);
+                QCOMPARE(layer->isVisible(),enabled);
+                inspected=true;
+            });
+            Pxl::ScreenshotLightbox::showImage(file,&surface);
+            QVERIFY(inspected); QVERIFY(background.isEnabled());
+            QVERIFY(!surface.findChild<QWidget*>("pxlScreenshotPreview"));
+        }
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu,previous);
+        QApplication::setEffectEnabled(Qt::UI_General,previousGeneral);
     }
 
     void contentPreviewUsesOwnHeaderAndControls()

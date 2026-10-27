@@ -20,6 +20,7 @@
 #include <QKeyEvent>
 #include <QCloseEvent>
 #include <QCursor>
+#include <QVariantAnimation>
 #include <QSortFilterProxyModel>
 #include <QStyledItemDelegate>
 #include <QRegularExpression>
@@ -152,6 +153,7 @@ public:
         layer->finished=[&loop] { loop.quit(); };
         QObject::connect(layer,&QObject::destroyed,&loop,&QEventLoop::quit);
         layer->show(); layer->raise(); layer->setFocus(Qt::OtherFocusReason);
+        layer->animateTo(1.0);
         loop.exec();
         if (layer) delete layer;
         for (const auto& widget : disabled) if (widget) widget->setEnabled(true);
@@ -161,10 +163,12 @@ protected:
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this); painter.setRenderHint(QPainter::Antialiasing); painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.fillRect(rect(),QColor(5,8,12,220));
+        painter.fillRect(rect(),QColor(5,8,12,qRound(220*m_reveal)));
         if (m_image.isNull()) return;
         const auto fit=m_image.size().scaled(size()-QSize(64,64),Qt::KeepAspectRatio);
-        m_imageArea=QRect(QPoint((width()-fit.width())/2,(height()-fit.height())/2),fit);
+        const QSize animated=(QSizeF(fit)*(0.92+0.08*m_reveal)).toSize();
+        m_imageArea=QRect(QPoint((width()-animated.width())/2,(height()-animated.height())/2),animated);
+        painter.setOpacity(m_reveal);
         QPainterPath clip; clip.addRoundedRect(QRectF(m_imageArea),18,18); painter.setClipPath(clip);
         painter.drawPixmap(m_imageArea,m_image); painter.setClipping(false);
         m_closeArea=QRect(m_imageArea.right()-42,m_imageArea.top()+10,32,32);
@@ -180,7 +184,14 @@ protected:
         if (event->button()==Qt::LeftButton && (!m_imageArea.contains(event->position().toPoint()) || m_closeArea.contains(event->position().toPoint()))) close();
     }
     void keyPressEvent(QKeyEvent* event) override { if (event->key()==Qt::Key_Escape) close(); else event->accept(); }
-    void closeEvent(QCloseEvent* event) override { event->accept(); hide(); if (finished) finished(); }
+    void closeEvent(QCloseEvent* event) override
+    {
+        if (!m_closing && m_reveal>0 && QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) {
+            event->ignore(); m_closing=true; animateTo(0.0); return;
+        }
+        if (m_closing && m_animation->state()==QAbstractAnimation::Running) { event->ignore(); return; }
+        event->accept(); hide(); if (finished) finished();
+    }
     bool eventFilter(QObject* watched,QEvent* event) override
     {
         if (watched==parentWidget() && event->type()==QEvent::Resize) setGeometry(parentWidget()->rect());
@@ -192,7 +203,21 @@ private:
         setObjectName("pxlScreenshotPreview"); setGeometry(parent->rect()); parent->installEventFilter(this);
         setFocusPolicy(Qt::StrongFocus); setMouseTracking(true);
         setAccessibleName(screenshotText("Screenshot preview. Escape closes."));
+        m_animation=new QVariantAnimation(this);
+        m_animation->setEasingCurve(QEasingCurve::OutCubic);
+        connect(m_animation,&QVariantAnimation::valueChanged,this,[this](const QVariant& value) { m_reveal=value.toReal(); update(); });
+        connect(m_animation,&QVariantAnimation::finished,this,[this] { if (m_closing) close(); });
     }
+    void animateTo(qreal end)
+    {
+        m_animation->stop();
+        if (!QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) { m_reveal=end; update(); return; }
+        m_animation->setDuration(end>0 ? 180 : 130);
+        m_animation->setStartValue(m_reveal); m_animation->setEndValue(end); m_animation->start();
+    }
+    QVariantAnimation* m_animation=nullptr;
+    qreal m_reveal=0.0;
+    bool m_closing=false;
     QPixmap m_image;
     QRect m_imageArea,m_closeArea;
     std::function<void()> finished;

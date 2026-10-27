@@ -112,6 +112,7 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/pxl/WorkspacePage.h"
+#include "ui/pxl/AccountsPage.h"
 #include <QScreen>
 #include "ui/pages/instance/ModFolderPage.h"
 #include "ui/pxl/TransferDialog.h"
@@ -366,6 +367,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             on_actionKillInstance_triggered();
         });
         connect(m_workspacePage, &WorkspacePage::accountsRequested, ui->actionManageAccounts, &QAction::trigger);
+        connect(m_workspacePage, &WorkspacePage::accountMenuRequested, this, [this](const QPoint& position) {
+            auto* popup=new Pxl::AccountPopup(APPLICATION->accounts(),this,position,[this] {
+                ui->actionManageAccounts->trigger();
+            });
+            popup->show();
+        });
         connect(m_workspacePage, &WorkspacePage::settingsRequested, ui->actionSettings, &QAction::trigger);
         connect(m_workspacePage, &WorkspacePage::openInstanceRequested, this, [this](const QString& id) {
             openWorkspaceInstance(id);
@@ -805,6 +812,7 @@ void MainWindow::repopulateAccountsMenu()
             QAction* action = new QAction(profileLabel, this);
             action->setData(i);
             action->setCheckable(true);
+            action->setEnabled(!account->isActive());
             action->setActionGroup(accountsGroup);
             if (defaultAccount == account) {
                 action->setChecked(true);
@@ -835,7 +843,7 @@ void MainWindow::repopulateAccountsMenu()
 
     ui->accountsMenu->addAction(ui->actionNoDefaultAccount);
 
-    connect(ui->actionNoDefaultAccount, &QAction::triggered, this, &MainWindow::changeActiveAccount);
+    connect(ui->actionNoDefaultAccount, &QAction::triggered, this, &MainWindow::changeActiveAccount, Qt::UniqueConnection);
 
     ui->accountsMenu->addSeparator();
     ui->accountsMenu->addAction(ui->actionManageSkins);
@@ -879,6 +887,9 @@ void MainWindow::defaultAccountChanged()
     repopulateAccountsMenu();
 
     MinecraftAccountPtr account = APPLICATION->accounts()->defaultAccount();
+
+    if (m_workspacePage) m_workspacePage->setAccountSummary(account ? account->profileName() : QString(),
+                                                           account ? account->getFace() : QPixmap());
 
     // FIXME: this needs adjustment for MSA
     if (account && account->profileName() != "") {
@@ -1568,6 +1579,11 @@ void MainWindow::on_actionManageSkins_triggered()
 
 void MainWindow::on_actionManageAccounts_triggered()
 {
+    if (m_workspacePage && m_workspacePage->isVisible()) {
+        auto* accounts=new Pxl::AccountsPage(APPLICATION->accounts(), APPLICATION->capabilities() & Application::SupportsMSA);
+        if (!m_workspacePage->presentInstanceView(accounts,tr("Accounts"),{})) delete accounts;
+        return;
+    }
     APPLICATION->ShowGlobalSettings(this, "accounts");
 }
 

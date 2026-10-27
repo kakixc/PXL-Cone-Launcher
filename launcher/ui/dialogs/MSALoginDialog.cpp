@@ -34,6 +34,7 @@
  */
 
 #include "MSALoginDialog.h"
+#include "ui/pxl/DialogOverlay.h"
 #include "Application.h"
 #include "settings/SettingsObject.h"
 
@@ -101,6 +102,11 @@ int MSALoginDialog::exec()
     QMetaObject::invokeMethod(m_authflow_task.get(), &Task::start, Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_devicecode_task.get(), &Task::start, Qt::QueuedConnection);
 
+    if (parentWidget() && parentWidget()->property("pxlEmbeddedAuth").toBool()) {
+        setProperty("pxlFlow",true);
+        setProperty("pxlPreferredSize",QSize(600,480));
+        return Pxl::DialogOverlay::run(this,parentWidget()->window());
+    }
     return QDialog::exec();
 }
 

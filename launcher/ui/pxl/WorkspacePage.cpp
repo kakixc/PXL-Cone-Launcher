@@ -467,6 +467,7 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     classic->setText(tr("Advanced"));
     classic->hide();
     auto* accounts = navButton("workspaceAccounts", tr("Accounts"), "accounts");
+    accounts->setCheckable(true);
     auto* settings = navButton("workspaceSettings", tr("Settings"), "settings");
     settings->setCheckable(true);
     for (auto* button : m_navigationButtons) button->setProperty("pxlNavLabel", button->text());
@@ -490,6 +491,21 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_heading = heading(tr("Home"), "workspacePageTitle", header);
     headerLayout->addWidget(m_heading);
     headerLayout->addStretch();
+    m_heading->setTextFormat(Qt::PlainText);
+    m_profileButton = new QPushButton(header);
+    m_profileButton->setObjectName("workspaceProfile");
+    m_profileButton->setFixedHeight(42);
+    m_profileButton->setMinimumWidth(112);
+    m_profileButton->setMaximumWidth(240);
+    m_profileButton->setIconSize(QSize(28,28));
+    m_profileButton->setCursor(Qt::PointingHandCursor);
+    m_profileButton->setStyleSheet("QPushButton { background: rgba(35,39,45,170); color: #edf0f4; border: 1px solid rgba(210,220,230,30); border-radius: 21px; padding: 0 16px; font-weight: 600; }"
+                                 "QPushButton:hover { background: rgba(62,56,51,210); border-color: rgba(242,163,101,110); }"
+                                 "QPushButton:pressed { background: rgba(76,64,53,225); }");
+    connect(m_profileButton, &QPushButton::clicked, this, [this] {
+        emit accountMenuRequested(m_profileButton->mapToGlobal(QPoint(m_profileButton->width(),m_profileButton->height()+6)));
+    });
+    headerLayout->addWidget(m_profileButton);
     main->addWidget(header);
     m_scroll = new QScrollArea(this);
     m_scroll->setObjectName("workspaceScroll");
@@ -744,9 +760,11 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     showHome(true);
     setNavigationPosition(false);
     retranslateUi();
+    setAccountSummary({});
     auto* playtimeClock = new QTimer(this);
     playtimeClock->setInterval(30000);
-    connect(playtimeClock, &QTimer::timeout, this, [this] { updateHome(); m_libraryView->viewport()->update(); });
+    connect(playtimeClock, &QTimer::timeout, this, [this] { updateHome(); m_libraryView->viewport()->update();
+        if (m_showHome && m_contentStack->currentWidget()==m_scroll) m_heading->setText(homeTitle()); });
     playtimeClock->start();
     if (auto* app = APPLICATION_DYN) {
         auto applyBackground = [this, app] {
@@ -806,7 +824,7 @@ void WorkspacePage::showHome(bool home)
     }
     const bool changed = m_showHome != home;
     m_showHome = home;
-    m_heading->setText(home ? tr("Home") : tr("Library"));
+    m_heading->setText(home ? homeTitle() : tr("Library"));
     m_header->setVisible(true);
     m_homeButton->setChecked(home);
     m_libraryButton->setChecked(!home);
@@ -1147,8 +1165,9 @@ void WorkspacePage::retranslateUi()
     sort->setItemText(1, tr("Last played"));
     for (auto* label : findChildren<QLabel*>("workspaceMuted"))
         if (label->text().contains("Ctrl+Enter")) label->setText(tr("Enter to open · Ctrl+Enter to play"));
-    m_heading->setText(m_contentStack->currentWidget() == m_scroll ? (m_showHome ? tr("Home") : tr("Library")) : m_instanceViewTitle);
+    m_heading->setText(m_contentStack->currentWidget() == m_scroll ? (m_showHome ? homeTitle() : tr("Library")) : m_instanceViewTitle);
     m_backButton->setText(tr("Back"));
+    if (m_profileButton) setAccountSummary(m_profileName,m_profileButton->icon().pixmap(32,32));
     m_viewModeButton->setItemText(0, tr("Cover tiles"));
     m_viewModeButton->setItemText(1, tr("PXL hybrid cards"));
     m_viewModeButton->setItemText(2, tr("Detailed list"));
@@ -1176,7 +1195,7 @@ bool WorkspacePage::presentInstanceView(QWidget* view, const QString& title, std
                 m_instanceView.clear();
                 m_leaveInstanceGuard = {};
                 m_backButton->hide();
-                m_heading->setText(m_showHome ? tr("Home") : tr("Library"));
+                m_heading->setText(m_showHome ? homeTitle() : tr("Library"));
                 QTimer::singleShot(0, this, [this] {
                     if (!m_instanceView) {
                         m_contentStack->setCurrentWidget(m_scroll);
@@ -1206,7 +1225,7 @@ bool WorkspacePage::leaveInstanceView()
     m_contentStack->setCurrentWidget(m_scroll);
     updateActiveNavigation();
     m_backButton->hide();
-    m_heading->setText(m_showHome ? tr("Home") : tr("Library"));
+    m_heading->setText(m_showHome ? homeTitle() : tr("Library"));
     updateLayout();
     Pxl::animatePage(m_scroll);
     return true;
@@ -1220,4 +1239,30 @@ void WorkspacePage::updateActiveNavigation()
     for (auto* button : m_navigationButtons) {
         if (button->isCheckable()) button->setChecked(button->objectName() == active);
     }
+}
+
+QString WorkspacePage::homeTitle() const
+{
+    if (m_profileName.isEmpty()) return tr("Welcome!");
+    const int hour=QTime::currentTime().hour();
+    if (hour>=5 && hour<12) return tr("Good morning, %1!").arg(m_profileName);
+    if (hour<18 && hour>=12) return tr("Good afternoon, %1!").arg(m_profileName);
+    if (hour>=18 && hour<23) return tr("Good evening, %1!").arg(m_profileName);
+    return tr("Good night, %1!").arg(m_profileName);
+}
+
+void WorkspacePage::setAccountSummary(const QString& name, const QPixmap& face)
+{
+    m_profileName=name;
+    m_profileButton->setText(QFontMetrics(m_profileButton->font()).elidedText(name.isEmpty() ? tr("Account") : name,Qt::ElideRight,150));
+    m_profileButton->setAccessibleName(name.isEmpty() ? tr("Choose account") : tr("Switch account: %1").arg(name));
+    if (face.isNull()) m_profileButton->setIcon(QIcon(":/pxl/icons/user-circle.svg"));
+    else {
+        QPixmap avatar(32,32); avatar.fill(Qt::transparent);
+        QPainter painter(&avatar); painter.setRenderHint(QPainter::Antialiasing);
+        QPainterPath clip; clip.addRoundedRect(QRectF(0,0,32,32),8,8); painter.setClipPath(clip);
+        painter.drawPixmap(avatar.rect(),face); painter.end();
+        m_profileButton->setIcon(QIcon(avatar));
+    }
+    if (m_showHome && m_contentStack->currentWidget()==m_scroll) m_heading->setText(homeTitle());
 }
