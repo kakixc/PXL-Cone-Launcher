@@ -172,7 +172,7 @@ protected:
         QPainterPath clip; clip.addRoundedRect(QRectF(m_imageArea),18,18); painter.setClipPath(clip);
         painter.drawPixmap(m_imageArea,m_image); painter.setClipping(false);
         m_closeArea=QRect(m_imageArea.right()-42,m_imageArea.top()+10,32,32);
-        if (m_closeArea.contains(mapFromGlobal(QCursor::pos()))) {
+        {
             painter.setPen(Qt::NoPen); painter.setBrush(QColor(15,19,24,200)); painter.drawEllipse(m_closeArea);
             painter.setPen(QPen(QColor("#edf0f4"),2,Qt::SolidLine,Qt::RoundCap));
             const auto center=m_closeArea.center(); painter.drawLine(center+QPoint(-5,-5),center+QPoint(5,5)); painter.drawLine(center+QPoint(-5,5),center+QPoint(5,-5));

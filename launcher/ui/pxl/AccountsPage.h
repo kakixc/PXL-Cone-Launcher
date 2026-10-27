@@ -19,14 +19,62 @@
 #include <QVBoxLayout>
 #include <QPainterPath>
 #include <functional>
+#include <QToolButton>
+#include <QCursor>
+#include <QLineEdit>
 
 namespace Pxl {
 inline QString accountText(const char* text) { return QCoreApplication::translate("Pxl::AccountsPage",text); }
 
+inline bool containsAccount(AccountList* accounts,const MinecraftAccountPtr& account)
+{
+    for (int i=0;i<accounts->count();++i) if (accounts->at(i)==account) return true;
+    return false;
+}
+inline void removeAccountProfile(QWidget* surface,AccountList* accounts,const MinecraftAccountPtr& account)
+{
+    if (!containsAccount(accounts,account) || account->isActive() || account->isInUse()) return;
+    const QPointer<QWidget> alive(surface); const QPointer<AccountList> model(accounts);
+    if (!messagePanel(surface,accountText("Remove profile?"),accountText("Remove %1 from this launcher? Your Minecraft files will stay on this computer.").arg(account->profileName()),accountText("Remove"),true) || !alive || !model) return;
+    if (account->isActive() || account->isInUse()) return;
+    for (int i=0;i<model->count();++i) if (model->at(i)==account) { model->removeAccount(model->index(i,0)); break; }
+}
+class ProfileHoverActions final : public QObject {
+public:
+    ProfileHoverActions(QWidget* row,QWidget* slot,bool position,const std::function<void()>& edit,const std::function<void()>& remove,bool enabled)
+        : QObject(row),m_row(row),m_slot(slot),m_position(position)
+    {
+        auto* layout=new QHBoxLayout(slot); layout->setContentsMargins(0,0,0,0); layout->setSpacing(4);
+        for (bool deleting : {false,true}) {
+            auto* action=new QToolButton(slot); action->setObjectName(deleting ? "pxlRemoveProfile" : "pxlEditProfile");
+            action->setIcon(QIcon(deleting ? ":/pxl/icons/trash.svg" : ":/pxl/icons/pencil.svg")); action->setFixedSize(28,28); action->setIconSize(QSize(17,17));
+            action->setToolTip(deleting ? accountText("Remove profile") : accountText("Edit profile")); action->setAccessibleName(action->toolTip()); action->setEnabled(enabled);
+            action->setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 8px; } QToolButton:hover { background: rgba(255,255,255,30); }");
+            connect(action,&QToolButton::clicked,row,deleting ? remove : edit); layout->addWidget(action);
+        }
+        slot->setFixedSize(60,28); slot->hide(); row->installEventFilter(this);
+        arrange();
+    }
+protected:
+    bool eventFilter(QObject*,QEvent* event) override
+    {
+        if (event->type()==QEvent::Resize) arrange();
+        if (event->type()==QEvent::Enter || event->type()==QEvent::FocusIn) m_slot->show();
+        if (event->type()==QEvent::Leave) QTimer::singleShot(0,this,[this] {
+            if (!m_row->rect().contains(m_row->mapFromGlobal(QCursor::pos())) && !m_row->hasFocus()) m_slot->hide();
+        });
+        return false;
+    }
+private:
+    void arrange() { if (m_position) m_slot->move(m_row->width()-68,(m_row->height()-28)/2); }
+    QWidget* m_row; QWidget* m_slot; bool m_position;
+};
+
 // A bounded quick switcher; the add action stays outside the scrolling list.
 class AccountPopup final : public QWidget {
 public:
-    AccountPopup(AccountList* accounts,QWidget* surface,const QPoint& anchor,std::function<void()> manage)
+    AccountPopup(AccountList* accounts,QWidget* surface,const QPoint& anchor,std::function<void()> manage,
+                 std::function<void(MinecraftAccountPtr)> edit={},std::function<void(MinecraftAccountPtr)> remove={})
         : QWidget(surface,Qt::Popup|Qt::FramelessWindowHint|Qt::NoDropShadowWindowHint),m_surface(surface)
     {
         setObjectName("pxlAccountPopup");
@@ -47,6 +95,11 @@ public:
             choice->setStyleSheet("QPushButton { text-align: left; color: #edf0f4; background: transparent; border: none; border-radius: 10px; padding: 6px 10px; }"
                                  "QPushButton:hover { background: rgba(255,255,255,24); } QPushButton:checked { background: rgba(242,163,101,32); color: #f5bb90; }"
                                  "QPushButton:disabled { color: #7e8793; }");
+            if (edit && remove) {
+                auto* slot=new QWidget(choice);
+                choice->setStyleSheet(choice->styleSheet()+"QPushButton { padding-right: 72px; }");
+                new ProfileHoverActions(choice,slot,true,[this,account,edit] { close(); edit(account); },[this,account,remove] { close(); remove(account); },!account->isActive() && !account->isInUse());
+            }
             rows->addWidget(choice);
             connect(choice,&QPushButton::clicked,this,[this,accounts,account] {
                 close();
@@ -112,6 +165,39 @@ public:
         connect(accounts,&AccountList::defaultAccountChanged,this,schedule);
         connect(accounts,&QAbstractItemModel::dataChanged,this,schedule);
         rebuild();
+    }
+    void editAccount(const MinecraftAccountPtr& account)
+    {
+        if (!contains(account) || account->isActive() || account->isInUse()) return;
+        if (account->accountType()==AccountType::Offline) {
+            ChooseOfflineNameDialog dialog(accountText("Change your offline profile name. A different name creates a different Minecraft player identity; worlds may show a different inventory."),this);
+            dialog.setUsername(account->profileName()); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(560,360));
+            const QPointer<AccountsPage> alive(this);
+            if (DialogOverlay::run(&dialog,window())!=QDialog::Accepted || !alive || !contains(account)) return;
+            const auto name=dialog.getUsername();
+            const auto existing=m_accounts->getAccountByProfileName(name);
+            if (existing && existing!=account) { showNotice(this,accountText("Edit profile"),accountText("A profile with this name already exists.")); return; }
+            account->renameOfflineProfile(name);
+            return;
+        }
+        QDialog panel(this); panel.setProperty("pxlFlow",true); panel.setProperty("pxlPreferredSize",QSize(560,300));
+        auto* layout=new QVBoxLayout(&panel); layout->setContentsMargins(24,24,24,24); layout->setSpacing(16);
+        auto* title=new QLabel(accountText("Edit profile"),&panel); title->setProperty("pxlFlowTitle",true); layout->addWidget(title);
+        auto* name=new QLineEdit(account->profileName(),&panel); name->setReadOnly(true); layout->addWidget(name);
+        auto* hint=new QLabel(accountText("Online profile names are managed on your account provider's website."),&panel); hint->setWordWrap(true); hint->setProperty("pxlFlowHint",true); layout->addWidget(hint);
+        auto* actions=new QHBoxLayout;
+        auto* site=new QPushButton(accountText("Open profile website"),&panel); actions->addWidget(site);
+        auto* skin=new QPushButton(accountText("Manage skin"),&panel); actions->addWidget(skin);
+        auto* done=new QPushButton(accountText("Done"),&panel); actions->addStretch(); actions->addWidget(done); layout->addLayout(actions);
+        connect(site,&QPushButton::clicked,&panel,[account] { DesktopServices::openUrl(QUrl(account->accountType()==AccountType::MSA ? "https://www.minecraft.net/msaprofile" : "https://account.ely.by/")); });
+        const QPointer<AccountList> accounts(m_accounts);
+        connect(skin,&QPushButton::clicked,&panel,[&panel,account,accounts] {
+            if (!accounts || !containsAccount(accounts,account) || account->isActive() || account->isInUse()) return;
+            if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(&panel,account); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(760,600)); DialogOverlay::run(&dialog,panel.window()); }
+            else DesktopServices::openUrl(QUrl("https://ely.by/skins"));
+        });
+        connect(done,&QPushButton::clicked,&panel,&QDialog::accept);
+        DialogOverlay::run(&panel,window());
     }
 private:
     QPushButton* button(const QString& text,const QString& icon)
@@ -179,6 +265,9 @@ private:
             auto* use=button(current ? accountText("Active profile") : accountText("Use profile"),current ? "check" : "user-circle");
             use->setObjectName("pxlUseProfile"); use->setEnabled(!current && !account->isActive()); line->addWidget(use);
             connect(use,&QPushButton::clicked,this,[this,account] { if (contains(account) && !account->isActive()) m_accounts->setDefaultAccount(account); });
+            auto* slot=new QWidget(row);
+            new ProfileHoverActions(row,slot,false,[this,account] { editAccount(account); },[this,account] { removeAccountProfile(this,m_accounts,account); },!account->isActive() && !account->isInUse());
+            auto* holder=new QWidget(row); holder->setFixedSize(60,28); slot->setParent(holder); line->addWidget(holder);
             auto* more=button(QStringLiteral("•••"),QString()); more->setAccessibleName(accountText("Profile actions")); line->addWidget(more);
             connect(more,&QPushButton::clicked,this,[this,account,more] { showActions(account,more); });
             m_rows->addWidget(row);
@@ -196,8 +285,9 @@ private:
             auto* action=menu.addAction(QIcon(":/pxl/icons/"+icon+".svg"),label); action->setEnabled(enabled);
             connect(action,&QAction::triggered,this,[this,account,callback] { if (contains(account) && !account->isActive()) callback(); });
         };
+        addAction(accountText("Edit profile"),"pencil",ready && !account->isInUse(),[this,account] { editAccount(account); });
         addAction(accountText("Refresh session"),"arrows-clockwise",ready && account->accountType()!=AccountType::Offline,[this,account] { m_accounts->requestRefresh(account->internalId()); });
-        addAction(accountText("Manage skin"),"user-circle",ready && account->accountType()!=AccountType::Offline,[this,account] {
+        addAction(accountText("Manage skin"),"user-circle",ready && !account->isInUse() && account->accountType()!=AccountType::Offline,[this,account] {
             if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(this,account); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(760,600)); DialogOverlay::run(&dialog,window()); }
             else DesktopServices::openUrl(QUrl("https://ely.by/skins"));
         });
@@ -207,12 +297,7 @@ private:
             for (int i=0;i<m_accounts->count();++i) if (m_accounts->at(i)==account) { m_accounts->moveAccount(m_accounts->index(i,0),delta); break; }
         });
         menu.addSeparator();
-        addAction(accountText("Remove profile"),"trash",ready,[this,account] {
-            const QPointer<AccountsPage> alive(this);
-            if (!messagePanel(this,accountText("Remove profile?"),accountText("Remove %1 from this launcher? Your Minecraft files will stay on this computer.").arg(account->profileName()),accountText("Remove"),true) || !alive) return;
-            if (account->isActive()) return;
-            for (int i=0;i<m_accounts->count();++i) if (m_accounts->at(i)==account) { m_accounts->removeAccount(m_accounts->index(i,0)); break; }
-        });
+        addAction(accountText("Remove profile"),"trash",ready && !account->isInUse(),[this,account] { removeAccountProfile(this,m_accounts,account); });
         menu.exec(anchor->mapToGlobal(QPoint(0,anchor->height()+4)));
     }
     AccountList* m_accounts;

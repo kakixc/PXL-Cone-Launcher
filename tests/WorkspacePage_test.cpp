@@ -42,6 +42,7 @@
 #include <ui/pxl/LibraryControls.h>
 #include <ui/pxl/ActionMenu.h>
 #include <ui/pxl/AccountsPage.h>
+#include <ui/pxl/InstalledContentView.h>
 #include <ui/pages/modplatform/ResourcePage.h>
 
 class CatalogTestVersion final : public BaseVersion {
@@ -317,6 +318,79 @@ class WorkspacePageTest : public QObject {
         QVERIFY(popup->height()<100);
         popup->findChild<QPushButton*>("pxlQuickAddAccount")->click(); QVERIFY(manage);
         QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+    }
+
+    void offlineProfileEditingPreservesOnlineAccountsAndUsesValidationDialog()
+    {
+        auto account=MinecraftAccount::createOffline("Before");
+        const auto oldId=account->profileId();
+        QSignalSpy changed(account.get(),&MinecraftAccount::changed);
+        QVERIFY(!account->renameOfflineProfile({}));
+        QVERIFY(account->renameOfflineProfile("After"));
+        QCOMPARE(account->profileName(),QString("After"));
+        QVERIFY(account->profileId()!=oldId); QCOMPARE(changed.count(),1);
+        QCOMPARE(MinecraftAccount::loadFromJsonV3(account->saveToJson())->profileName(),QString("After"));
+        auto online=MinecraftAccount::createBlank(AccountType::MSA);
+        const auto original=online->saveToJson();
+        QVERIFY(!online->renameOfflineProfile("NotAllowed")); QCOMPARE(online->saveToJson(),original);
+        AccountList accounts; accounts.addAccount(account);
+        Pxl::AccountsPage page(&accounts,false); page.resize(900,600); page.show();
+        QTimer::singleShot(20,&page,[&] {
+            auto* dialog=page.findChild<ChooseOfflineNameDialog*>(); QVERIFY(dialog);
+            dialog->setUsername("Edited"); dialog->accept();
+        });
+        page.editAccount(account);
+        QCOMPARE(account->profileName(),QString("Edited"));
+        QTimer::singleShot(20,&page,[&] {
+            auto* dialog=page.findChild<QDialog*>("pxlMessagePanel"); QVERIFY(dialog); dialog->reject();
+        });
+        Pxl::removeAccountProfile(&page,&accounts,account); QCOMPARE(accounts.count(),1);
+        QTimer::singleShot(20,&page,[&] {
+            auto* dialog=page.findChild<QDialog*>("pxlMessagePanel"); QVERIFY(dialog); dialog->accept();
+        });
+        Pxl::removeAccountProfile(&page,&accounts,account); QCOMPARE(accounts.count(),0);
+    }
+
+    void installedContentUsesSharedSelectionAndExplicitToggle()
+    {
+        QStandardItemModel source(2,5);
+        source.setData(source.index(0,2),"Sodium"); source.setData(source.index(1,2),"Iris");
+        for (int row=0;row<2;++row) {
+            source.setItem(row,0,new QStandardItem);
+            source.item(row,0)->setCheckable(true); source.item(row,0)->setCheckState(Qt::Checked);
+            source.setData(source.index(row,3),"1.0"); source.setData(source.index(row,4),QString("content-%1.jar").arg(row));
+        }
+        QSortFilterProxyModel proxy; proxy.setSourceModel(&source); proxy.setFilterKeyColumn(-1);
+        QItemSelectionModel selection(&proxy);
+        QAction add("Add files",&source); add.setObjectName("actionAddItem");
+        QAction remove("Remove",&source); remove.setObjectName("actionRemoveItem");
+        QSignalSpy adds(&add,&QAction::triggered), removes(&remove,&QAction::triggered);
+        int browse=0;
+        Pxl::InstalledContentView view(&proxy,&selection,{"Enable","Image","Name","Version","File Name"},{&add,&remove},"mods",[&] { ++browse; });
+        view.resize(980,540); view.show(); QTest::qWait(30);
+        auto* list=view.findChild<QListView*>("installedContentList"); QVERIFY(list);
+        view.findChild<QPushButton*>("installedBrowse")->click(); QCOMPARE(browse,1);
+        view.findChild<QPushButton*>("installedAddFiles")->click(); QCOMPARE(adds.count(),1);
+        const auto index=proxy.index(0,2); const auto rect=list->visualRect(index);
+        QTest::mouseClick(list->viewport(),Qt::LeftButton,Qt::NoModifier,rect.topLeft()+QPoint(90,30));
+        QCOMPARE(selection.selectedRows(0).size(),1);
+        QCOMPARE(selection.selectedIndexes().size(),5);
+        QSignalSpy changed(&source,&QAbstractItemModel::dataChanged);
+        QTest::mouseClick(list->viewport(),Qt::LeftButton,Qt::NoModifier,Pxl::installedToggle(rect).center());
+        QCOMPARE(source.index(0,0).data(Qt::CheckStateRole).toInt(),int(Qt::Unchecked));
+        QCOMPARE(changed.count(),1);
+        QTest::keyClick(list,Qt::Key_Space); QCOMPARE(changed.count(),2);
+        QTest::keyClick(list,Qt::Key_Delete); QCOMPARE(removes.count(),1);
+        auto* search=view.findChild<QLineEdit*>("installedContentSearch"); search->setText("not present");
+        QCOMPARE(proxy.rowCount(),0);
+        QCOMPARE(view.findChild<QLabel*>("installedEmptyTitle")->text(),QString("No matching content"));
+        search->clear(); QCOMPARE(proxy.rowCount(),2); QTest::qWait(40);
+        const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("installed-content.png")));
+        source.removeRows(0,2);
+        QTRY_COMPARE(view.findChild<QLabel*>("installedEmptyTitle")->text(),QString("No mods installed"));
+        QVERIFY(view.findChild<QLabel*>("installedEmptyTitle")->isVisible());
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("installed-content-empty.png")));
     }
 
     void frostedSurfaceBlursTheApplicationBackdrop()

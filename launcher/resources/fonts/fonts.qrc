@@ -18,6 +18,7 @@
         <file alias="icons/check.svg">../pxl/icons/check.svg</file>
         <file alias="icons/arrows-clockwise.svg">../pxl/icons/arrows-clockwise.svg</file>
         <file alias="icons/trash.svg">../pxl/icons/trash.svg</file>
+        <file alias="icons/pencil.svg">../pxl/icons/pencil.svg</file>
         <file alias="icons/house.svg">../pxl/icons/house.svg</file>
         <file alias="icons/squares-four.svg">../pxl/icons/squares-four.svg</file>
         <file alias="icons/list.svg">../pxl/icons/list.svg</file>

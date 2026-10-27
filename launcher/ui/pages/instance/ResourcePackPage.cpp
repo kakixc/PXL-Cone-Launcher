@@ -81,6 +81,7 @@ void ResourcePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] 
 
 void ResourcePackPage::downloadResourcePacks()
 {
+    if (routePxlDownload()) return;
     if (m_downloadDialog && m_downloadDialog->isVisible()) {
         m_downloadDialog->raise();
         m_downloadDialog->activateWindow();

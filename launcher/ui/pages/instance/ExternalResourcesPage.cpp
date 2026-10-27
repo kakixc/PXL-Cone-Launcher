@@ -34,6 +34,7 @@
  */
 
 #include "ExternalResourcesPage.h"
+#include "ui/pxl/InstalledContentView.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui_ExternalResourcesPage.h"
 
@@ -149,14 +150,15 @@ void ExternalResourcesPage::openedImpl()
     auto const setting_name = QString("WideBarVisibility_%1").arg(id());
     m_wide_bar_setting = APPLICATION->settings()->getOrRegisterSetting(setting_name);
 
-    ui->actionsToolbar->setVisibilityState(QByteArray::fromBase64(m_wide_bar_setting->get().toString().toUtf8()));
+    if (m_pxlBrowse) ui->actionsToolbar->hide();
+    else ui->actionsToolbar->setVisibilityState(QByteArray::fromBase64(m_wide_bar_setting->get().toString().toUtf8()));
 }
 
 void ExternalResourcesPage::closedImpl()
 {
     m_model->stopWatching();
 
-    m_wide_bar_setting->set(QString::fromUtf8(ui->actionsToolbar->getVisibilityState().toBase64()));
+    if (!m_pxlBrowse) m_wide_bar_setting->set(QString::fromUtf8(ui->actionsToolbar->getVisibilityState().toBase64()));
 }
 
 void ExternalResourcesPage::retranslate()
@@ -347,4 +349,23 @@ QString ExternalResourcesPage::extraHeaderInfoString()
             return tr(" (%1 installed, %2 selected)").arg(m_model->size()).arg(count);
     }
     return tr(" (%1 installed)").arg(m_model->size());
+}
+
+void ExternalResourcesPage::usePxlPresentation(std::function<void()> browse)
+{
+    if (m_pxlBrowse) return;
+    m_pxlBrowse=std::move(browse);
+    setProperty("pxlInstalledContent",true);
+    // Retain the original selection and commands, not the original visual layout.
+    auto* original=takeCentralWidget(); original->hide(); original->setParent(this);
+    auto* view=new Pxl::InstalledContentView(m_filterModel,ui->treeView->selectionModel(),m_model->columnNames(false),
+                                            ui->actionsToolbar->actions(),id(),m_pxlBrowse,this);
+    setCentralWidget(view);
+    ui->actionsToolbar->hide();
+}
+
+bool ExternalResourcesPage::routePxlDownload()
+{
+    if (!m_pxlBrowse) return false;
+    m_pxlBrowse(); return true;
 }

@@ -87,6 +87,7 @@ void TexturePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] c
 
 void TexturePackPage::downloadTexturePacks()
 {
+    if (routePxlDownload()) return;
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }

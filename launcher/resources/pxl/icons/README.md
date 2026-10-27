@@ -7,4 +7,4 @@ The upstream MIT license is preserved in [LICENSE.txt](LICENSE.txt).
 
 Phosphor files use `#e5e8ed` instead of `currentColor` for the dark navigation surface.
 
-`play.svg`, `stop.svg`, `star.svg`, `import.svg` and `list.svg` are PXL-authored vectors supplied with the project under its license. Play/Stop use rounded filled silhouettes; the recommendation star uses the warm PXL accent. Primary-action icons are tinted at render time to match their dark button text.
+`play.svg`, `stop.svg`, `star.svg`, `import.svg`, `list.svg`, `check.svg`, `image.svg`, `arrows-clockwise.svg`, `trash.svg` and `pencil.svg` are PXL-authored vectors supplied with the project under its license. Play/Stop use rounded filled silhouettes; the recommendation star uses the warm PXL accent. Primary-action icons are tinted at render time to match their dark button text.

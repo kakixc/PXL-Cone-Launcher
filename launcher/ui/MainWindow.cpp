@@ -370,7 +370,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(m_workspacePage, &WorkspacePage::accountMenuRequested, this, [this](const QPoint& position) {
             auto* popup=new Pxl::AccountPopup(APPLICATION->accounts(),this,position,[this] {
                 ui->actionManageAccounts->trigger();
-            });
+            },[this](MinecraftAccountPtr account) {
+                auto* page=new Pxl::AccountsPage(APPLICATION->accounts(),APPLICATION->capabilities() & Application::SupportsMSA);
+                if (!m_workspacePage->presentInstanceView(page,tr("Accounts"),{})) { delete page; return; }
+                page->editAccount(account);
+            },[this](MinecraftAccountPtr account) { Pxl::removeAccountProfile(this,APPLICATION->accounts(),account); });
             popup->show();
         });
         connect(m_workspacePage, &WorkspacePage::settingsRequested, ui->actionSettings, &QAction::trigger);

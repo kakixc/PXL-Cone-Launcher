@@ -99,6 +99,9 @@ class MinecraftAccount : public QObject, public Usable {
 
     shared_qobject_ptr<AuthFlow> refresh();
 
+    // Offline identity only; online names remain provider-owned.
+    bool renameOfflineProfile(const QString& name);
+
     shared_qobject_ptr<AuthFlow> currentTask();
 
    public: /* queries */

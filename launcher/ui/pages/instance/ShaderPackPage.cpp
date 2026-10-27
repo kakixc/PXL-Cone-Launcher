@@ -78,6 +78,7 @@ ShaderPackPage::ShaderPackPage(MinecraftInstance* instance, ShaderPackFolderMode
 
 void ShaderPackPage::downloadShaderPack()
 {
+    if (routePxlDownload()) return;
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }

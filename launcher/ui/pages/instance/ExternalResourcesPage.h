@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <functional>
 #include <QSortFilterProxyModel>
 
 #include "Application.h"
@@ -30,6 +31,7 @@ class ExternalResourcesPage : public QMainWindow, public BasePage {
 
     virtual bool shouldDisplay() const override = 0;
     QString extraHeaderInfoString();
+    void usePxlPresentation(std::function<void()> browse);
 
     void openedImpl() override;
     void closedImpl() override;
@@ -39,6 +41,7 @@ class ExternalResourcesPage : public QMainWindow, public BasePage {
    protected:
     bool eventFilter(QObject* obj, QEvent* ev) override;
     bool listFilter(QKeyEvent* ev);
+    bool routePxlDownload();
     QMenu* createPopupMenu() override;
 
    public slots:
@@ -71,6 +74,7 @@ class ExternalResourcesPage : public QMainWindow, public BasePage {
     ResourceFolderModel* m_model;
     QSortFilterProxyModel* m_filterModel = nullptr;
 
+    std::function<void()> m_pxlBrowse;
     QString m_fileSelectionFilter;
     QString m_viewFilter;
 

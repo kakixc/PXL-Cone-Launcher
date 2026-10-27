@@ -2119,3 +2119,63 @@ msgstr "Удалить"
 msgctxt "Pxl::AccountsPage"
 msgid "Add account"
 msgstr "Добавить аккаунт"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Search installed content"
+msgstr "Поиск установленных дополнений"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Browse content"
+msgstr "Найти контент"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Add files"
+msgstr "Добавить файлы"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Content actions"
+msgstr "Действия с контентом"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Find additions for this instance or add files from your computer."
+msgstr "Найдите дополнения для этой сборки или добавьте файлы с компьютера."
+
+msgctxt "Pxl::InstalledContentView"
+msgid "No mods installed"
+msgstr "Нет установленных модификаций"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "No shaders installed"
+msgstr "Нет установленных шейдеров"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "No resource packs installed"
+msgstr "Нет установленных ресурспаков"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "No matching content"
+msgstr "Ничего не найдено"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Edit profile"
+msgstr "Редактировать профиль"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Change your offline profile name. A different name creates a different Minecraft player identity; worlds may show a different inventory."
+msgstr "Измените имя офлайн-профиля. Другое имя создаёт другую игровую личность Minecraft: в мирах может отображаться другой инвентарь."
+
+msgctxt "Pxl::AccountsPage"
+msgid "A profile with this name already exists."
+msgstr "Профиль с таким именем уже существует."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Online profile names are managed on your account provider's website."
+msgstr "Имена онлайн-профилей изменяются на сайте провайдера аккаунта."
+
+msgctxt "Pxl::AccountsPage"
+msgid "Open profile website"
+msgstr "Открыть сайт профиля"
+
+msgctxt "Pxl::AccountsPage"
+msgid "Done"
+msgstr "Готово"

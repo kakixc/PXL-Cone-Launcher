@@ -94,6 +94,10 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         layout->setContentsMargins(24, 16, 24, 24);
         layout->setSpacing(16);
         auto* tabs = new QHBoxLayout;
+        if (dynamic_cast<MinecraftInstance*>(m_instance))
+        for (const auto& id : {QStringLiteral("mods"),QStringLiteral("resourcepacks"),QStringLiteral("texturepacks"),QStringLiteral("shaderpacks")})
+            if (auto* page=dynamic_cast<ExternalResourcesPage*>(m_container->getPage(id)))
+                page->usePxlPresentation([this,id] { browseContent(id=="texturepacks" ? "resourcepacks" : id); });
         const QString resourcePage = m_instance->traits().contains("texturepacks") ? "texturepacks" : "resourcepacks";
         const QList<QPair<QString, QString>> categories{{"mods", tr("Mods")}, {resourcePage, tr("Resource packs")},
             {"shaderpacks", tr("Shaders")}, {"worlds", tr("Worlds")}, {"console", tr("Logs")}, {"version", tr("Advanced")}};
@@ -361,8 +365,10 @@ void InstanceWindow::updateEditorNavigation(const QString& page)
         common |= selected && page != "version";
     }
     const bool content = page == "mods" || page == "resourcepacks" || page == "texturepacks" || page == "shaderpacks";
-    m_browseContent->setVisible(content);
-    m_addContent->setVisible(content);
+    const auto* widget=dynamic_cast<QWidget*>(selectedPage());
+    const bool ownControls=widget && widget->property("pxlInstalledContent").toBool();
+    m_browseContent->setVisible(content && !ownControls);
+    m_addContent->setVisible(content && !ownControls);
     m_container->setPageListVisible(!common);
     m_container->setPageHeadingVisible(!common);
     if (!common && !m_editorTabs.isEmpty()) m_editorTabs.last()->setChecked(true);

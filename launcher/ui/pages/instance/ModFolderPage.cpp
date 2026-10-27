@@ -162,6 +162,7 @@ void ModFolderPage::removeItems(const QItemSelection& selection)
 
 void ModFolderPage::downloadMods()
 {
+    if (routePxlDownload()) return;
     if (m_downloadDialog && m_downloadDialog->isVisible()) {
         m_downloadDialog->raise();
         m_downloadDialog->activateWindow();
