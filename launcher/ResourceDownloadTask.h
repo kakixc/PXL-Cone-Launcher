@@ -20,6 +20,7 @@
 #pragma once
 
 #include "net/NetJob.h"
+#include <QPointer>
 #include "tasks/SequentialTask.h"
 
 #include "minecraft/mod/tasks/LocalResourceUpdateTask.h"
@@ -42,10 +43,13 @@ class ResourceDownloadTask : public SequentialTask {
     const QString& getName() const { return m_pack->name; }
     ModPlatform::IndexedPack::Ptr getPack() { return m_pack; }
 
+   protected:
+    void executeTask() override;
+
    private:
     ModPlatform::IndexedPack::Ptr m_pack;
     ModPlatform::IndexedVersion m_pack_version;
-    ResourceFolderModel* m_pack_model;
+    QPointer<ResourceFolderModel> m_pack_model;
 
     NetJob::Ptr m_filesNetJob;
     LocalResourceUpdateTask::Ptr m_update_task;

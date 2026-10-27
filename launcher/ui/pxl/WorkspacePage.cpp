@@ -3,6 +3,7 @@
 #include "WorkspacePage.h"
 #include "Animations.h"
 #include "TaskHistory.h"
+#include "TaskActivity.h"
 #include "Backdrop.h"
 #include "LibraryControls.h"
 #include "InstanceLibraryDelegate.h"
@@ -524,6 +525,7 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_contentStack->addWidget(m_scroll);
     workspaceBody->addWidget(m_contentStack, 1);
     main->addLayout(workspaceBody, 1);
+    main->addWidget(new Pxl::TaskActivity(Pxl::TaskHistory::instance(), this));
 
     m_recentSection = new WorkspaceHero(content);
     auto* recent = new QVBoxLayout(m_recentSection);

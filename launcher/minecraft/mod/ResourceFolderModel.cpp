@@ -50,6 +50,9 @@ ResourceFolderModel::ResourceFolderModel(const QDir& dir, BaseInstance* instance
 
 ResourceFolderModel::~ResourceFolderModel()
 {
+    // Notify asynchronous users before the wait below can dispatch callbacks.
+    m_isBeingDestroyed = true;
+    emit aboutToBeDestroyed();
     while (!QThreadPool::globalInstance()->waitForDone(100)) {
         QCoreApplication::processEvents();
     }
@@ -323,6 +326,7 @@ bool ResourceFolderModel::setResourceEnabled(const QModelIndexList& indexes, Ena
 static QMutex s_update_task_mutex;
 bool ResourceFolderModel::update()
 {
+    if (m_isBeingDestroyed) return false;
     // We hold a lock here to prevent race conditions on the m_current_update_task reset.
     QMutexLocker lock(&s_update_task_mutex);
 

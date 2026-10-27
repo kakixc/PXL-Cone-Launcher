@@ -115,10 +115,11 @@ void TaskHistory::watch(Task* task, const QString& title, const QIcon& icon)
         if (auto* entry = record(id)) entry->canAbort = canAbort;
         notifyChanged();
     });
-    auto finish = [this, id](Task::State state, const QString& error = {}) {
+    auto finish = [this, id, task](Task::State state, const QString& error = {}) {
         if (auto* entry = record(id)) {
             entry->state = state;
             entry->error = error;
+            if (!task->warnings().isEmpty()) entry->details += '\n' + task->warnings().join('\n');
             entry->finishedAt = QDateTime::currentDateTime();
         }
         notifyChanged();
@@ -138,6 +139,17 @@ void TaskHistory::watch(Task* task, const QString& title, const QIcon& icon)
     // its terminal signals. Reconcile once after all observers are installed.
     if (task->isFinished()) finish(task->getState(), task->failReason());
     notifyChanged();
+}
+
+void TaskHistory::startOwned(std::unique_ptr<Task> task, const QString& title, const QIcon& icon)
+{
+    if (!task) return;
+    auto* operation = task.release();
+    operation->setParent(this);
+    watch(operation, title, icon);
+    connect(operation, &Task::finished, operation, &QObject::deleteLater);
+    if (operation->isFinished()) operation->deleteLater();
+    else if (!operation->isRunning()) QTimer::singleShot(0, operation, &Task::start);
 }
 
 void TaskHistory::notifyChanged()

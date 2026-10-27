@@ -63,6 +63,7 @@ class ResourceFolderModel : public QAbstractListModel {
    public:
     ResourceFolderModel(const QDir& dir, BaseInstance* instance, bool isIndexed, bool createDir, QObject* parent = nullptr);
     ~ResourceFolderModel() override;
+    bool isBeingDestroyed() const { return m_isBeingDestroyed; }
 
     virtual QString id() const { return "resource"; }
 
@@ -186,6 +187,7 @@ class ResourceFolderModel : public QAbstractListModel {
     BaseInstance* instance() const { return m_instance; }
 
    signals:
+    void aboutToBeDestroyed();
     void updateFinished();
     void parseFinished();
 
@@ -252,6 +254,7 @@ class ResourceFolderModel : public QAbstractListModel {
     BaseInstance* m_instance;
     QFileSystemWatcher m_watcher;
     bool m_isWatching = false;
+    bool m_isBeingDestroyed = false;
 
     bool m_isIndexed;
     bool m_firstFolderLoad = true;

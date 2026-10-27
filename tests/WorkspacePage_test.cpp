@@ -186,6 +186,7 @@ public:
 #include <ui/themes/ConeTheme.h>
 #include <ui/dialogs/ProgressDialog.h>
 #include <ui/pxl/TaskHistory.h>
+#include <ui/pxl/TaskActivity.h>
 #include <ui/pxl/DialogOverlay.h>
 #include <ui/pxl/Backdrop.h>
 #include <ui/widgets/VersionSelectWidget.h>
@@ -214,6 +215,7 @@ class PreviewInstallTask final : public Task {
 class ManualHistoryTask final : public Task {
    public:
     void complete() { emitSucceeded(); }
+    void fail() { emitFailed("Download unavailable"); }
    protected:
     void executeTask() override {}
 };
@@ -1638,6 +1640,108 @@ class WorkspacePageTest : public QObject {
         QVERIFY(history.records().first().task.isNull());
         QVERIFY(!history.cancel(history.records().first().id));
         dialog->close();
+    }
+
+    void backgroundTasksSurvivePagesAndRetainResults()
+    {
+        Pxl::TaskHistory history;
+        auto page = std::make_unique<QWidget>();
+        auto owned = std::make_unique<ManualHistoryTask>();
+        owned->setParent(page.get());
+        QPointer<ManualHistoryTask> operation = owned.get();
+        history.startOwned(std::move(owned), "Install content: Survival");
+        page.reset();
+        QVERIFY(operation);
+        QTRY_VERIFY(operation->isRunning());
+        QCOMPARE(history.activeCount(), 1);
+        operation->fail();
+        QTRY_VERIFY(operation.isNull());
+        QCOMPARE(history.activeCount(), 0);
+        QCOMPARE(history.records().first().error, QString("Download unavailable"));
+
+        auto cancellable = std::make_unique<ManualHistoryTask>();
+        cancellable->setAbortable(true);
+        QPointer<ManualHistoryTask> cancelled = cancellable.get();
+        history.startOwned(std::move(cancellable), "Second installation");
+        QTRY_VERIFY(cancelled->isRunning());
+        QVERIFY(history.cancel(history.records().last().id));
+        QTRY_VERIFY(cancelled.isNull());
+        QCOMPARE(history.records().last().state, Task::State::AbortedByUser);
+    }
+
+    void instanceContentInstallBlocksLaunchUntilTerminalResult()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        auto instanceSettings = std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg"));
+        MinecraftInstance instance(globalSettings.get(), std::move(instanceSettings), temporary.filePath("pack"));
+        const bool launchableBefore = instance.canLaunch();
+        ManualHistoryTask install;
+        ManualHistoryTask another;
+        QVERIFY(instance.beginContentInstall(&install));
+        QVERIFY(instance.isInstallingContent());
+        QVERIFY(!instance.canLaunch());
+        QVERIFY(!instance.beginContentInstall(&another));
+        install.start();
+        install.complete();
+        QVERIFY(!instance.isInstallingContent());
+        QCOMPARE(instance.canLaunch(), launchableBefore);
+        instance.setRunning(true);
+        QVERIFY(!instance.beginContentInstall(&another));
+        instance.setRunning(false);
+        auto interrupted = std::make_unique<ManualHistoryTask>();
+        QVERIFY(instance.beginContentInstall(interrupted.get()));
+        interrupted.reset();
+        QVERIFY(!instance.isInstallingContent());
+        QCOMPARE(instance.canLaunch(), launchableBefore);
+    }
+
+    void resourceModelAnnouncesTeardownBeforePumpingEvents()
+    {
+        QTemporaryDir temporary;
+        auto model = std::make_unique<ResourceFolderModel>(QDir(temporary.path()), nullptr, false, false);
+        QStringList order;
+        ManualHistoryTask operation;
+        operation.setAbortable(true);
+        operation.start();
+        connect(model.get(), &QObject::destroyed, this, [&] { order.append("destroyed"); });
+        // reset clears the unique_ptr before destructor callbacks; retain a raw
+        // pointer for assertions inside the deliberately early teardown signal.
+        auto* target = model.release();
+        connect(target, &ResourceFolderModel::aboutToBeDestroyed, this, [&, target] {
+            order.append("early");
+            QVERIFY(target->isBeingDestroyed());
+            QVERIFY(!target->update());
+            operation.abort();
+        });
+        delete target;
+        QCOMPARE(order, QStringList({"early", "destroyed"}));
+        QCOMPARE(operation.getState(), Task::State::AbortedByUser);
+    }
+
+    void taskActivityUsesRealProgressAndHidesWhenFinished()
+    {
+        Pxl::TaskHistory history;
+        QWidget surface;
+        auto* layout = new QVBoxLayout(&surface);
+        auto* activity = new Pxl::TaskActivity(&history, &surface);
+        layout->addWidget(activity);
+        surface.resize(900, 90);
+        surface.show();
+        QVERIFY(activity->isHidden());
+        ManualHistoryTask task;
+        history.watch(&task, "Install content: Survival");
+        task.start();
+        task.setProgress(25, 100);
+        QTRY_VERIFY(activity->isVisible());
+        auto* progress = activity->findChild<QProgressBar*>("taskActivityProgress");
+        QCOMPARE(progress->value(), 250);
+        task.setProgress(0, 0);
+        QTRY_COMPARE(progress->maximum(), 0);
+        const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("background-activity.png")));
+        task.complete();
+        QTRY_VERIFY(activity->isHidden());
     }
 
     void popupSelectionKeepsReadableText()

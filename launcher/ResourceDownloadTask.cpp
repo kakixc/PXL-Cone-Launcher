@@ -64,6 +64,10 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
                                            QString downloadReason)
     : m_pack(std::move(pack)), m_pack_version(std::move(version)), m_pack_model(packs)
 {
+    connect(packs, &ResourceFolderModel::aboutToBeDestroyed, this, [this] {
+        m_pack_model.clear();
+        if (isRunning()) abort();
+    });
     if (isIndexed) {
         m_update_task.reset(new LocalResourceUpdateTask(m_pack_model->indexDir(), *m_pack, m_pack_version));
         connect(m_update_task.get(), &LocalResourceUpdateTask::hasOldResource, this, &ResourceDownloadTask::hasOldResource);
@@ -107,20 +111,29 @@ ResourceDownloadTask::ResourceDownloadTask(ModPlatform::IndexedPack::Ptr pack,
     addTask(m_filesNetJob);
 }
 
+void ResourceDownloadTask::executeTask()
+{
+    if (!m_pack_model) {
+        emitFailed(tr("The target instance is no longer available."));
+        return;
+    }
+    SequentialTask::executeTask();
+}
+
 void ResourceDownloadTask::downloadSucceeded()
 {
     m_filesNetJob.reset();
     auto oldName = std::get<0>(to_delete);
     auto oldFilename = std::get<1>(to_delete);
 
-    if (oldName.isEmpty() || oldFilename == m_pack_version.fileName) {
+    if (!m_pack_model || oldName.isEmpty() || oldFilename == m_pack_version.fileName) {
         return;
     }
 
     m_pack_model->uninstallResource(oldFilename, true);
 
     // also rename the shader config file
-    if (dynamic_cast<ShaderPackFolderModel*>(m_pack_model) != nullptr) {
+    if (dynamic_cast<ShaderPackFolderModel*>(m_pack_model.data()) != nullptr) {
         QFileInfo oldConfig(m_pack_model->dir(), oldFilename + ".txt");
         QFileInfo newConfig(m_pack_model->dir(), getFilename() + ".txt");
 

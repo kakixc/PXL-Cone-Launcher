@@ -2415,3 +2415,29 @@ msgstr "Поделиться журналом"
 msgctxt "Pxl::LogSurface"
 msgid "Clear"
 msgstr "Очистить"
+
+
+msgctxt "ContentBrowser"
+msgid "Install content: %1"
+msgstr "Установка дополнений: %1"
+
+msgctxt "ResourceDownloadTask"
+msgid "The target instance is no longer available."
+msgstr "Сборка для установки больше недоступна."
+
+msgctxt "Pxl::TaskActivity"
+msgid "Downloads · %1"
+msgstr "Загрузки · %1"
+
+
+msgctxt "ContentBrowser"
+msgid "Installation unavailable"
+msgstr "Установка недоступна"
+
+msgctxt "ContentBrowser"
+msgid "Stop the game and wait for this instance's current installation to finish before installing more content."
+msgstr "Остановите игру и дождитесь завершения текущей установки в этой сборке, прежде чем добавлять дополнения."
+
+msgctxt "LaunchController"
+msgid "Wait for this instance's content installation to finish before launching."
+msgstr "Перед запуском дождитесь завершения установки дополнений в этой сборке."

@@ -17,7 +17,7 @@
 #include "minecraft/PackProfile.h"
 #include "minecraft/mod/ResourceFolderModel.h"
 #include "tasks/ConcurrentTask.h"
-#include "ui/dialogs/ProgressDialog.h"
+#include "ui/pxl/TaskHistory.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/pxl/DialogOverlay.h"
 #include "ui/pxl/MessagePanel.h"
@@ -180,23 +180,29 @@ void ContentBrowser::showCategory(const QString& category)
 void ContentBrowser::installSelection(const QString& category, ResourceDownload::ResourceDownloadDialog* dialog)
 {
     auto* tasks = new ConcurrentTask(tr("Install content"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-    tasks->setParent(this);
     for (const auto& task : dialog->getTasks()) tasks->addTask(task);
-    ProgressDialog progress(this);
-    progress.setWindowTitle(tr("Install content"));
-    progress.setSkipButton(true, tr("Cancel"));
-    progress.execWithTask(tasks);
-    if (!tasks->wasSuccessful() && tasks->getState() != Task::State::AbortedByUser) {
-        Pxl::showNotice(this, tr("Content installation failed"), tasks->failReason());
-    } else if (!tasks->warnings().isEmpty()) {
-        Pxl::showNotice(this, tr("Installation warnings"), tasks->warnings().join('\n'));
+    if (!m_instance->beginContentInstall(tasks)) {
+        tasks->deleteLater();
+        dialog->show();
+        Pxl::showNotice(this, tr("Installation unavailable"),
+                        tr("Stop the game and wait for this instance's current installation to finish before installing more content."));
+        return;
     }
-    dialog->getBaseModel()->update();
+    const QPointer<ResourceFolderModel> model = dialog->getBaseModel();
+    connect(tasks, &Task::finished, tasks, [model] { if (model && !model->isBeingDestroyed()) model->update(); });
+    connect(m_instance, &BaseInstance::statusChanged, tasks, [tasks](auto, auto status) {
+        if (status == BaseInstance::Status::Gone && tasks->isRunning()) tasks->abort();
+    });
+    connect(model.data(), &ResourceFolderModel::aboutToBeDestroyed, tasks, [tasks] { if (tasks->isRunning()) tasks->abort(); });
+    const auto title = tr("Install content: %1").arg(m_instance->name());
+    Pxl::TaskHistory::instance()->startOwned(std::unique_ptr<Task>(tasks), title,
+                                            APPLICATION->icons()->getIcon(m_instance->iconKey()));
+    // The task holds the selected ResourceDownloadTask pointers. The catalog
+    // and its selection can now go away without cancelling the operation.
     m_stack->removeWidget(dialog);
     m_catalogs.remove(category);
     dialog->deleteLater();
-    tasks->deleteLater();
-    showCategory(m_category);
+    emit installedContentRequested();
 }
 
 bool ContentBrowser::prepareToLeave()

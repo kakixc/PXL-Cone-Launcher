@@ -43,6 +43,7 @@
 #include <QList>
 #include <QMenu>
 #include <QObject>
+#include <QPointer>
 #include <QProcess>
 #include <QSet>
 #include "QObjectPtr.h"
@@ -119,6 +120,8 @@ class BaseInstance : public QObject {
     void setMinecraftRunning(bool running);
     void setRunning(bool running);
     bool isRunning() const;
+    bool isInstallingContent() const;
+    bool beginContentInstall(Task* task);
     int64_t totalTimePlayed() const;
     bool isGameTimeShown() const;
     bool isGameTimeRecordingEnabled() const;
@@ -312,6 +315,7 @@ class BaseInstance : public QObject {
     std::unique_ptr<SettingsObject> m_settings;
     // InstanceFlags m_flags;
     bool m_isRunning = false;
+    QPointer<Task> m_contentInstallTask;
     std::unique_ptr<LaunchTask> m_launchProcess;
     QDateTime m_timeStarted;
     RuntimeContext m_runtimeContext;

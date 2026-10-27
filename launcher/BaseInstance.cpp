@@ -46,6 +46,7 @@
 #include "Application.h"
 #include "Json.h"
 #include "launch/LaunchTask.h"
+#include "tasks/Task.h"
 #include "settings/INISettingsObject.h"
 #include "settings/OverrideSetting.h"
 #include "settings/Setting.h"
@@ -358,7 +359,29 @@ SettingsObject* BaseInstance::settings()
 
 bool BaseInstance::canLaunch() const
 {
-    return (!hasVersionBroken() && !isRunning());
+    return (!hasVersionBroken() && !isRunning() && !isInstallingContent());
+}
+
+bool BaseInstance::isInstallingContent() const
+{
+    return m_contentInstallTask && !m_contentInstallTask->isFinished();
+}
+
+bool BaseInstance::beginContentInstall(Task* task)
+{
+    if (!task || isRunning() || isInstallingContent()) return false;
+    m_contentInstallTask = task;
+    connect(task, &Task::finished, this, [this, task] {
+        if (m_contentInstallTask == task) {
+            m_contentInstallTask.clear();
+            emit propertiesChanged(this);
+        }
+    });
+    connect(task, &QObject::destroyed, this, [this] {
+        if (!m_contentInstallTask) emit propertiesChanged(this);
+    });
+    emit propertiesChanged(this);
+    return true;
 }
 
 bool BaseInstance::reloadSettings()

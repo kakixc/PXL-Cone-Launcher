@@ -6,6 +6,7 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <memory>
 #include "tasks/Task.h"
 
 class QDialog;
@@ -33,6 +34,8 @@ class TaskHistory final : public QObject {
     explicit TaskHistory(QObject* parent = nullptr);
     static TaskHistory* instance();
     void watch(Task* task, const QString& title, const QIcon& icon = {});
+    // Own an asynchronous operation independently of the page that started it.
+    void startOwned(std::unique_ptr<Task> task, const QString& title, const QIcon& icon = {});
     QList<Record> records() const { return m_records; }
     int activeCount() const;
     bool cancel(quint64 id);

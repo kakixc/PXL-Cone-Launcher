@@ -377,6 +377,13 @@ void LaunchController::launchInstance()
     Q_ASSERT(m_instance != nullptr);
     Q_ASSERT(m_session.get() != nullptr);
 
+    // Account authentication may have kept the controller waiting while a
+    // background installation started after Application's initial launch check.
+    if (m_instance->isInstallingContent()) {
+        emitFailed(tr("Wait for this instance's content installation to finish before launching."));
+        return;
+    }
+
     if (!m_instance->reloadSettings()) {
         QMessageBox::critical(m_parentWidget, tr("Error!"), tr("Couldn't load the instance profile."));
         emitFailed(tr("Couldn't load the instance profile."));
