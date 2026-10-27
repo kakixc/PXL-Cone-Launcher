@@ -50,6 +50,7 @@
 namespace Ui {
 class VersionPage;
 }
+namespace Pxl { class ComponentView; }
 
 class VersionPage : public QMainWindow, public BasePage {
     Q_OBJECT
@@ -66,6 +67,7 @@ class VersionPage : public QMainWindow, public BasePage {
 
     void openedImpl() override;
     void closedImpl() override;
+    void usePxlPresentation();
 
    private slots:
     void on_actionChange_version_triggered();
@@ -108,6 +110,7 @@ class VersionPage : public QMainWindow, public BasePage {
     PackProfile* m_profile;
     MinecraftInstance* m_inst;
     int currentIdx = 0;
+    Pxl::ComponentView* m_componentView = nullptr;
 
     std::shared_ptr<Setting> m_wide_bar_setting = nullptr;
 

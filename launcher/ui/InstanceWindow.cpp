@@ -58,6 +58,7 @@
 #include "ui/pages/instance/ResourcePackPage.h"
 #include "ui/pages/instance/TexturePackPage.h"
 #include "ui/pages/instance/ShaderPackPage.h"
+#include "ui/pages/instance/VersionPage.h"
 
 InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool embedded)
     : QMainWindow(parent), m_instance(instance), m_embedded(embedded)
@@ -94,6 +95,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         layout->setContentsMargins(24, 16, 24, 24);
         layout->setSpacing(16);
         auto* tabs = new QHBoxLayout;
+        if (auto* versions = dynamic_cast<VersionPage*>(m_container->getPage("version"))) versions->usePxlPresentation();
         if (dynamic_cast<MinecraftInstance*>(m_instance))
         for (const auto& id : {QStringLiteral("mods"),QStringLiteral("resourcepacks"),QStringLiteral("texturepacks"),QStringLiteral("shaderpacks")})
             if (auto* page=dynamic_cast<ExternalResourcesPage*>(m_container->getPage(id)))

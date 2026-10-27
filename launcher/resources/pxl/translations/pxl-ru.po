@@ -2307,3 +2307,27 @@ msgstr "Нужно для: %1"
 msgctxt "Pxl::AccountsPage"
 msgid "Edit offline profile"
 msgstr "Изменить офлайн-профиль"
+
+msgctxt "Pxl::ComponentView"
+msgid "Search components"
+msgstr "Поиск компонентов"
+
+msgctxt "Pxl::ComponentView"
+msgid "Version %1"
+msgstr "Версия %1"
+
+msgctxt "Pxl::ComponentView"
+msgid "Install loader"
+msgstr "Установить загрузчик"
+
+msgctxt "Pxl::ComponentView"
+msgid "Change version"
+msgstr "Изменить версию"
+
+msgctxt "Pxl::ComponentView"
+msgid "More actions"
+msgstr "Другие действия"
+
+msgctxt "Pxl::ComponentView"
+msgid "Core components stay enabled. Select a row to change its version or open its actions."
+msgstr "Основные компоненты остаются включёнными. Выберите строку, чтобы изменить версию или открыть её действия."

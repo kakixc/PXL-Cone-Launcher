@@ -53,6 +53,7 @@
 
 #include "QObjectPtr.h"
 #include "VersionPage.h"
+#include "ui/pxl/ComponentView.h"
 #include "meta/JsonFormat.h"
 #include "tasks/SequentialTask.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
@@ -123,6 +124,7 @@ void VersionPage::retranslate()
 
 void VersionPage::openedImpl()
 {
+    if (m_componentView) return;
     auto const setting_name = QString("WideBarVisibility_%1").arg(id());
     m_wide_bar_setting = APPLICATION->settings()->getOrRegisterSetting(setting_name);
 
@@ -130,6 +132,7 @@ void VersionPage::openedImpl()
 }
 void VersionPage::closedImpl()
 {
+    if (m_componentView) return;
     m_wide_bar_setting->set(QString::fromUtf8(ui->toolBar->getVisibilityState().toBase64()));
 }
 
@@ -173,8 +176,8 @@ VersionPage::VersionPage(MinecraftInstance* inst, QWidget* parent) : QMainWindow
     preselect(0);
     connect(ui->packageView, &ModListView::customContextMenuRequested, this, &VersionPage::showContextMenu);
     connect(ui->packageView, &QAbstractItemView::activated, this, [this](const QModelIndex& index) {
-        auto component = m_profile->getComponent(index.row());
-        component->setEnabled(!component->isEnabled());
+        auto component = m_profile->getComponent(Pxl::componentSourceRow(index));
+        if (component && index.flags().testFlag(Qt::ItemIsUserCheckable)) component->setEnabled(!component->isEnabled());
     });
     connect(ui->filterEdit, &QLineEdit::textChanged, this, &VersionPage::onFilterTextChanged);
 }
@@ -182,6 +185,18 @@ VersionPage::VersionPage(MinecraftInstance* inst, QWidget* parent) : QMainWindow
 VersionPage::~VersionPage()
 {
     delete ui;
+}
+
+void VersionPage::usePxlPresentation()
+{
+    if (m_componentView) return;
+    auto* legacy = takeCentralWidget();
+    legacy->setParent(this);
+    legacy->hide();
+    ui->toolBar->hide();
+    m_componentView = new Pxl::ComponentView(m_filterModel, ui->packageView->selectionModel(), ui->toolBar->actions(), this);
+    setCentralWidget(m_componentView);
+    packageCurrent(ui->packageView->currentIndex(), {});
 }
 
 void VersionPage::showContextMenu(const QPoint& pos)
@@ -195,9 +210,10 @@ void VersionPage::packageCurrent(const QModelIndex& current, [[maybe_unused]] co
 {
     if (!current.isValid()) {
         ui->frame->clear();
+        if (m_componentView) m_componentView->setProblem({});
         return;
     }
-    int row = current.row();
+    int row = Pxl::componentSourceRow(current);
     auto patch = m_profile->getComponent(row);
     auto severity = patch->getProblemSeverity();
     switch (severity) {
@@ -210,6 +226,7 @@ void VersionPage::packageCurrent(const QModelIndex& current, [[maybe_unused]] co
         default:
         case ProblemSeverity::None:
             ui->frame->clear();
+            if (m_componentView) m_componentView->setProblem({});
             return;
     }
 
@@ -225,11 +242,13 @@ void VersionPage::packageCurrent(const QModelIndex& current, [[maybe_unused]] co
         problemOut += "\n";
     }
     ui->frame->setDescription(problemOut);
+    if (m_componentView) m_componentView->setProblem(problemOut);
 }
 
 void VersionPage::updateVersionControls()
 {
     updateButtons();
+    if (m_componentView) packageCurrent(ui->packageView->currentIndex(), {});
 }
 
 void VersionPage::updateButtons(int row)
@@ -274,7 +293,7 @@ void VersionPage::on_actionRemove_triggered()
     if (!ui->packageView->currentIndex().isValid()) {
         return;
     }
-    int index = ui->packageView->currentIndex().row();
+    int index = Pxl::componentSourceRow(ui->packageView->currentIndex());
     auto component = m_profile->getComponent(index);
     if (component->isCustom()) {
         auto response = CustomMessageBox::selectable(this, tr("Confirm Removal"),
@@ -372,10 +391,10 @@ void VersionPage::on_actionChange_version_triggered()
     auto patch = m_profile->getComponent(versionRow);
     auto name = patch->getName();
     auto list = patch->getVersionList();
-    list->clearExternalRecommends();
     if (!list) {
         return;
     }
+    list->clearExternalRecommends();
     auto uid = list->uid();
 
     // recommend the correct lwjgl version for the current minecraft version
@@ -482,7 +501,7 @@ void VersionPage::on_actionMinecraftFolder_triggered()
 
 void VersionPage::versionCurrent(const QModelIndex& current, [[maybe_unused]] const QModelIndex& previous)
 {
-    currentIdx = current.row();
+    currentIdx = Pxl::componentSourceRow(current);
     updateButtons(currentIdx);
 }
 
@@ -497,9 +516,11 @@ void VersionPage::preselect(int row)
     if (row < 0) {
         return;
     }
-    auto model_index = m_profile->index(row);
-    ui->packageView->selectionModel()->select(model_index, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
-    updateButtons(row);
+    auto* icons = static_cast<QAbstractProxyModel*>(m_filterModel->sourceModel());
+    const auto model_index = m_filterModel->mapFromSource(icons->mapFromSource(m_profile->index(row)));
+    if (model_index.isValid())
+        ui->packageView->selectionModel()->setCurrentIndex(model_index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    updateButtons();
 }
 
 void VersionPage::onGameUpdateError(QString error)
@@ -521,7 +542,7 @@ int VersionPage::currentRow()
     if (ui->packageView->selectionModel()->selectedRows().isEmpty()) {
         return -1;
     }
-    return ui->packageView->selectionModel()->selectedRows().first().row();
+    return Pxl::componentSourceRow(ui->packageView->selectionModel()->selectedRows().first());
 }
 
 void VersionPage::on_actionCustomize_triggered()
