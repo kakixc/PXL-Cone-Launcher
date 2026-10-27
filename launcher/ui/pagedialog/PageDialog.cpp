@@ -39,6 +39,7 @@
 
 #include "ui/widgets/PageContainer.h"
 #include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/LibraryControls.h"
 
 PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidget* parent, bool embedded) : QDialog(parent), m_embedded(embedded)
 {
@@ -52,16 +53,19 @@ PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidge
         setProperty("pxlSettings", true);
         setStyleSheet("PageDialog { background: transparent; } PageDialog QGroupBox { border: 1px solid #383e47; border-radius: 10px; margin-top: 16px; padding: 16px 12px 12px; } PageDialog QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 5px; font-weight: 600; }");
         m_container->useConeStyle();
+        if (m_container->getPage("accounts")) {
+            m_container->setExcludedPage("accounts");
+            if (m_container->selectedPage() && m_container->selectedPage()->id()=="accounts") m_container->selectPage("launcher-settings");
+        }
         for (auto* area : m_container->findChildren<QScrollArea*>()) {
             area->viewport()->setAutoFillBackground(false);
             if (area->widget()) area->widget()->setAutoFillBackground(false);
         }
         mainLayout->setContentsMargins(4, 4, 12, 12);
         mainLayout->setSpacing(16);
-        auto* search = new QLineEdit(this);
+        auto* search = new Pxl::LibrarySearch(this);
         search->setPlaceholderText(tr("Search settings"));
         search->setClearButtonEnabled(true);
-        search->addAction(QIcon(":/pxl/icons/magnifying-glass.svg"), QLineEdit::LeadingPosition);
         mainLayout->addWidget(search);
         connect(search, &QLineEdit::textChanged, m_container, &PageContainer::setSearchText);
         mainLayout->addWidget(m_container, 1);

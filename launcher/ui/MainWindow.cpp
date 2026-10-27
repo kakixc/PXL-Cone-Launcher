@@ -1524,6 +1524,7 @@ void MainWindow::on_actionSettings_triggered()
 bool MainWindow::openWorkspaceSettings(const QString& page)
 {
     if (!m_workspaceViews || m_workspaceViews->currentWidget() != m_workspacePage) return false;
+    if (page=="accounts") { on_actionManageAccounts_triggered(); return true; }
     if (m_embeddedSettings) {
         if (!page.isEmpty()) m_embeddedSettings->selectPage(page);
         return true;

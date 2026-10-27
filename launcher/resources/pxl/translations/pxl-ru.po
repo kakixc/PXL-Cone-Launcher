@@ -2179,3 +2179,87 @@ msgstr "Открыть сайт профиля"
 msgctxt "Pxl::AccountsPage"
 msgid "Done"
 msgstr "Готово"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Game window"
+msgstr "Окно игры"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Default size and window behavior when launching Minecraft."
+msgstr "Размер и поведение окна при запуске Minecraft."
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Width"
+msgstr "Ширина"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Height"
+msgstr "Высота"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Launcher behavior"
+msgstr "Поведение лаунчера"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Choose what the launcher does while you play."
+msgstr "Выберите, как лаунчер будет работать во время игры."
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Game log"
+msgstr "Журнал игры"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Keep launch diagnostics available without opening an extra console every time."
+msgstr "Настройте показ журнала запуска и ошибок игры."
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Playtime"
+msgstr "Время игры"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Control the playtime shown on your instances and across the launcher."
+msgstr "Настройте учёт времени и его отображение в сборках и лаунчере."
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Ely.by integration"
+msgstr "Интеграция с Ely.by"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Choose when to apply the existing Ely.by game patch."
+msgstr "Выберите, когда применять игровой патч Ely.by."
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Always"
+msgstr "Всегда"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Ely.by and offline profiles"
+msgstr "Для Ely.by и офлайн-профилей"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Ely.by profiles only"
+msgstr "Только для профилей Ely.by"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Never"
+msgstr "Никогда"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "General"
+msgstr "Основное"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Advanced"
+msgstr "Дополнительно"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Launch commands"
+msgstr "Команды запуска"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Environment variables"
+msgstr "Переменные окружения"
+
+msgctxt "Pxl::MinecraftPreferences"
+msgid "Maximized launch is simulated and may behave differently between Minecraft versions."
+msgstr "Развёрнутый запуск имитируется лаунчером и может работать по-разному в разных версиях Minecraft."

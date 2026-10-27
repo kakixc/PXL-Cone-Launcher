@@ -36,6 +36,7 @@
  */
 
 #include "MinecraftSettingsWidget.h"
+#include "ui/pxl/MinecraftPreferences.h"
 #include "modplatform/ModIndex.h"
 #include "ui_MinecraftSettingsWidget.h"
 
@@ -146,6 +147,18 @@ MinecraftSettingsWidget::MinecraftSettingsWidget(MinecraftInstance* instance, QW
     connect(m_ui->useNativeGLFWCheck, &QAbstractButton::toggled, m_ui->lineEditGLFWPath, &QWidget::setEnabled);
 
     loadSettings();
+    if (!m_instance) {
+        // General uses new PXL controls; native/commands/environment keep their existing handlers.
+        const int general=m_ui->settingsTabs->indexOf(m_ui->generalPage);
+        if (general>=0) m_ui->settingsTabs->removeTab(general);
+        m_ui->generalPage->hide();
+        m_ui->settingsTabs->insertTab(0,new Pxl::MinecraftPreferences(this,m_ui->settingsTabs),Pxl::minecraftPreferenceText("General"));
+        m_ui->settingsTabs->setTabText(m_ui->settingsTabs->indexOf(m_ui->tweaksPage),Pxl::minecraftPreferenceText("Advanced"));
+        m_ui->settingsTabs->setTabText(m_ui->settingsTabs->indexOf(m_ui->customCommandsPage),Pxl::minecraftPreferenceText("Launch commands"));
+        m_ui->settingsTabs->setTabText(m_ui->settingsTabs->indexOf(m_ui->environmentVariablesPage),Pxl::minecraftPreferenceText("Environment variables"));
+        m_ui->settingsTabs->setCurrentIndex(0);
+        m_ui->settingsTabs->setStyleSheet("QTabWidget::pane { background: transparent; border: none; } QTabBar::tab { color: #e5e9ef; background: rgba(42,46,52,170); border: 1px solid transparent; border-radius: 9px; padding: 9px 15px; margin-right: 6px; margin-bottom: 8px; font-weight: 600; } QTabBar::tab:selected { color: #f5bb90; background: rgba(242,163,101,30); border-color: rgba(242,163,101,90); } QTabBar::tab:hover { background: rgba(76,68,61,180); }");
+    }
 }
 
 MinecraftSettingsWidget::~MinecraftSettingsWidget()

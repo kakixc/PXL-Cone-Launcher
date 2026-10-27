@@ -72,7 +72,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override
     {
         const auto index=indexAt(event->position().toPoint());
-        m_pressed={}; m_target=0;
+        m_pressed=QPersistentModelIndex(); m_target=0;
         if (event->button()==Qt::LeftButton && index.isValid()) {
             const auto point=event->position().toPoint();
             if (installedToggle(visualRect(index)).contains(point)) m_target=1;
@@ -84,7 +84,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override
     {
         const auto index=indexAt(event->position().toPoint());
-        const auto pressed=m_pressed; const int target=m_target; m_pressed={}; m_target=0;
+        const auto pressed=m_pressed; const int target=m_target; m_pressed=QPersistentModelIndex(); m_target=0;
         if (event->button()==Qt::LeftButton && index.isValid() && pressed==index) {
             if (target==1 && installedToggle(visualRect(index)).contains(event->position().toPoint())) {
                 const auto active=index.siblingAtColumn(0);

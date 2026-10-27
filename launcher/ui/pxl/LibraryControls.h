@@ -44,6 +44,8 @@ public:
     void showPopup() override
     {
         FrostedMenu menu(this);
+        const auto flags=menu.windowFlags(); menu.setParent(nullptr,flags);
+        connect(this,&QObject::destroyed,&menu,&QMenu::close);
         menu.setMinimumWidth(width());
         const QPointer<ChoiceChip> alive(this);
         for (int row = 0; row < count(); ++row) {

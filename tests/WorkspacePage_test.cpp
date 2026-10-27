@@ -43,6 +43,7 @@
 #include <ui/pxl/ActionMenu.h>
 #include <ui/pxl/AccountsPage.h>
 #include <ui/pxl/InstalledContentView.h>
+#include <ui/pxl/MinecraftPreferences.h>
 #include <ui/pages/modplatform/ResourcePage.h>
 
 class CatalogTestVersion final : public BaseVersion {
@@ -393,6 +394,36 @@ class WorkspacePageTest : public QObject {
         if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("installed-content-empty.png")));
     }
 
+    void minecraftPreferencesUseFreshControlsAndExistingValues()
+    {
+        QWidget original;
+        const QStringList names={"maximizedCheckBox","closeAfterLaunchCheck","quitAfterGameStopCheck","showConsoleCheck","showConsoleErrorCheck","autoCloseConsoleCheck","showGameTime","recordGameTime","showGlobalGameTime","showGameTimeWithoutDays"};
+        const QStringList labels={"Start Minecraft maximized","Hide launcher while playing","Quit launcher when the game closes","Open game log on launch","Show the log if Minecraft crashes","Close log when Minecraft stops","Show playtime on instances","Record playtime","Show total playtime","Show durations in hours"};
+        for (int i=0;i<names.size();++i) { auto* control=new QCheckBox(labels[i],&original); control->setObjectName(names[i]); }
+        auto* source=original.findChild<QCheckBox*>("showConsoleCheck");
+        auto* width=new QSpinBox(&original); width->setObjectName("windowWidthSpinBox"); width->setRange(320,7680); width->setValue(854);
+        auto* height=new QSpinBox(&original); height->setObjectName("windowHeightSpinBox"); height->setRange(200,4320); height->setValue(480);
+        auto* patch=new QComboBox(&original); patch->setObjectName("applyElyPatch"); patch->addItems({"Always","Ely/offline","Ely","Never"}); patch->setCurrentIndex(1);
+        QSignalSpy changes(source,&QCheckBox::toggled);
+        Pxl::MinecraftPreferences view(&original); view.resize(900,740); view.show(); QTest::qWait(30);
+        QCOMPARE(changes.count(),0);
+        auto* toggle=view.findChild<QCheckBox*>("pxl-showConsoleCheck"); QVERIFY(toggle); QVERIFY(toggle!=source);
+        QCOMPARE(source->parentWidget(),&original);
+        QTest::mouseClick(toggle,Qt::LeftButton,Qt::NoModifier,QPoint(12,toggle->height()/2));
+        QVERIFY(source->isChecked()); QCOMPARE(changes.count(),1);
+        QTest::keyClick(toggle,Qt::Key_Space); QVERIFY(!source->isChecked()); QCOMPARE(changes.count(),2);
+        source->setChecked(true); QVERIFY(toggle->isChecked());
+        auto* displayWidth=view.findChild<QSpinBox*>("pxl-windowWidthSpinBox"); QVERIFY(displayWidth);
+        QCOMPARE(displayWidth->maximum(),7680); QCOMPARE(displayWidth->value(),854);
+        displayWidth->setValue(1280); QCOMPARE(width->value(),1280);
+        width->setValue(1920); QCOMPARE(displayWidth->value(),1920);
+        auto* choice=view.findChild<QComboBox*>("pxl-applyElyPatch"); QVERIFY(choice);
+        QCOMPARE(choice->currentIndex(),1); choice->setCurrentIndex(3); QCOMPARE(patch->currentIndex(),3);
+        patch->setCurrentIndex(0); QCOMPARE(choice->currentIndex(),0);
+        const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("minecraft-preferences.png")));
+    }
+
     void frostedSurfaceBlursTheApplicationBackdrop()
     {
         QImage pattern(4, 4, QImage::Format_RGB32);
@@ -626,6 +657,17 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(combo->currentText(), QString("0.29.2"));
     }
 
+    void libraryChoicePopupSurvivesSourceDestruction()
+    {
+        QWidget surface; surface.resize(500,300); surface.show();
+        QPointer<Pxl::ChoiceChip> choice=new Pxl::ChoiceChip(&surface);
+        choice->addItems({"One","Two"}); choice->show();
+        QTimer::singleShot(20,&surface,[&] { delete choice.data(); });
+        choice->showPopup();
+        QVERIFY(!choice);
+        QVERIFY(!QApplication::activePopupWidget());
+    }
+
     void libraryChoiceAndForwardedCommandsKeepTheirBehavior()
     {
         QWidget surface;
@@ -635,12 +677,14 @@ class WorkspacePageTest : public QObject {
         chip.resize(180, 34);
         surface.show();
         QSignalSpy selected(&chip, &QComboBox::currentIndexChanged);
+        QTimer::singleShot(1000,&surface,[] { if (auto* popup=QApplication::activePopupWidget()) popup->close(); });
         QTimer::singleShot(0, &chip, [&chip] {
-            auto* menu = chip.findChild<QMenu*>();
+            auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
             QVERIFY(menu);
-            QVERIFY(menu->actions().at(0)->isChecked());
+            const bool checked=menu->actions().at(0)->isChecked();
             menu->actions().at(1)->trigger();
             menu->close();
+            QVERIFY(checked);
         });
         chip.showPopup();
         QCOMPARE(chip.currentText(), QString("Survival"));
