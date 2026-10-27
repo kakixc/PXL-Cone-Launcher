@@ -5,6 +5,7 @@
 #include "TaskHistory.h"
 #include "Backdrop.h"
 #include "LibraryControls.h"
+#include "InstanceLibraryDelegate.h"
 
 #include <algorithm>
 
@@ -310,184 +311,7 @@ QString playedDuration(BaseInstance* instance)
                          : QObject::tr("%1 min played").arg(minutes);
 }
 
-class WorkspaceCardDelegate final : public QStyledItemDelegate {
-   public:
-    using Activate = std::function<void(const QModelIndex&)>;
-    using Context = std::function<void(const QModelIndex&, const QPoint&)>;
-    WorkspaceCardDelegate(Activate activate, Activate stop, Context context, QObject* parent)
-        : QStyledItemDelegate(parent), m_activate(std::move(activate)), m_stop(std::move(stop)), m_context(std::move(context)) {}
-    bool cards() const { return parent()->property("pxlCards").toBool(); }
-    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
-    {
-        if (!cards()) return {400, 76};
-        const auto* view = qobject_cast<QListView*>(parent());
-        return {view && view->gridSize().width() > 0 ? view->gridSize().width() : 220, 260};
-    }
-    QRect playRect(const QRect& row) const { return cards() ? QRect(row.right() - 52, row.bottom() - 54, 36, 36) : QRect(row.right() - 104, row.center().y() - 22, 44, 44); }
-    QRect moreRect(const QRect& row) const { return cards() ? QRect(row.right() - 40, row.top() + 10, 30, 30) : QRect(row.right() - 52, row.center().y() - 22, 44, 44); }
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
-    {
-        if (cards()) { paintTile(painter, option, index); return; }
-        painter->save();
-        painter->setRenderHint(QPainter::Antialiasing);
-        const auto palette = QApplication::palette();
-        const QRect row = option.rect.adjusted(0, 2, -4, -2);
-        const bool selected = option.state.testFlag(QStyle::State_Selected);
-        const bool hover = option.state.testFlag(QStyle::State_MouseOver);
-        painter->setPen(Qt::NoPen);
-        QColor surface = palette.color(QPalette::Base);
-        if (selected) surface = surface.lighter(110);
-        if (hover && !selected) surface = palette.color(QPalette::AlternateBase);
-        surface.setAlpha(190);
-        painter->setBrush(surface);
-        painter->drawRoundedRect(row, 10, 10);
-        if (selected) {
-            painter->setBrush(palette.color(QPalette::Mid));
-            painter->drawRoundedRect(QRect(row.left() + 1, row.top() + 18, 3, row.height() - 36), 1.5, 1.5);
-        }
-        const auto icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-        icon.paint(painter, QRect(row.left() + 12, row.center().y() - 22, 44, 44), Qt::AlignCenter);
-        auto* instance = static_cast<BaseInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
-        const bool wide = row.width() >= 680;
-        const int textLeft = row.left() + 72;
-        const int textWidth = qMax(40, row.width() - (wide ? 382 : 190));
-        QFont title = option.font;
-        title.setPixelSize(16);
-        title.setWeight(QFont::Bold);
-        painter->setFont(title);
-        painter->setPen(palette.color(QPalette::Text));
-        painter->drawText(QRect(textLeft, row.top() + 11, textWidth, 23), Qt::AlignVCenter,
-                          QFontMetrics(title).elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, textWidth));
-        QFont body = option.font;
-        body.setPixelSize(13);
-        body.setWeight(QFont::Medium);
-        painter->setFont(body);
-        painter->setPen(palette.color(QPalette::Mid));
-        const auto group = index.data(InstanceList::GroupRole).toString();
-        const int badgeWidth = group.isEmpty() ? 0 : qMin(textWidth, qMin(120, QFontMetrics(body).horizontalAdvance(group) + 16));
-        const int metadataWidth = qMax(0, textWidth - (badgeWidth ? badgeWidth + 8 : 0));
-        painter->drawText(QRect(textLeft, row.top() + 38, metadataWidth, 20), Qt::AlignVCenter,
-                          QFontMetrics(body).elidedText(index.data(kWorkspaceMetadataRole).toString(), Qt::ElideRight, metadataWidth));
-        if (badgeWidth) paintGroupBadge(painter, QRect(textLeft + textWidth - badgeWidth, row.top() + 38, badgeWidth, 20), group);
-        const auto state = instance && instance->isRunning() ? tr("Running")
-                         : (instance && !instance->canLaunch() ? tr("Needs attention") : lastPlayedText(instance));
-        if (wide) {
-            const auto duration = playedDuration(instance);
-            painter->drawText(QRect(row.right() - 286, row.top() + (duration.isEmpty() ? 0 : 10), 166, duration.isEmpty() ? row.height() : 22), Qt::AlignRight | Qt::AlignVCenter, state);
-            if (!duration.isEmpty()) painter->drawText(QRect(row.right() - 286, row.top() + 37, 166, 22), Qt::AlignRight | Qt::AlignVCenter, duration);
-        }
-        const bool running = instance && instance->isRunning();
-        const bool launchable = instance && (instance->canLaunch() || running);
-        painter->setPen(launchable ? palette.color(QPalette::Text) : palette.color(QPalette::Mid));
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(running ? QColor("#673b3c") : QColor(255, 238, 218, 15));
-        painter->drawRoundedRect(playRect(row), 8, 8);
-        static const QIcon playIcon(":/pxl/icons/play.svg");
-        static const QIcon stopIcon(":/pxl/icons/stop.svg");
-        static const QIcon moreIcon(":/pxl/icons/dots-three-vertical.svg");
-        (running ? stopIcon : playIcon).paint(painter, playRect(row).adjusted(12, 12, -12, -12), Qt::AlignCenter,
-                       launchable ? QIcon::Normal : QIcon::Disabled);
-        moreIcon.paint(painter, moreRect(row).adjusted(12, 12, -12, -12), Qt::AlignCenter);
-        if (option.state.testFlag(QStyle::State_HasFocus)) {
-            painter->setBrush(Qt::NoBrush);
-            QColor focus = palette.color(QPalette::Mid);
-            focus.setAlpha(90);
-            painter->setPen(QPen(focus, 1));
-            painter->drawRoundedRect(row.adjusted(1, 1, -1, -1), 5, 5);
-        }
-        painter->restore();
-    }
-    bool editorEvent(QEvent* event, QAbstractItemModel*, const QStyleOptionViewItem& option, const QModelIndex& index) override
-    {
-        if (event->type() != QEvent::MouseButtonRelease) return false;
-        auto* mouse = static_cast<QMouseEvent*>(event);
-        if (mouse->button() != Qt::LeftButton) return false;
-        const auto row = option.rect.adjusted(0, 2, -4, -2);
-        if (moreRect(row).contains(mouse->position().toPoint())) {
-            m_context(index, mouse->globalPosition().toPoint());
-            return true;
-        }
-        if (playRect(row).contains(mouse->position().toPoint())) {
-            auto* instance = static_cast<BaseInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
-            if (instance && instance->isRunning()) m_stop(index);
-            else if (instance && instance->canLaunch()) m_activate(index);
-            return true;
-        }
-        return false;
-    }
-   private:
-    void paintGroupBadge(QPainter* painter, const QRect& area, const QString& group) const
-    {
-        if (group.isEmpty() || area.width() < 16) return;
-        painter->save();
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(QColor(238, 226, 211, 17));
-        painter->drawRoundedRect(area, 7, 7);
-        QFont font = painter->font();
-        font.setPixelSize(11);
-        font.setWeight(QFont::DemiBold);
-        painter->setFont(font);
-        painter->setPen(QColor("#c5bdba"));
-        painter->drawText(area.adjusted(8, 0, -8, 0), Qt::AlignVCenter,
-            QFontMetrics(font).elidedText(group, Qt::ElideRight, area.width() - 16));
-        painter->restore();
-    }
-    void paintTile(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
-    {
-        painter->save();
-        painter->setRenderHint(QPainter::Antialiasing);
-        const auto palette = QApplication::palette();
-        const QRect row = option.rect.adjusted(0, 2, -4, -2);
-        const bool selected = option.state.testFlag(QStyle::State_Selected);
-        const bool hover = option.state.testFlag(QStyle::State_MouseOver);
-        painter->setPen(selected ? QColor(242, 163, 101, 100) : QColor(165, 176, 193, 26));
-        // The workspace wallpaper is already blurred and cached. Blend the card
-        // into that material, without capturing our own text during painting.
-        painter->setBrush(hover ? QColor(47, 49, 55, 210) : QColor(32, 35, 41, 180));
-        painter->drawRoundedRect(row, 18, 18);
-        const auto icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-        icon.paint(painter, QRect(row.left() + 16, row.top() + 16, 96, 96), Qt::AlignCenter);
-        const auto group = index.data(InstanceList::GroupRole).toString();
-        paintGroupBadge(painter, QRect(row.left() + 124, row.top() + 66, row.width() - 140, 22), group);
-        QFont title = option.font;
-        title.setPixelSize(16);
-        title.setWeight(QFont::Bold);
-        painter->setFont(title);
-        painter->setPen(palette.color(QPalette::Text));
-        painter->drawText(QRect(row.left() + 16, row.top() + 124, row.width() - 32, 24), Qt::AlignVCenter,
-            QFontMetrics(title).elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, row.width() - 32));
-        QFont body = option.font;
-        body.setPixelSize(12);
-        body.setWeight(QFont::Medium);
-        painter->setFont(body);
-        painter->setPen(palette.color(QPalette::Mid));
-        painter->drawText(QRect(row.left() + 16, row.top() + 154, row.width() - 32, 20), Qt::AlignVCenter,
-            QFontMetrics(body).elidedText(index.data(kWorkspaceMetadataRole).toString(), Qt::ElideRight, row.width() - 32));
-        auto* instance = static_cast<BaseInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
-        const auto state = instance && instance->isRunning() ? tr("Running") : lastPlayedText(instance);
-        const int footerWidth = qMax(20, row.width() - 76);
-        painter->drawText(QRect(row.left() + 16, row.top() + 182, row.width() - 32, 18), Qt::AlignVCenter,
-            QFontMetrics(body).elidedText(state, Qt::ElideRight, row.width() - 32));
-        painter->drawText(QRect(row.left() + 16, playRect(row).top(), footerWidth, 36), Qt::AlignVCenter,
-            QFontMetrics(body).elidedText(playedDuration(instance), Qt::ElideRight, footerWidth));
-        const bool running = instance && instance->isRunning();
-        const bool launchable = instance && (instance->canLaunch() || running);
-        const auto* view = qobject_cast<QListView*>(parent());
-        const bool overPlay = hover && view && playRect(row).contains(view->viewport()->mapFromGlobal(QCursor::pos()));
-        painter->setBrush(running ? (overPlay ? QColor("#a94b50") : QColor("#673b3c"))
-            : launchable ? (overPlay ? QColor("#f2a365") : QColor(242, 163, 101, 30)) : QColor(255, 238, 218, 18));
-        painter->setPen(Qt::NoPen);
-        painter->drawRoundedRect(playRect(row), 9, 9);
-        const auto actionIcon = running ? QIcon(":/pxl/icons/stop.svg") : launchable && overPlay ? Pxl::primaryIcon("play") : QIcon(":/pxl/icons/play.svg");
-        actionIcon.paint(painter, playRect(row).adjusted(9, 9, -9, -9), Qt::AlignCenter,
-                         launchable ? QIcon::Normal : QIcon::Disabled);
-        QIcon(":/pxl/icons/dots-three-vertical.svg").paint(painter, moreRect(row).adjusted(6, 6, -6, -6));
-        painter->restore();
-    }
-    Activate m_activate;
-    Activate m_stop;
-    Context m_context;
-};
+using WorkspaceCardDelegate = Pxl::InstanceLibraryDelegate;
 
 QIcon workspaceIcon(const QString& name)
 {
@@ -702,14 +526,16 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_totalTime->setProperty("pxlFlowHint", true);
     libraryHeading->addWidget(m_totalTime);
     libraryHeading->addStretch();
-    m_viewModeButton = new QPushButton(content);
+    m_viewModeButton = new Pxl::ChoiceChip(content);
     m_viewModeButton->setObjectName("workspaceViewMode");
-    m_viewModeButton->setFixedSize(40, 40);
-    m_viewModeButton->setIconSize(QSize(20, 20));
-    m_viewModeButton->setStyleSheet("QPushButton { background: rgba(53,54,60,185); border: 1px solid rgba(199,207,219,38); border-radius: 12px; padding: 8px; }"
-                                  "QPushButton:hover, QPushButton:focus { background: rgba(77,65,57,220); border-color: rgba(242,163,101,130); }");
+    m_viewModeButton->addItem(workspaceIcon("squares-four"), tr("Cover tiles"), "covers");
+    m_viewModeButton->addItem(workspaceIcon("minecraft"), tr("PXL hybrid cards"), "hybrid");
+    m_viewModeButton->addItem(workspaceIcon("list"), tr("Detailed list"), "list");
+    m_viewModeButton->setMinimumWidth(180);
     libraryHeading->addWidget(m_viewModeButton);
-    connect(m_viewModeButton, &QPushButton::clicked, this, [this] { setLibraryViewMode(!m_cardsMode); });
+    connect(m_viewModeButton, &QComboBox::currentIndexChanged, this, [this](int) {
+        setLibraryPresentation(m_viewModeButton->currentData().toString());
+    });
     contentLayout->addLayout(libraryHeading);
     auto* tools = new QHBoxLayout;
     tools->setSpacing(10);
@@ -811,7 +637,7 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
         view->setItemDelegate(new WorkspaceCardDelegate(
             [this](const QModelIndex& index) { emit activateInstance(idForIndex(index)); },
             [this](const QModelIndex& index) { emit stopInstance(idForIndex(index)); },
-            [this](const QModelIndex& index, const QPoint& point) { emit contextMenuRequested(idForIndex(index), point); }, view));
+            [this](const QModelIndex& index, const QPoint& point) { emit contextMenuRequested(idForIndex(index), point); }, kWorkspaceMetadataRole, lastPlayedText, playedDuration, view));
         connect(view, &QListView::activated, this, [this](const QModelIndex& index) {
             auto* instance = m_instances->getInstanceById(idForIndex(index));
             if (instance && instance->canEdit()) emit openInstanceRequested(instance->id());
@@ -878,7 +704,7 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
         });
     }
     refresh();
-    setLibraryViewMode(m_preferences && m_preferences->get("WorkspaceLibraryView").toString() != "list");
+    setLibraryPresentation(m_preferences ? m_preferences->get("WorkspaceLibraryView").toString() : "covers");
     showHome(true);
     setNavigationPosition(false);
     retranslateUi();
@@ -891,11 +717,11 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
             setImageBackground(app->settings()->get("WorkspaceBackground").toString() != "solid",
                                app->settings()->get("WorkspaceBackgroundImage").toString());
             setNavigationPosition(app->settings()->get("WorkspaceNavigation").toString() == "top");
-            setLibraryViewMode(app->settings()->get("WorkspaceLibraryView").toString() != "list");
+            setLibraryPresentation(app->settings()->get("WorkspaceLibraryView").toString());
         };
         connect(app, &Application::globalSettingsApplied, this, applyBackground);
         applyBackground();
-    } else if (m_preferences) setLibraryViewMode(m_preferences->get("WorkspaceLibraryView").toString() != "list");
+    } else if (m_preferences) setLibraryPresentation(m_preferences->get("WorkspaceLibraryView").toString());
 }
 
 WorkspacePage::~WorkspacePage()
@@ -909,21 +735,30 @@ WorkspacePage::~WorkspacePage()
 
 void WorkspacePage::setLibraryViewMode(bool cards)
 {
-    m_cardsMode = cards;
-    m_libraryView->setProperty("pxlCards", cards);
-    m_libraryView->setViewMode(cards ? QListView::IconMode : QListView::ListMode);
-    m_libraryView->setFlow(cards ? QListView::LeftToRight : QListView::TopToBottom);
-    m_libraryView->setWrapping(cards);
+    setLibraryPresentation(cards ? "covers" : "list");
+}
+
+void WorkspacePage::setLibraryPresentation(const QString& value)
+{
+    const QString mode = value == "hybrid" || value == "list" ? value : QStringLiteral("covers");
+    const auto selected = m_selectedId;
+    m_cardsMode = mode != "list";
+    m_libraryView->setProperty("pxlLibraryMode", mode);
+    m_libraryView->setProperty("pxlCards", m_cardsMode);
+    m_libraryView->setViewMode(m_cardsMode ? QListView::IconMode : QListView::ListMode);
+    m_libraryView->setFlow(m_cardsMode ? QListView::LeftToRight : QListView::TopToBottom);
+    m_libraryView->setWrapping(m_cardsMode);
     m_libraryView->setMovement(QListView::Static);
-    m_libraryView->setSpacing(cards ? 8 : 0);
-    if (!cards) m_libraryView->setGridSize(QSize());
-    m_viewModeButton->setIcon(QIcon(cards ? ":/pxl/icons/list.svg" : ":/pxl/icons/squares-four.svg"));
-    const auto action = cards ? tr("Switch to list") : tr("Switch to cards");
-    m_viewModeButton->setToolTip(action);
-    m_viewModeButton->setAccessibleName(action);
-    if (m_preferences) m_preferences->set("WorkspaceLibraryView", cards ? "cards" : "list");
+    m_libraryView->setSpacing(m_cardsMode ? 6 : 2);
+    if (!m_cardsMode) m_libraryView->setGridSize(QSize());
+    const QSignalBlocker blocker(m_viewModeButton);
+    m_viewModeButton->setCurrentIndex(m_viewModeButton->findData(mode));
+    m_viewModeButton->setToolTip(tr("Library view"));
+    m_viewModeButton->setAccessibleName(tr("Library view"));
+    if (m_preferences) m_preferences->set("WorkspaceLibraryView", mode);
     updateLayout();
     m_libraryView->doItemsLayout();
+    setSelectedInstance(selected);
     m_libraryView->viewport()->update();
 }
 
@@ -974,13 +809,16 @@ void WorkspacePage::updateLayout()
                                      : tr("No matching instances"));
     m_libraryView->setVisible(count > 0);
     if (m_cardsMode) {
+        const bool hybrid = m_libraryView->property("pxlLibraryMode").toString() == "hybrid";
         const int available = qMax(220, m_libraryView->viewport()->width());
-        const int columns = qMax(1, available / 236);
-        const int tileWidth = qMax(210, available / columns - 16);
-        m_libraryView->setGridSize(QSize(tileWidth, 260));
+        const int columns = hybrid ? qBound(1, available / 340, 3) : qMax(1, available / 260);
+        const int tileWidth = hybrid ? qMin(380, qMax(210, (available - columns * 12) / columns))
+                                     : qMax(210, (available - columns * 12) / columns);
+        const int tileHeight = hybrid ? 140 : 220;
+        m_libraryView->setGridSize(QSize(tileWidth, tileHeight));
         const int rows = (count + columns - 1) / columns;
-        m_libraryView->setFixedHeight(qMax(1, qMin(rows, 4)) * 276 + 8);
-    } else m_libraryView->setFixedHeight(qMax(1, qMin(count, 9)) * 76 + 4);
+        m_libraryView->setFixedHeight(qMax(1, qMin(rows, 4)) * (tileHeight + 12) + 8);
+    } else m_libraryView->setFixedHeight(qMax(1, qMin(count, 9)) * 78 + 4);
     qint64 seconds = 0;
     bool showTotal = false;
     if (m_preferences) showTotal = m_preferences->get("ShowGlobalGameTime").toBool();
@@ -1055,7 +893,6 @@ void WorkspacePage::setSelectedInstance(const QString& id)
     m_syncingSelection = true;
     selectInView(m_homeView, id);
     selectInView(m_libraryView, id);
-    if (m_showHome && m_recentModel->rowCount() == 0 && m_featuredId != id) updateHome();
     m_syncingSelection = false;
 }
 
@@ -1202,7 +1039,7 @@ void WorkspacePage::updateHome()
             auto* candidate = static_cast<BaseInstance*>(source.data(InstanceList::InstancePointerRole).value<void*>());
             if (!candidate || candidate->currentStatus() != BaseInstance::Status::Present) continue;
             if (!featured.isValid()) featured = source;
-            if (candidate->id() == m_selectedId) {
+            if (candidate->id() == m_featuredId) {
                 featured = source;
                 break;
             }
@@ -1276,8 +1113,11 @@ void WorkspacePage::retranslateUi()
         if (label->text().contains("Ctrl+Enter")) label->setText(tr("Enter to open · Ctrl+Enter to play"));
     m_heading->setText(m_contentStack->currentWidget() == m_scroll ? (m_showHome ? tr("Home") : tr("Library")) : m_instanceViewTitle);
     m_backButton->setText(tr("Back"));
-    m_viewModeButton->setToolTip(m_cardsMode ? tr("Switch to list") : tr("Switch to cards"));
-    m_viewModeButton->setAccessibleName(m_viewModeButton->toolTip());
+    m_viewModeButton->setItemText(0, tr("Cover tiles"));
+    m_viewModeButton->setItemText(1, tr("PXL hybrid cards"));
+    m_viewModeButton->setItemText(2, tr("Detailed list"));
+    m_viewModeButton->setToolTip(tr("Library view"));
+    m_viewModeButton->setAccessibleName(tr("Library view"));
     updateGroups();
     static_cast<WorkspaceInstanceModel*>(m_recentModel)->rebuildMetadata();
     static_cast<WorkspaceInstanceModel*>(m_libraryModel)->rebuildMetadata();

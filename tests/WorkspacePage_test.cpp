@@ -33,6 +33,9 @@
 #include <QStandardItemModel>
 #include <ui/pxl/FrostedSurface.h>
 #include <ui/pxl/CatalogCardDelegate.h>
+#include <ui/pxl/InstanceCovers.h>
+#include <ui/pxl/CoverPicker.h>
+#include <ui/pxl/InstanceLibraryDelegate.h>
 #include <ui/pxl/LibraryControls.h>
 #include <ui/pxl/ActionMenu.h>
 #include <ui/pages/modplatform/ResourcePage.h>
@@ -349,6 +352,7 @@ class WorkspacePageTest : public QObject {
         command.setCheckable(true);
         command.setShortcut(QKeySequence("Ctrl+D"));
         Pxl::FrostedMenu menu(&surface);
+        QVERIFY(menu.windowFlags().testFlag(Qt::NoDropShadowWindowHint));
         auto* presented = Pxl::forwardMenuAction(&menu, &command, "Duplicate");
         QSignalSpy invoked(&command, &QAction::triggered);
         presented->trigger();
@@ -612,68 +616,117 @@ class WorkspacePageTest : public QObject {
         WorkspacePage page(&instances, nullptr, globalSettings.get());
         page.resize(1080, 820);
         page.show();
+        const auto heroBeforeSelection = page.findChild<QLabel*>("workspaceFeatureTitle")->text();
+        page.setSelectedInstance("pack1");
+        page.refresh();
+        QCOMPARE(page.findChild<QLabel*>("workspaceFeatureTitle")->text(),heroBeforeSelection);
         page.findChild<QPushButton*>("workspaceLibrary")->click();
         page.setSelectedInstance("pack1");
         auto* view = page.findChild<QListView*>("workspaceCards");
         auto* model = view->model();
         QCOMPARE(model->rowCount(), 2);
         QCOMPARE(model->index(0, 0).data(InstanceList::GroupRole).toString(), QString("Survival"));
-        auto* toggle = page.findChild<QPushButton*>("workspaceViewMode");
+        auto* toggle = page.findChild<QComboBox*>("workspaceViewMode");
         QVERIFY(toggle);
-        QCOMPARE(view->viewMode(), QListView::IconMode);
-        QCOMPARE(toggle->accessibleName(), QString("Switch to list"));
-        const auto listIcon = toggle->icon().cacheKey();
-        toggle->click();
-        QCOMPARE(view->viewMode(), QListView::ListMode);
-        QCOMPARE(toggle->accessibleName(), QString("Switch to cards"));
-        QVERIFY(toggle->icon().cacheKey() != listIcon);
-        toggle->click();
-        QCOMPARE(view->viewMode(), QListView::IconMode);
-        QCOMPARE(view->model(), model);
-        QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(), QString("pack1"));
-        QVERIFY(page.findChild<QLabel*>("workspaceTotalTime")->text().startsWith("3 h"));
-        QCoreApplication::processEvents();
+        QCOMPARE(toggle->count(), 3);
+        QCOMPARE(toggle->accessibleName(), QString("Library view"));
         QSignalSpy opened(&page, &WorkspacePage::openInstanceRequested);
         QSignalSpy launched(&page, &WorkspacePage::activateInstance);
         QSignalSpy menu(&page, &WorkspacePage::contextMenuRequested);
-        const auto card = view->visualRect(model->index(0, 0)).adjusted(0, 2, -4, -2);
-        const QPoint playCenter(card.right() - 34, card.bottom() - 36);
-        const QPoint playSample(card.right() - 47, card.bottom() - 36);
-        QTest::mouseMove(view->viewport(), card.topLeft() + QPoint(8, 8));
-        const auto idle = view->viewport()->grab();
-        const auto idleColor = idle.toImage().pixelColor(playSample * idle.devicePixelRatio());
-        QTest::mouseMove(view->viewport(), playCenter);
-        const auto hovered = view->viewport()->grab();
-        const auto hoverColor = hovered.toImage().pixelColor(playSample * hovered.devicePixelRatio());
-        QVERIFY2(hoverColor.lightness() > idleColor.lightness() + 25, "Play should brighten only when hovered");
-        QTest::mouseMove(view->viewport(), card.topLeft() + QPoint(8, 8));
-        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, card.center());
-        QCOMPARE(opened.count(), 1);
-        QCOMPARE(launched.count(), 0);
-        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier,
-                          QPoint(card.right() - 25, card.bottom() - 25));
-        QCOMPARE(opened.count(), 1);
-        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier,
-                          QPoint(card.right() - 25, card.top() + 25));
-        QCOMPARE(opened.count(), 1);
-        QCOMPARE(menu.count(), 1);
-        page.setSelectedInstance("pack1");
         page.setImageBackground(true);
-        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
-        if (!screenshots.isEmpty()) {
+        for (const auto& mode : {QString("covers"), QString("hybrid"), QString("list")}) {
+            toggle->setCurrentIndex(toggle->findData(mode));
             QCoreApplication::processEvents();
-            QVERIFY(page.grab().save(QDir(screenshots).filePath("library-tiles.png")));
+            QCOMPARE(view->property("pxlLibraryMode").toString(), mode);
+            QCOMPARE(view->model(), model);
+            QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(), QString("pack1"));
+            QCOMPARE(globalSettings->get("WorkspaceLibraryView").toString(), mode);
+            QVERIFY(page.findChild<QLabel*>("workspaceTotalTime")->text().startsWith("3 h"));
+            auto* delegate = static_cast<Pxl::InstanceLibraryDelegate*>(view->itemDelegate());
+            const auto card = view->visualRect(model->index(0,0)).adjusted(0,2,-4,-2);
+            QVERIFY(card.height() <= (mode == "covers" ? 220 : mode == "hybrid" ? 140 : 74));
+            const auto play = delegate->playRect(card);
+            const auto more = delegate->moreRect(card);
+            QVERIFY(card.contains(play));
+            QVERIFY(!play.intersects(more));
+            const int menus = menu.count();
+            QTest::mouseClick(view->viewport(),Qt::LeftButton,Qt::NoModifier,more.center());
+            QCOMPARE(menu.count(),menus+1);
+            const int launches = launched.count();
+            QTest::mouseClick(view->viewport(),Qt::LeftButton,Qt::NoModifier,play.center());
+            QCOMPARE(launched.count(),launches + (instances.getInstanceById("pack0")->canLaunch() ? 1 : 0));
+            const int opens = opened.count();
+            if (mode != "list") {
+                QTest::mouseClick(view->viewport(),Qt::LeftButton,Qt::NoModifier,card.topLeft()+QPoint(80,95));
+                QCOMPARE(opened.count(),opens+1);
+            }
+            page.setSelectedInstance("pack1");
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(page.grab().save(QDir(screenshots).filePath("library-"+mode+".png")));
+            WorkspacePage restored(&instances,nullptr,globalSettings.get());
+            QCOMPARE(restored.findChild<QListView*>("workspaceCards")->property("pxlLibraryMode").toString(),mode);
         }
         page.findChild<QLineEdit*>("workspaceSearch")->setText("Second");
-        QCOMPARE(model->rowCount(), 1);
-        toggle->click();
-        QCOMPARE(view->viewMode(), QListView::ListMode);
-        QCOMPARE(view->model(), model);
-        QCOMPARE(model->rowCount(), 1);
-        QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(), QString("pack1"));
-        QCOMPARE(globalSettings->get("WorkspaceLibraryView").toString(), QString("list"));
-        WorkspacePage restored(&instances, nullptr, globalSettings.get());
-        QCOMPARE(restored.findChild<QListView*>("workspaceCards")->viewMode(), QListView::ListMode);
+        QCOMPARE(model->rowCount(),1);
+        page.setLibraryPresentation("hybrid");
+        QCOMPARE(model->rowCount(),1);
+        QCOMPARE(view->currentIndex().data(InstanceList::InstanceIDRole).toString(),QString("pack1"));
+        page.setLibraryPresentation("cards");
+        QCOMPARE(toggle->currentData().toString(),QString("covers"));
+    }
+
+    void coverPickerPreviewsBeforeApplying()
+    {
+        QTemporaryDir temporary;
+        QWidget surface;
+        surface.resize(1080,740);
+        surface.show();
+        const auto root = temporary.filePath("pack");
+        QVERIFY(QDir().mkpath(root));
+        QTimer::singleShot(50,&surface,[&] {
+            auto* panel = surface.findChild<QDialog*>("pxlCoverPicker");
+            QVERIFY(panel);
+            for (auto* button : panel->findChildren<QPushButton*>())
+                if (button->text()=="Warm stone") button->click();
+            QVERIFY(!QFileInfo::exists(Pxl::instanceCoverPath(root)));
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("cover-picker.png")));
+            for (auto* button : panel->findChildren<QPushButton*>())
+                if (button->text()=="Apply") button->click();
+        });
+        QVERIFY(Pxl::editInstanceCover(&surface,root));
+        QVERIFY(!Pxl::instanceCover(root).isNull());
+    }
+
+    void individualCoversPreserveSourceAndPreviousImageOnFailure()
+    {
+        QTemporaryDir temporary;
+        const auto root = temporary.filePath("pack");
+        QVERIFY(QDir().mkpath(root));
+        const auto source = temporary.filePath("source.png");
+        QImage image(600,240,QImage::Format_RGB32);
+        image.fill(QColor("#416d72"));
+        QVERIFY(image.save(source));
+        QString error;
+        QVERIFY(Pxl::saveInstanceCover(root,source,&error));
+        QVERIFY(!Pxl::instanceCover(root).isNull());
+        QVERIFY(Pxl::instanceCover(temporary.filePath("other-pack")).isNull());
+        QFile cover(Pxl::instanceCoverPath(root));
+        QVERIFY(cover.open(QIODevice::ReadOnly));
+        const auto previous = cover.readAll();
+        cover.close();
+        QVERIFY(!Pxl::saveInstanceCover(root,temporary.filePath("missing.png"),&error));
+        QVERIFY(!error.isEmpty());
+        QVERIFY(cover.open(QIODevice::ReadOnly));
+        QCOMPARE(cover.readAll(),previous);
+        cover.close();
+        QVERIFY(Pxl::setInstanceCoverColor(root,QColor("#655147"),&error));
+        QVERIFY(!Pxl::instanceCover(root).isNull());
+        QVERIFY(Pxl::saveInstanceCover(root,":/pxl/cone-dawn-banner.png",&error));
+        QVERIFY(Pxl::resetInstanceCover(root));
+        QVERIFY(Pxl::instanceCover(root).isNull());
+        QVERIFY(QFileInfo::exists(source));
+        QCOMPARE(QImage(source).pixelColor(0,0),QColor("#416d72"));
     }
 
     void populatedLibraryFiltersSelectionAndLaunches()

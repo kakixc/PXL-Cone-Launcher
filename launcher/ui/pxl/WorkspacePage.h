@@ -46,6 +46,7 @@ class WorkspacePage final : public QWidget {
     void setImageBackground(bool enabled, const QString& path = {});
     void setNavigationPosition(bool top);
     void setLibraryViewMode(bool cards);
+    void setLibraryPresentation(const QString& mode);
     bool presentInstanceView(QWidget* view, const QString& title, std::function<bool()> leaveGuard);
     bool leaveInstanceView();
     void updateActiveNavigation();
@@ -122,7 +123,7 @@ class WorkspacePage final : public QWidget {
     QString m_featuredId;
     bool m_syncingSelection = false;
     bool m_cardsMode = false;
-    QPushButton* m_viewModeButton = nullptr;
+    QComboBox* m_viewModeButton = nullptr;
     QLabel* m_totalTime = nullptr;
     QSet<BaseInstance*> m_observedInstances;
     QPointer<SettingsObject> m_preferences;

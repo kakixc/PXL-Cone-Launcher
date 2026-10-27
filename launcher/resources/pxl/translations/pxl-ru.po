@@ -1735,3 +1735,143 @@ msgstr "Оформление и порядок"
 msgctxt "MainWindow"
 msgid "Delete"
 msgstr "Удалить"
+
+msgctxt "WorkspacePage"
+msgid "Cover tiles"
+msgstr "Плитки с обложкой"
+
+msgctxt "WorkspacePage"
+msgid "PXL hybrid cards"
+msgstr "Гибридные карточки PXL"
+
+msgctxt "WorkspacePage"
+msgid "Detailed list"
+msgstr "Подробный список"
+
+msgctxt "WorkspacePage"
+msgid "Library view"
+msgstr "Вид библиотеки"
+
+msgctxt "MainWindow"
+msgid "Change cover…"
+msgstr "Изменить обложку…"
+
+msgctxt "MainWindow"
+msgid "Choose cover"
+msgstr "Выберите обложку"
+
+msgctxt "MainWindow"
+msgid "Images (*.png *.jpg *.jpeg *.webp *.bmp)"
+msgstr "Изображения (*.png *.jpg *.jpeg *.webp *.bmp)"
+
+msgctxt "MainWindow"
+msgid "Could not change cover"
+msgstr "Не удалось изменить обложку"
+
+msgctxt "MainWindow"
+msgid "Reset cover"
+msgstr "Сбросить обложку"
+
+msgctxt "MainWindow"
+msgid "Could not remove the saved cover."
+msgstr "Не удалось удалить сохранённую обложку."
+
+msgctxt "QObject"
+msgid "Choose a valid image up to 16384 pixels and 64 megapixels."
+msgstr "Выберите изображение размером до 16384 пикселей и 64 мегапикселей."
+
+msgctxt "QObject"
+msgid "The cover destination must not be a symbolic link."
+msgstr "Папка обложки не должна быть символической ссылкой."
+
+msgctxt "QObject"
+msgid "Could not create the cover folder."
+msgstr "Не удалось создать папку обложки."
+
+msgctxt "QObject"
+msgid "Could not save the cover. The previous cover has been kept."
+msgstr "Не удалось сохранить обложку. Предыдущая обложка сохранена."
+
+msgctxt "MainWindow"
+msgid "Ready-made covers"
+msgstr "Готовые обложки"
+
+msgctxt "MainWindow"
+msgid "PXL dawn"
+msgstr "Рассвет PXL"
+
+msgctxt "MainWindow"
+msgid "PXL valley"
+msgstr "Долина PXL"
+
+msgctxt "MainWindow"
+msgid "Slate"
+msgstr "Сланец"
+
+msgctxt "MainWindow"
+msgid "Warm stone"
+msgstr "Тёплый камень"
+
+msgctxt "MainWindow"
+msgid "Forest"
+msgstr "Лес"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Instance cover"
+msgstr "Обложка сборки"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Choose your image…"
+msgstr "Выбрать свою картинку…"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Images (*.png *.jpg *.jpeg *.webp *.bmp)"
+msgstr "Изображения (*.png *.jpg *.jpeg *.webp *.bmp)"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Could not open image"
+msgstr "Не удалось открыть изображение"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Choose a valid image up to 16384 pixels and 64 megapixels."
+msgstr "Выберите изображение размером до 16384 пикселей и 64 мегапикселей."
+
+msgctxt "Pxl::CoverPicker"
+msgid "Neutral"
+msgstr "Нейтральная"
+
+msgctxt "Pxl::CoverPicker"
+msgid "PXL dawn"
+msgstr "Рассвет PXL"
+
+msgctxt "Pxl::CoverPicker"
+msgid "PXL valley"
+msgstr "Долина PXL"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Slate"
+msgstr "Сланец"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Warm stone"
+msgstr "Тёплый камень"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Forest"
+msgstr "Лес"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Apply"
+msgstr "Применить"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Could not save cover"
+msgstr "Не удалось сохранить обложку"
+
+msgctxt "Pxl::CoverPicker"
+msgid "Could not remove the saved cover."
+msgstr "Не удалось удалить сохранённую обложку."

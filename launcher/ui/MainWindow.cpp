@@ -38,6 +38,7 @@
  *      limitations under the License.
  */
 
+#include "pxl/CoverPicker.h"
 #include "Application.h"
 #include "BuildConfig.h"
 #include "FileSystem.h"
@@ -421,6 +422,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             Pxl::forwardMenuAction(&organise, ui->actionRenameInstance, tr("Rename"));
             Pxl::forwardMenuAction(&organise, ui->actionChangeInstGroup, tr("Change group"));
             Pxl::forwardMenuAction(&organise, ui->actionChangeInstIcon, tr("Change icon"));
+            auto* changeCover = organise.addAction(tr("Change cover…"));
+            connect(changeCover, &QAction::triggered, this, [this, id] {
+                auto* instance = APPLICATION->instances()->getInstanceById(id);
+                if (instance && Pxl::editInstanceCover(this,instance->instanceRoot())) m_workspacePage->refresh();
+            });
             Pxl::forwardMenuAction(&organise, ui->actionCreateInstanceShortcut, tr("Create shortcut"));
             auto* organiseAction = menu.addMenu(&organise);
             organiseAction->setText(tr("Organise"));
