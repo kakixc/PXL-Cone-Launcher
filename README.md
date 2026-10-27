@@ -13,12 +13,13 @@
 
 ## What works in the current development version
 
-- Separate Home and Library views, saved Cards/List presentation, search/groups/sorting, recorded playtime and instance management inside the main window.
+- Home and Library with three saved layouts: cover tiles, compact PXL hybrid cards and a detailed list. Search, groups, sorting, playtime and custom static instance covers stay in the main window.
 - Instance creation from Minecraft/loader versions, existing modpack catalogs and supported import routes, using the upstream metadata and installation tasks.
 - Play/Stop actions and a task panel showing active operations and their recent results.
 - An in-instance content browser for mods, resource packs and shaders, using existing provider queries and dependency review. Vanilla opens resource packs; mods require a loader and shaders show their renderer prerequisite. Data packs currently link to world management.
 - Cone appearance with Inter, English/Russian UI, top/side navigation, optional wallpaper and a custom-image choice.
-- Settings inside the main launcher, with the existing settings pages, search and explicit Apply/leave validation. The visual conversion of individual advanced controls is ongoing.
+- Settings inside the launcher with search, explicit Apply/leave validation and a saved basic/advanced mode. Technical services, tools and proxy options remain available in advanced mode; some technical screens are still being redesigned.
+- PXL views for installed content, game components, worlds and live logs, sharing the existing models and operations. A compact account picker and screenshot gallery provide quick access to profiles and captured images.
 - Copy import from Prism/Pinecone instance folders and PXL archive import/export.
 
 The launcher retains the upstream instance, Microsoft/Ely.by account, loader, Modrinth/CurseForge and Java-management infrastructure. Keeping a feature in the code does not mean every combination has been tested in the redesigned interface. Platform packaging and end-to-end compatibility are still being validated.
@@ -41,15 +42,16 @@ See [the archive format and current limits](docs/PXL_ARCHIVE_FORMAT.md). Existin
 
 ## Roadmap — not implemented features
 
-These are development directions, not release commitments:
+Preparation for the first public release includes a short, skippable setup and feature introduction, real screenshots in both READMEs, and a PXL-style website on GitHub Pages from this repository. These are not implemented yet.
+
+Other development directions have no fixed release date:
 
 - Further content-management design work, including installed-project actions and world-specific data-pack browsing.
-- A short, skippable first-run setup and simpler access to the existing automatic Java management.
 - Compatible quick-start presets with a preview of the changes; no universal performance or RAM claims.
 - Smart Minecraft/loader migration, snapshots, change history and rollback.
 - Linked local-server workflows and pack collaboration.
 - Optional AI-assisted pack drafts using a user-configured provider, with approval of the exact content before installation.
-- Per-version artwork and a product website.
+- Per-version artwork and further banner customisation.
 
 ## Technology and platforms
 
