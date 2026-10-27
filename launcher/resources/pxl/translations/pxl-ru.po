@@ -2441,3 +2441,63 @@ msgstr "Остановите игру и дождитесь завершения
 msgctxt "LaunchController"
 msgid "Wait for this instance's content installation to finish before launching."
 msgstr "Перед запуском дождитесь завершения установки дополнений в этой сборке."
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Interface assets"
+msgstr "Оформление интерфейса"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Choose the icon set used throughout the launcher."
+msgstr "Выберите набор иконок для интерфейса лаунчера."
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Theme"
+msgstr "Тема"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Icon set"
+msgstr "Набор иконок"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Log appearance"
+msgstr "Оформление журнала"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Font settings apply to game logs. Preview changes below."
+msgstr "Шрифт используется в игровых журналах. Результат виден в примере ниже."
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Log font size"
+msgstr "Размер шрифта журнала"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Font"
+msgstr "Шрифт"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Cat mascot"
+msgstr "Кот"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Keep your companion visible, or hide its navigation button."
+msgstr "Настройте своего спутника и его кнопку в навигации."
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Show the cat button"
+msgstr "Показывать кнопку кота"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Cat pack"
+msgstr "Набор котиков"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Scaling"
+msgstr "Масштабирование"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Opacity"
+msgstr "Непрозрачность"
+
+msgctxt "Pxl::AppearanceSections"
+msgid "Cat opacity"
+msgstr "Непрозрачность кота"

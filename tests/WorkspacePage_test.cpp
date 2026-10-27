@@ -187,6 +187,7 @@ public:
 #include <ui/dialogs/ProgressDialog.h>
 #include <ui/pxl/TaskHistory.h>
 #include <ui/pxl/TaskActivity.h>
+#include <ui/pxl/AppearanceSections.h>
 #include <ui/pxl/DialogOverlay.h>
 #include <ui/pxl/Backdrop.h>
 #include <ui/widgets/VersionSelectWidget.h>
@@ -1564,6 +1565,71 @@ class WorkspacePageTest : public QObject {
         qApp->removeTranslator(&upstream);
         QCoreApplication::processEvents();
         QCOMPARE(page.findChild<QLineEdit*>("workspaceSearch")->placeholderText(), QString("Search instances"));
+    }
+
+    void appearanceChoicesKeepBackendSelectionAcrossReloads()
+    {
+        QComboBox source;
+        source.addItem("Cone", "cone");
+        source.addItem("Minecraft", "minecraft");
+        QWidget surface;
+        auto* choice = Pxl::appearanceChoice(&source, &surface);
+        choice->setCurrentIndex(1);
+        QCOMPARE(source.currentData().toString(), QString("cone"));
+        emit choice->activated(1);
+        QCOMPARE(source.currentData().toString(), QString("minecraft"));
+        source.setCurrentIndex(0);
+        QCOMPARE(choice->currentIndex(), 0);
+        {
+            const QSignalBlocker loading(&source);
+            source.clear();
+            source.addItem("Minecraft", "minecraft");
+            source.addItem("Cone", "cone");
+            source.setCurrentIndex(1);
+        }
+        QTRY_COMPARE(choice->currentData().toString(), QString("cone"));
+        QCOMPARE(source.currentData().toString(), QString("cone"));
+    }
+
+    void appearanceSectionsUseSeparateCardsAndKeepCatSettings()
+    {
+        QWidget surface;
+        auto* legacy = new QWidget(&surface);
+        legacy->hide();
+        auto combo = [legacy](const QStringList& values) { auto* c = new QComboBox(legacy); c->addItems(values); return c; };
+        auto action = [legacy](const QString& text) { return new QPushButton(text, legacy); };
+        auto* font = new QFontComboBox(legacy);
+        auto* size = new QSpinBox(legacy);
+        size->setValue(11);
+        auto* opacity = new QSlider(Qt::Horizontal, legacy);
+        opacity->setRange(0, 100);
+        opacity->setValue(75);
+        auto* hideCat = new QCheckBox(legacy);
+        auto* preview = new QTextEdit(legacy);
+        preview->setPlainText("[INFO] Game started\n[WARN] Example warning\n[DEBUG] Example details");
+        auto* cat = action({});
+        cat->setIcon(QIcon(":/pxl/cone-icon.svg"));
+        auto* sections = new Pxl::AppearanceSections({combo({"Cone"}), combo({"PXL icons", "Simple"}),
+            combo({"PXL Cat"}), combo({"Fit", "Fill", "Stretch"}), action("Folder"), action("Folder"),
+            action("Folder"), action("Reload assets"), cat, font, size, opacity, hideCat, preview}, &surface);
+        auto* layout = new QVBoxLayout(&surface);
+        layout->addWidget(sections);
+        surface.resize(900, 950);
+        surface.show();
+        QTest::qWait(20);
+        QCOMPARE(sections->findChildren<QFrame*>("pxlSettingsCard").size(), 3);
+        auto* visible = sections->findChild<QCheckBox*>("appearanceCatVisible");
+        QVERIFY(visible && visible->isChecked());
+        visible->setChecked(false);
+        QVERIFY(hideCat->isChecked());
+        hideCat->setChecked(false);
+        QVERIFY(visible->isChecked());
+        QCOMPARE(opacity->value(), 75);
+        QCOMPARE(size->value(), 11);
+        QVERIFY(preview->height() <= 150);
+        QVERIFY(legacy->isHidden());
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("appearance-sections.png")));
     }
 
     void progressDetailsAndCancellationPreserveTaskBehavior()

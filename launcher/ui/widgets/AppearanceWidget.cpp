@@ -43,6 +43,7 @@
 #include "ui/pxl/Backdrop.h"
 #include "ui/pxl/SettingsCards.h"
 #include "ui/pxl/ScrollableSettings.h"
+#include "ui/pxl/AppearanceSections.h"
 #include "LanguageSelectionWidget.h"
 #include "ui_AppearanceWidget.h"
 
@@ -157,13 +158,10 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         advancedButton->setCheckable(true);
         advancedButton->setProperty("pxlDisclosure", true);
         m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);
-        auto* advanced = new QWidget(this);
-        auto* advancedLayout = new QVBoxLayout(advanced);
-        advancedLayout->setContentsMargins(0, 0, 0, 0);
-        for (auto* group : {m_ui->themingBox, m_ui->settingsBox, m_ui->previewBox}) {
-            advancedLayout->addWidget(group);
-            group->show();
-        }
+        auto* advanced = new Pxl::AppearanceSections({m_ui->widgetStyleComboBox, m_ui->iconsComboBox,
+            m_ui->catPackComboBox, m_ui->catFitComboBox, m_ui->widgetStyleFolder, m_ui->iconsFolder,
+            m_ui->catPackFolder, m_ui->reloadThemesButton, m_ui->catPreview, m_ui->consoleFont,
+            m_ui->fontSizeBox, m_ui->catOpacitySlider, m_ui->hideCatButtonCheckBox, m_ui->consolePreview}, this);
         advanced->hide();
         m_ui->verticalLayout->addWidget(advanced);
         m_ui->verticalLayout->addStretch();
