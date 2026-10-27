@@ -230,7 +230,7 @@ private:
             return;
         }
         ChooseOfflineNameDialog dialog(accountText("Choose a name for your offline profile."),this);
-        dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(520,320));
+        dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(520,240));
         const QPointer<AccountsPage> alive(this);
         if (DialogOverlay::run(&dialog,window())!=QDialog::Accepted || !alive) return;
         auto account=MinecraftAccount::createOffline(dialog.getUsername());

@@ -42,6 +42,7 @@
 #include <QMessageBox>
 #include "ui/pxl/Backdrop.h"
 #include "ui/pxl/SettingsCards.h"
+#include "ui/pxl/ScrollableSettings.h"
 #include "LanguageSelectionWidget.h"
 #include "ui_AppearanceWidget.h"
 
@@ -167,6 +168,7 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         m_ui->verticalLayout->addWidget(advanced);
         m_ui->verticalLayout->addStretch();
         connect(advancedButton, &QPushButton::toggled, advanced, &QWidget::setVisible);
+        Pxl::makeSettingsScrollable(m_ui->verticalLayout);
     }
 }
 

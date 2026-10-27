@@ -148,7 +148,7 @@ void MSALoginDialog::authorizeWithBrowser(const QUrl& url)
     ui->stackedWidget2->setCurrentIndex(1);
     ui->stackedWidget2->adjustSize();
     ui->stackedWidget2->updateGeometry();
-    this->adjustSize();
+    if (isWindow()) adjustSize(); // Embedded geometry belongs to DialogOverlay.
     ui->loginButton->setToolTip(QString("<div style='width: 200px;'>%1</div>").arg(url.toString()));
     m_url = url;
 }
@@ -190,7 +190,7 @@ void MSALoginDialog::authorizeWithBrowserWithExtra(QString url, QString code, [[
     ui->stackedWidget->setCurrentIndex(1);
     ui->stackedWidget->adjustSize();
     ui->stackedWidget->updateGeometry();
-    this->adjustSize();
+    if (isWindow()) adjustSize(); // Embedded geometry belongs to DialogOverlay.
 
     const auto linkString = QString("<a href=\"%1\">%2</a>").arg(url, url);
     if (url == m_linkUrl && !code.isEmpty()) {
@@ -216,7 +216,7 @@ void MSALoginDialog::onDeviceFlowStatus(QString status)
     ui->stackedWidget->setCurrentIndex(0);
     ui->stackedWidget->adjustSize();
     ui->stackedWidget->updateGeometry();
-    this->adjustSize();
+    if (isWindow()) adjustSize(); // Embedded geometry belongs to DialogOverlay.
     ui->status->setText(status);
 }
 
@@ -225,7 +225,7 @@ void MSALoginDialog::onAuthFlowStatus(QString status)
     ui->stackedWidget2->setCurrentIndex(0);
     ui->stackedWidget2->adjustSize();
     ui->stackedWidget2->updateGeometry();
-    this->adjustSize();
+    if (isWindow()) adjustSize(); // Embedded geometry belongs to DialogOverlay.
     ui->status2->setText(status);
 }
 

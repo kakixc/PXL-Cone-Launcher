@@ -47,6 +47,10 @@
 #include <ui/pxl/InstalledContentView.h>
 #include <ui/pxl/MinecraftPreferences.h>
 #include <ui/pxl/SettingsMode.h>
+#include <ui/pxl/ScrollableSettings.h>
+#include <ui/pxl/NoWheelSelection.h>
+#include <ui/pxl/ComponentView.h>
+#include <QIdentityProxyModel>
 #include <ui/pages/modplatform/ResourcePage.h>
 
 class CatalogTestVersion final : public BaseVersion {
@@ -366,6 +370,147 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(container->selectedPage()->id(), QString("launcher-settings"));
         QCOMPARE(technical->text(), QString("retained value"));
         QVERIFY(technical->isHidden());
+    }
+
+    void expandedSettingsScrollWithoutGrowingWindow()
+    {
+        QWidget page;
+        auto* layout = new QVBoxLayout(&page);
+        auto* disclosure = new QPushButton("Icons, console and mascot", &page);
+        disclosure->setCheckable(true);
+        layout->addWidget(disclosure);
+        auto* expanded = new QWidget(&page);
+        expanded->setMinimumHeight(1100);
+        layout->addWidget(expanded);
+        expanded->hide();
+        connect(disclosure, &QPushButton::toggled, expanded, &QWidget::setVisible);
+        auto* scroll = Pxl::makeSettingsScrollable(layout);
+        page.resize(820, 520);
+        page.show();
+        QTest::qWait(30);
+        const auto before = page.size();
+        disclosure->click();
+        QTest::qWait(30);
+        QCOMPARE(page.size(), before);
+        QVERIFY(scroll->verticalScrollBar()->maximum() > 0);
+        QVERIFY(page.minimumSizeHint().height() < before.height());
+        disclosure->click();
+        QTest::qWait(30);
+        QCOMPARE(page.size(), before);
+        QCOMPARE(scroll->verticalScrollBar()->maximum(), 0);
+    }
+
+    void closedChoicesIgnoreWheelButKeepKeyboardAndPopupScrolling()
+    {
+        Pxl::installWheelSelectionGuard(qApp);
+        QComboBox combo;
+        for (int row = 0; row < 60; ++row) combo.addItem(QString::number(row));
+        combo.setMaxVisibleItems(8);
+        combo.setCurrentIndex(4);
+        combo.resize(200, 40);
+        combo.show();
+        combo.setFocus();
+        QWheelEvent wheel(QPointF(10, 10), QPointF(10, 10), {}, QPoint(0, 120), Qt::NoButton,
+                          Qt::NoModifier, Qt::NoScrollPhase, false);
+        qApp->sendEvent(&combo, &wheel);
+        QCOMPARE(combo.currentIndex(), 4);
+        QVERIFY(!wheel.isAccepted());
+        QTest::keyClick(&combo, Qt::Key_Down);
+        QCOMPARE(combo.currentIndex(), 5);
+        combo.showPopup();
+        QTest::qWait(30);
+        QVERIFY(combo.view()->isVisible());
+        auto* scrollbar = combo.view()->verticalScrollBar();
+        scrollbar->setValue(0);
+        QWheelEvent scroll(QPointF(20, 20), QPointF(20, 20), {}, QPoint(0, -120), Qt::NoButton,
+                           Qt::NoModifier, Qt::NoScrollPhase, false);
+        qApp->sendEvent(combo.view()->viewport(), &scroll);
+        QVERIFY(scrollbar->value() > 0);
+        combo.hidePopup();
+    }
+
+    void overlayRecentersAfterDialogRequestsItsOwnSize()
+    {
+        const bool animated = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
+        QWidget surface;
+        surface.resize(1280, 800);
+        surface.show();
+        QDialog dialog(&surface);
+        dialog.setProperty("pxlPreferredSize", QSize(600, 480));
+        auto* layout = new QVBoxLayout(&dialog);
+        layout->addWidget(new QLabel("Authentication state changed", &dialog));
+        bool centered = false;
+        QTimer::singleShot(20, &dialog, [&] {
+            dialog.adjustSize();
+            QEvent layoutChanged(QEvent::LayoutRequest);
+            qApp->sendEvent(&dialog, &layoutChanged);
+            centered = (dialog.geometry().center() - dialog.parentWidget()->rect().center()).manhattanLength() <= 2;
+            surface.resize(1000, 700);
+            centered &= (dialog.geometry().center() - dialog.parentWidget()->rect().center()).manhattanLength() <= 2;
+            dialog.reject();
+        });
+        QTimer::singleShot(1500, &dialog, &QDialog::reject);
+        Pxl::DialogOverlay::run(&dialog, &surface);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, animated);
+        QVERIFY(centered);
+    }
+
+    void offlineNameFormKeepsFieldsTogether()
+    {
+        ChooseOfflineNameDialog dialog("Choose a name for your offline profile.");
+        dialog.resize(520, 240);
+        dialog.show();
+        QTest::qWait(20);
+        const auto* label = dialog.findChild<QLabel*>("label");
+        const auto* edit = dialog.findChild<QLineEdit*>("usernameTextBox");
+        QVERIFY(label && edit);
+        QVERIFY(label->geometry().top() <= 28);
+        QVERIFY(edit->geometry().top() - label->geometry().bottom() <= 18);
+    }
+
+    void componentViewSharesCommandsSelectionAndFilteredSourceRows()
+    {
+        QStandardItemModel source(3, 2);
+        source.setData(source.index(0, 0), "Minecraft"); source.setData(source.index(0, 1), "1.20.1");
+        source.setData(source.index(1, 0), "LWJGL"); source.setData(source.index(1, 1), "3.3.1");
+        source.setData(source.index(2, 0), "Fabric Loader"); source.setData(source.index(2, 1), "0.16.10");
+        for (int row = 0; row < 3; ++row) {
+            source.item(row, 0)->setCheckable(row == 2);
+            source.item(row, 0)->setCheckState(Qt::Checked);
+        }
+        QIdentityProxyModel icons; icons.setSourceModel(&source);
+        QSortFilterProxyModel filter; filter.setSourceModel(&icons); filter.setFilterKeyColumn(-1);
+        QItemSelectionModel selection(&filter);
+        QAction change("Change version", &source); change.setObjectName("actionChange_version");
+        QAction loader("Install loader", &source); loader.setObjectName("actionInstall_Loader");
+        QSignalSpy changes(&change, &QAction::triggered);
+        Pxl::ComponentView view(&filter, &selection, {&change, &loader}, nullptr);
+        view.resize(950, 500); view.show();
+        auto* search = view.findChild<QLineEdit*>("componentSearch");
+        auto* list = view.findChild<QListView*>("componentList");
+        QVERIFY(search && list);
+        search->setText("Fabric");
+        QTest::qWait(20);
+        QCOMPARE(filter.rowCount(), 1);
+        const auto index = filter.index(0, 0);
+        QCOMPARE(Pxl::componentSourceRow(index), 2);
+        const auto row = list->visualRect(index);
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, row.topLeft() + QPoint(85, 25));
+        QCOMPARE(selection.selectedRows().size(), 1);
+        QCOMPARE(Pxl::componentSourceRow(selection.currentIndex()), 2);
+        view.findChild<QPushButton*>("actionChange_version")->click();
+        QCOMPARE(changes.count(), 1);
+        QSignalSpy updates(&source, &QAbstractItemModel::dataChanged);
+        QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::installedToggle(row).center());
+        QCOMPARE(source.index(2, 0).data(Qt::CheckStateRole).toInt(), int(Qt::Unchecked));
+        QCOMPARE(updates.count(), 1);
+        QCOMPARE(source.index(0, 0).data(Qt::CheckStateRole).toInt(), int(Qt::Checked));
+        change.setEnabled(false);
+        QVERIFY(!view.findChild<QPushButton*>("actionChange_version")->isEnabled());
+        search->clear();
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("component-view.png")));
     }
 
     void accountHeaderAndProfilesUseExistingAccountModel()

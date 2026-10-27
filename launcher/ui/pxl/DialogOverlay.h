@@ -139,7 +139,7 @@ private:
         const auto bounded = desired.boundedTo(available.expandedTo(QSize(1, 1)));
         const QRect target((width() - bounded.width()) / 2, (height() - bounded.height()) / 2,
                            bounded.width(), bounded.height());
-        if (animated && target == m_target) return;
+        if (animated && target == m_target && (m_dialog->geometry() == target || m_transition->state() == QAbstractAnimation::Running)) return;
         m_target = target;
         m_transition->stop();
         if (animated && isVisible() && QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) {

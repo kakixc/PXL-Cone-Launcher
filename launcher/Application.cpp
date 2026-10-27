@@ -41,6 +41,7 @@
  */
 
 #include "Application.h"
+#include "ui/pxl/NoWheelSelection.h"
 #include <QScreen>
 #include "ui/pxl/WindowGeometry.h"
 #include "BuildConfig.h"
@@ -1216,6 +1217,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         }
     }
 
+    Pxl::installWheelSelectionGuard(this);
     if (qgetenv("XDG_CURRENT_DESKTOP") == "gamescope") {
         installEventFilter(new ToolTipFilter);
     }
