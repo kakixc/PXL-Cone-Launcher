@@ -9,6 +9,7 @@
 #include <QSet>
 #include <functional>
 
+class ExternalUpdater;
 class InstanceList;
 class BaseInstance;
 class SettingsObject;
@@ -41,6 +42,8 @@ class WorkspacePage final : public QWidget {
 
     void setSelectedInstance(const QString& id);
     void refresh();
+    void bindUpdater(ExternalUpdater* updater);
+    void showLauncherUpdates();
     void setAccountSummary(const QString& name, const QPixmap& face = {});
     void setPaintCat(bool visible);
     void setCatButtonVisible(bool visible);
@@ -86,6 +89,8 @@ class WorkspacePage final : public QWidget {
     void retranslateUi();
     QString homeTitle() const;
 
+    QPointer<ExternalUpdater> m_updater;
+    QPushButton* m_updateButton = nullptr;
     InstanceList* m_instances = nullptr;
     QSortFilterProxyModel* m_recentModel = nullptr;
     QSortFilterProxyModel* m_libraryModel = nullptr;

@@ -113,6 +113,7 @@
 #include "net/HttpMetaCache.h"
 
 #include "updater/ExternalUpdater.h"
+#include "updater/ReleaseUpdateChecker.h"
 
 #include "tools/JProfiler.h"
 #include "tools/JVisualVM.h"
@@ -1307,11 +1308,7 @@ bool Application::createSetupWizard()
 
 bool Application::updaterEnabled()
 {
-#if defined(Q_OS_MAC)
-    return BuildConfig.UPDATER_ENABLED;
-#else
-    return BuildConfig.UPDATER_ENABLED && QFileInfo(FS::PathCombine(m_rootPath, updaterBinaryName())).isFile();
-#endif
+    return !BuildConfig.RELEASE_REPOSITORY.isEmpty();
 }
 
 QString Application::updaterBinaryName()
@@ -1406,13 +1403,9 @@ void Application::performMainStartupAction()
     // initialize the updater
     if (updaterEnabled()) {
         qDebug() << "Initializing updater";
-#ifdef Q_OS_MAC
-#if defined(SPARKLE_ENABLED)
-        m_updater.reset(new MacSparkleUpdater());
-#endif
-#else
-        m_updater.reset(new PrismExternalUpdater(m_mainWindow, m_rootPath, m_dataPath));
-#endif
+        m_updater = std::make_unique<ReleaseUpdateChecker>(network(), FS::PathCombine(m_dataPath, "pxl-updates.ini"),
+                                                          BuildConfig.RELEASE_REPOSITORY, BuildConfig.RELEASE_VERSION);
+        emit updaterReady(m_updater.get());
         qDebug() << "<> Updater started.";
     }
 
@@ -2058,8 +2051,8 @@ void Application::triggerUpdateCheck()
 {
     if (m_updater) {
         qDebug() << "Checking for updates.";
-        m_updater->setBetaAllowed(false);  // There are no other channels than stable
         m_updater->checkForUpdates();
+        emit updateDetailsRequested();
     } else {
         qDebug() << "Updater not available.";
     }

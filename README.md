@@ -21,6 +21,7 @@
 - Settings inside the launcher with search, explicit Apply/leave validation and a saved basic/advanced mode. Technical services, tools and proxy options remain available in advanced mode; some technical screens are still being redesigned.
 - PXL views for installed content, game components, worlds and live logs, sharing the existing models and operations. A compact account picker and screenshot gallery provide quick access to profiles and captured images.
 - Copy import from Prism/Pinecone instance folders and PXL archive import/export.
+- Background checks for PXL Cone releases, a header notification and Markdown release notes. Downloads open the release page; executable replacement is manual. See [release notification configuration](docs/RELEASE_UPDATES.md).
 
 The launcher retains the upstream instance, Microsoft/Ely.by account, loader, Modrinth/CurseForge and Java-management infrastructure. Keeping a feature in the code does not mean every combination has been tested in the redesigned interface. Platform packaging and end-to-end compatibility are still being validated.
 

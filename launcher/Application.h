@@ -207,6 +207,8 @@ class Application : public QApplication {
 
    signals:
     void updateAllowedChanged(bool status);
+    void updaterReady(ExternalUpdater* updater);
+    void updateDetailsRequested();
     void globalSettingsAboutToOpen();
     void globalSettingsApplied();
     int currentCatChanged(int index);

@@ -195,7 +195,9 @@ set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_MAJOR},${Launcher_VERSION_M
 set(Launcher_BUILD_PLATFORM "unknown" CACHE STRING "A short string identifying the platform that this build was built for. Only used to display in the about dialog.")
 
 # Github repo URL with releases for updater
-set(Launcher_UPDATER_GITHUB_REPO "https://github.com/ElyPrismLauncher/Launcher" CACHE STRING "Base github URL for the updater.")
+# PXL release notifications are independent of upstream installer artifacts.
+set(Launcher_RELEASE_REPOSITORY "kakixc/PXL-Cone-Launcher" CACHE STRING "GitHub owner/repository for PXL release notifications")
+set(Launcher_UPDATER_GITHUB_REPO "https://github.com/kakixc/PXL-Cone-Launcher" CACHE STRING "Base github URL for the updater.")
 
 # Name to help updater identify valid artifacts
 set(Launcher_BUILD_ARTIFACT "" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
@@ -282,6 +284,17 @@ set(Launcher_COMPILER_TARGET_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR})
 #### Check the current Git commit and branch
 include(GetGitRevisionDescription)
 git_get_exact_tag(Launcher_GIT_TAG)
+
+if(NOT DEFINED Launcher_RELEASE_VERSION)
+    # Use the exact release checkout, never the nearest inherited upstream tag.
+    # Unreleased previews must be able to discover the first PXL alpha.
+    if(Launcher_GIT_TAG MATCHES "^v?[0-9]+[.][0-9]+[.][0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?([+][A-Za-z0-9.-]+)?$")
+        set(Launcher_RELEASE_VERSION "${Launcher_GIT_TAG}")
+    else()
+        set(Launcher_RELEASE_VERSION "0.0.0-dev")
+    endif()
+endif()
+message(STATUS "PXL release comparison version: ${Launcher_RELEASE_VERSION}")
 get_git_head_revision(Launcher_GIT_REFSPEC Launcher_GIT_COMMIT)
 
 message(STATUS "Git commit: ${Launcher_GIT_COMMIT}")

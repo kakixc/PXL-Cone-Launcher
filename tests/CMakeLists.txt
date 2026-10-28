@@ -1,5 +1,8 @@
 project(tests)
 
+ecm_add_test(LauncherUpdates_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME LauncherUpdates)
+
 ecm_add_test(WorkspaceTransfer_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME WorkspaceTransfer)
 

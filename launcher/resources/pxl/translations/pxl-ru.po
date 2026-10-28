@@ -2589,3 +2589,79 @@ msgstr "Установлено"
 msgctxt "Pxl::InstalledContentView"
 msgid "Check for updates"
 msgstr "Проверить обновления"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Launcher updates"
+msgstr "Обновления лаунчера"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Close"
+msgstr "Закрыть"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Check automatically"
+msgstr "Проверять автоматически"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Check for updates"
+msgstr "Проверить обновления"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Open release downloads"
+msgstr "Открыть страницу загрузки"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Update available: %1 · Installed: %2"
+msgstr "Доступно обновление: %1 · Установлено: %2"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Checking for updates…"
+msgstr "Проверяем обновления…"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "You have the latest version: %1"
+msgstr "Установлена последняя версия: %1"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Release notes will appear here when a new version is available."
+msgstr "Здесь появится список изменений новой версии."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "The update check timed out. Try again later."
+msgstr "Время проверки обновлений истекло. Попробуйте позже."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "The release information could not be read."
+msgstr "Не удалось прочитать информацию о релизах."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Update checks are unavailable in this build."
+msgstr "Проверка обновлений недоступна в этой сборке."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "The release information is too large."
+msgstr "Информация о релизах превышает допустимый размер."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "No published releases are available yet."
+msgstr "Опубликованных релизов пока нет."
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Could not check for updates. Check your connection and try again."
+msgstr "Не удалось проверить обновления. Проверьте подключение и повторите попытку."
+
+msgctxt "WorkspacePage"
+msgid "Update available"
+msgstr "Доступно обновление"
+
+msgctxt "WorkspacePage"
+msgid "Updates"
+msgstr "Обновления"
+
+msgctxt "WorkspacePage"
+msgid "Check for updates"
+msgstr "Проверить обновления"
+
+msgctxt "ReleaseUpdateChecker"
+msgid "Development preview"
+msgstr "Тестовая сборка"

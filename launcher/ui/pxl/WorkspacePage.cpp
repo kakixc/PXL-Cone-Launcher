@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #include "WorkspacePage.h"
+#include "LauncherUpdateDialog.h"
 #include "Animations.h"
 #include "TaskHistory.h"
 #include "TaskActivity.h"
@@ -493,6 +494,19 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     headerLayout->addWidget(m_heading);
     headerLayout->addStretch();
     m_heading->setTextFormat(Qt::PlainText);
+    m_updateButton = new QPushButton(tr("Update available"), header);
+    m_updateButton->setObjectName("workspaceUpdateAvailable");
+    m_updateButton->setIcon(QIcon(":/pxl/icons/arrows-clockwise.svg"));
+    m_updateButton->setCursor(Qt::PointingHandCursor);
+    m_updateButton->setStyleSheet("QPushButton { background:rgba(35,39,45,150); color:#c2cad4; border:1px solid rgba(210,220,230,30); border-radius:17px; padding:8px 14px; font-weight:600; } QPushButton[available=true] { background:rgba(242,163,101,30); color:#f2b17d; border-color:rgba(242,163,101,90); } QPushButton:hover { background:rgba(242,163,101,65); }");
+    m_updateButton->hide();
+    headerLayout->addWidget(m_updateButton);
+    connect(m_updateButton,&QPushButton::clicked,this,&WorkspacePage::showLauncherUpdates);
+    if (auto* app = APPLICATION_DYN) {
+        connect(app,&Application::updaterReady,this,&WorkspacePage::bindUpdater);
+        connect(app,&Application::updateDetailsRequested,this,&WorkspacePage::showLauncherUpdates);
+        bindUpdater(app->updater());
+    }
     m_profileButton = new QPushButton(header);
     m_profileButton->setObjectName("workspaceProfile");
     m_profileButton->setFixedHeight(42);
@@ -1142,6 +1156,11 @@ void WorkspacePage::changeEvent(QEvent* event)
 
 void WorkspacePage::retranslateUi()
 {
+    if (auto* checker = qobject_cast<ReleaseUpdateChecker*>(m_updater.data())) {
+        m_updateButton->setText(checker->release().isAvailable() ? tr("Update available") : tr("Updates"));
+        m_updateButton->setMinimumWidth(QFontMetrics(m_updateButton->font()).horizontalAdvance(m_updateButton->text()) + 64);
+        m_updateButton->setToolTip(checker->release().isAvailable() ? checker->release().tag : tr("Check for updates"));
+    }
     const char* labels[] = {"Home", "Library", "Screenshots", "Import", "Downloads & tasks", "Cat", "Advanced", "Accounts", "Settings"};
     for (int i = 0; i < m_navigationButtons.size(); ++i) {
         auto* button = m_navigationButtons[i];
@@ -1267,4 +1286,34 @@ void WorkspacePage::setAccountSummary(const QString& name, const QPixmap& face)
         m_profileButton->setIcon(QIcon(avatar));
     }
     if (m_showHome && m_contentStack->currentWidget()==m_scroll) m_heading->setText(homeTitle());
+}
+
+void WorkspacePage::bindUpdater(ExternalUpdater* updater)
+{
+    if (m_updater) disconnect(m_updater,nullptr,this,nullptr);
+    m_updater = updater;
+    auto* checker = qobject_cast<ReleaseUpdateChecker*>(updater);
+    m_updateButton->setVisible(checker != nullptr);
+    if (!checker) return;
+    auto refreshUpdate = [this,checker] {
+        const bool available = checker->release().isAvailable();
+        m_updateButton->setText(available ? tr("Update available") : tr("Updates"));
+        m_updateButton->setProperty("available",available);
+        m_updateButton->style()->unpolish(m_updateButton);
+        m_updateButton->style()->polish(m_updateButton);
+        m_updateButton->setMinimumWidth(QFontMetrics(m_updateButton->font()).horizontalAdvance(m_updateButton->text()) + 64);
+        m_updateButton->setToolTip(available ? checker->release().tag : tr("Check for updates"));
+    };
+    connect(checker,&ReleaseUpdateChecker::stateChanged,this,refreshUpdate);
+    refreshUpdate();
+    connect(checker,&QObject::destroyed,this,[this] { m_updateButton->hide(); });
+}
+
+void WorkspacePage::showLauncherUpdates()
+{
+    auto* checker = qobject_cast<ReleaseUpdateChecker*>(m_updater.data());
+    if (!checker || findChild<QDialog*>("pxlLauncherUpdates")) return;
+    if (!checker->checking() && !checker->release().isAvailable()) checker->checkForUpdates();
+    Pxl::LauncherUpdateDialog dialog(checker);
+    Pxl::DialogOverlay::run(&dialog,this);
 }
