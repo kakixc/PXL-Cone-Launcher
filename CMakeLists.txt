@@ -175,9 +175,9 @@ endif()
 ##################################### Set Application options #####################################
 
 ######## Set URLs ########
-set(Launcher_NEWS_RSS_URL "https://pineconemc.ru/feed/feed.xml" CACHE STRING "URL to fetch Prism Launcher's news RSS feed from.")
-set(Launcher_NEWS_OPEN_URL "https://discord.gg/5kcBCvnbTp" CACHE STRING "URL that gets opened when the user clicks 'More News'")
-set(Launcher_WIKI_URL "https://prismlauncher.org/wiki/" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
+set(Launcher_NEWS_RSS_URL "https://github.com/kakixc/PXL-Cone-Launcher/releases.atom" CACHE STRING "URL to fetch PXL Cone release news from.")
+set(Launcher_NEWS_OPEN_URL "https://github.com/kakixc/PXL-Cone-Launcher/releases" CACHE STRING "URL that gets opened when the user clicks 'More News'")
+set(Launcher_WIKI_URL "https://github.com/kakixc/PXL-Cone-Launcher#readme" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
 set(Launcher_HELP_URL "https://prismlauncher.org/wiki/help-pages/%1" CACHE STRING "URL (with arg %1 to be substituted with page-id) that gets opened when the user requests help in a dialog window")
 set(Launcher_LOGIN_CALLBACK_URL "https://pineconemc.ru/successful-login" CACHE STRING "URL that gets opened when the user successfully logins.")
 set(Launcher_LEGACY_FMLLIBS_BASE_URL "https://files.pineconemc.ru/fmllibs/" CACHE STRING "URL for legacy (<=1.5.2) FML Libraries.")
@@ -209,17 +209,17 @@ set(Launcher_META_URL "https://meta.pineconemc.ru/v1/" CACHE STRING "URL to fetc
 set(Launcher_IMGUR_CLIENT_ID "5b97b0713fba4a3" CACHE STRING "Client ID you can get from Imgur when you register an application")
 
 # Bug tracker URL
-set(Launcher_BUG_TRACKER_URL "https://github.com/ElyPrismLauncher/Launcher/issues" CACHE STRING "URL for the bug tracker.")
+set(Launcher_BUG_TRACKER_URL "https://github.com/kakixc/PXL-Cone-Launcher/issues" CACHE STRING "URL for the bug tracker.")
 
 # Translations Platform URL
-set(Launcher_TRANSLATIONS_URL "https://hosted.weblate.org/projects/prismlauncher/launcher/" CACHE STRING "URL for the translations platform.")
+set(Launcher_TRANSLATIONS_URL "https://github.com/kakixc/PXL-Cone-Launcher/tree/develop/launcher/resources/pxl/translations" CACHE STRING "URL for the translations platform.")
 set(Launcher_TRANSLATION_FILES_URL "https://i18n.prismlauncher.org/" CACHE STRING "URL for the translations files.")
 
 # Matrix Space
 #set(Launcher_MATRIX_URL "https://prismlauncher.org/matrix" CACHE STRING "URL to the Matrix Space")
 
 # Discord URL
-set(Launcher_DISCORD_URL "https://discord.gg/5kcBCvnbTp" CACHE STRING "URL for the Discord guild.")
+set(Launcher_DISCORD_URL "" CACHE STRING "URL for the Discord guild.")
 
 # Subreddit URL
 #set(Launcher_SUBREDDIT_URL "https://prismlauncher.org/reddit" CACHE STRING "URL for the subreddit.")
@@ -469,7 +469,7 @@ elseif(UNIX)
 
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${Launcher_Desktop} DESTINATION ${KDE_INSTALL_APPDIR})
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${Launcher_MetaInfo} DESTINATION ${KDE_INSTALL_METAINFODIR})
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${Launcher_SVG} DESTINATION "${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${Launcher_SVG} DESTINATION "${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps" RENAME "${Launcher_AppID}.svg")
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${Launcher_PNG_256} DESTINATION "${KDE_INSTALL_ICONDIR}/hicolor/256x256/apps" RENAME "${Launcher_AppID}.png")
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${Launcher_MIMEInfo} DESTINATION ${KDE_INSTALL_MIMEDIR})
 

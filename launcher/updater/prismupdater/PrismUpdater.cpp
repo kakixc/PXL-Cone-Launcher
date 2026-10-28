@@ -83,7 +83,7 @@ PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, ar
 
     // Command line parsing
     QCommandLineParser parser;
-    parser.setApplicationDescription(QObject::tr("An auto-updater for Prism Launcher"));
+    parser.setApplicationDescription(QObject::tr("An auto-updater for PXL Cone"));
 
     parser.addOptions(
         { { { "d", "dir" }, tr("Use a custom path as application root (use '.' for current directory)."), tr("directory") },
@@ -866,7 +866,7 @@ void PrismUpdaterApp::performInstall(QFileInfo file)
                "\n"
                "This likely means that a previous update attempt failed. Please ensure your installation is in working order before "
                "proceeding.\n"
-               "Check the Prism Launcher updater log at: \n"
+               "Check the PXL Cone updater log at: \n"
                "%7\n"
                "for details on the last update attempt.\n"
                "\n"

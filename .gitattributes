@@ -1,2 +1,4 @@
 *.pem -crlf
 **/testdata/** -text -diff
+
+program_info/genicons.sh text eol=lf

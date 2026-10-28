@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(PxlBrandingRenderer LANGUAGES CXX)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Svg)
+add_executable(pxl-branding-render render.cpp)
+target_compile_features(pxl-branding-render PRIVATE cxx_std_17)
+target_link_libraries(pxl-branding-render PRIVATE Qt6::Core Qt6::Gui Qt6::Svg)

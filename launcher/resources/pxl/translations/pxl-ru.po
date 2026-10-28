@@ -2721,3 +2721,11 @@ msgstr "Настройки не найдены"
 msgctxt "PageContainer"
 msgid "Try another word or clear the search."
 msgstr "Попробуйте другое слово или очистите поиск."
+
+msgctxt "JavaWizardPage"
+msgid "Please select how much memory to allocate to instances and if PXL Cone should manage Java automatically or manually."
+msgstr "Выберите объём памяти для сборок и способ управления Java в PXL Cone: автоматически или вручную."
+
+msgctxt "QObject"
+msgid "An auto-updater for PXL Cone"
+msgstr "Средство обновления PXL Cone"

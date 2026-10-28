@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>@Launcher_AppID@</id>
+  <name>@Launcher_DisplayName@</name>
+  <summary>Custom Minecraft Launcher to easily manage multiple Minecraft installations at once</summary>
+  <developer id="io.github.kakixc">
+    <name>PXL Cone Contributors</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description>
+    <p>PXL Cone is a Minecraft launcher based on PineconeMC and Prism Launcher, with a native PXL interface.</p>
+    <p>Organize instances, launch Minecraft, install mods and resource packs, manage screenshots and transfer your setups between computers.</p>
+    <p>Advanced Minecraft, Java and instance controls remain available alongside the everyday interface.</p>
+  </description>
+  <releases>
+    <release version="@Launcher_VERSION_NAME@" date="@Launcher_BUILD_TIMESTAMP@"></release>
+  </releases>
+  <url type="homepage">https://github.com/kakixc/PXL-Cone-Launcher</url>
+  <url type="bugtracker">https://github.com/kakixc/PXL-Cone-Launcher/issues</url>
+  <url type="vcs-browser">https://github.com/kakixc/PXL-Cone-Launcher</url>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">moderate</content_attribute>
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+  <launchable type="desktop-id">@Launcher_AppID@.desktop</launchable>
+</component>
