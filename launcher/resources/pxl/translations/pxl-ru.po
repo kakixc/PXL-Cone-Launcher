@@ -2529,3 +2529,55 @@ msgstr "Не удалось скопировать изображение"
 msgctxt "Pxl::ScreenshotGallery"
 msgid "The screenshot could not be read. The clipboard was not changed."
 msgstr "Не удалось прочитать скриншот. Буфер обмена не изменён."
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Runtime arguments"
+msgstr "Параметры запуска Java"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Keep the default profile unless a modpack requires specific Java options."
+msgstr "Оставьте стандартный профиль, если сборка не требует особых параметров Java."
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Use Mojang's recommended arguments"
+msgstr "Использовать рекомендованные параметры Mojang"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Garbage collector"
+msgstr "Сборщик памяти"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Arguments selected by the launcher"
+msgstr "Параметры, выбранные лаунчером"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Custom JVM arguments"
+msgstr "Собственные параметры JVM"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Applied in addition to the launcher arguments. Leave empty to use the selected profile."
+msgstr "Дополняют параметры лаунчера. Оставьте поле пустым, чтобы использовать выбранный профиль."
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Compatibility and legacy Java"
+msgstr "Совместимость и старые версии Java"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Disabling compatibility checks can prevent Minecraft from starting. PermGen is only used by old Java runtimes."
+msgstr "Отключение проверки совместимости может помешать запуску Minecraft. PermGen используется только старыми версиями Java."
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Skip Java compatibility checks"
+msgstr "Пропускать проверку совместимости Java"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Skip the Java setup prompt"
+msgstr "Не предлагать настройку Java при запуске"
+
+msgctxt "Pxl::JavaAdvancedSections"
+msgid "Legacy PermGen memory"
+msgstr "Память PermGen для старой Java"
+
+msgctxt "InstanceWindow"
+msgid "Advanced: profilers"
+msgstr "Для разработчиков: профилировщики"

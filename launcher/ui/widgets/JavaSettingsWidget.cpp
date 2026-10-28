@@ -56,6 +56,7 @@
 
 #include "ui_JavaSettingsWidget.h"
 #include "ui/pxl/SettingsCards.h"
+#include "ui/pxl/JavaAdvancedSections.h"
 
 JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
     : QWidget(parent), m_instance(instance), m_ui(new Ui::JavaSettingsWidget)
@@ -113,6 +114,7 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
     connect(m_ui->optimizedArgsCheckBox, &QCheckBox::toggled, this, &JavaSettingsWidget::updateLauncherArgs);
     connect(m_ui->noPresetRadioButton, &QRadioButton::toggled, this, &JavaSettingsWidget::updateLauncherArgs);
     connect(m_ui->g1gcPresetRadioButton, &QRadioButton::toggled, this, &JavaSettingsWidget::updateLauncherArgs);
+    connect(m_ui->shenandoahPresetRadioButton, &QRadioButton::toggled, this, &JavaSettingsWidget::updateLauncherArgs);
     connect(m_ui->zgcPresetRadioButton, &QRadioButton::toggled, this, &JavaSettingsWidget::updateLauncherArgs);
 
     loadSettings();
@@ -161,14 +163,11 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
         advancedButton->setCheckable(true);
         advancedButton->setProperty("pxlDisclosure", true);
         m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);
-        auto* advanced = new QWidget(this);
+        auto* advanced = Pxl::javaAdvancedSections({m_ui->optimizedArgsCheckBox, m_ui->skipCompatibilityCheckBox,
+            m_ui->skipWizardCheckBox, {m_ui->noPresetRadioButton, m_ui->g1gcPresetRadioButton,
+            m_ui->shenandoahPresetRadioButton, m_ui->zgcPresetRadioButton}, m_ui->launcherArgsTextBox,
+            m_ui->userArgsTextBox, m_ui->argsNoticeLabel, m_ui->permGenSpinBox}, this);
         Pxl::markAdvancedSetting(advanced, advancedButton);
-        auto* advancedLayout = new QVBoxLayout(advanced);
-        advancedLayout->setContentsMargins(0, 0, 0, 0);
-        for (auto* group : {m_ui->javaInstallationGroupBox, m_ui->memoryGroupBox, m_ui->javaArgumentsGroupBox}) {
-            advancedLayout->addWidget(group);
-            group->show();
-        }
         for (auto* label : {m_ui->label_4, m_ui->labelMinMem, m_ui->labelMaxMem, m_ui->label, m_ui->label_2}) label->hide();
         advanced->hide();
         m_ui->verticalLayout->addWidget(advanced);
