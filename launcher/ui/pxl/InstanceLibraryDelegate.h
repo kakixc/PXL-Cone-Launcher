@@ -2,6 +2,7 @@
 #pragma once
 #include "Icons.h"
 #include "InstanceCovers.h"
+#include "InstanceDescription.h"
 #include <BaseInstance.h>
 #include <InstanceList.h>
 #include <QApplication>
@@ -95,8 +96,15 @@ public:
             icon.paint(painter,QRect(row.left()+14,row.center().y()-22,44,44));
             const bool wide = row.width() >= 760;
             const int identityWidth = qMax(40,row.width() - (wide ? 390 : 224));
-            text(QRect(row.left()+72,row.top()+11,identityWidth,24),index.data().toString(),15,true);
-            text(QRect(row.left()+72,row.top()+38,identityWidth,20),metadata,12,false,true);
+            const auto description = instance ? briefInstanceDescription(instance->description()) : QString();
+            if (!description.isEmpty() && identityWidth >= 220) {
+                text(QRect(row.left()+72,row.top()+5,identityWidth,22),index.data().toString(),15,true);
+                text(QRect(row.left()+72,row.top()+27,identityWidth,18),description,12,false,true);
+                text(QRect(row.left()+72,row.top()+46,identityWidth,18),metadata,11,false,true);
+            } else {
+                text(QRect(row.left()+72,row.top()+11,identityWidth,24),index.data().toString(),15,true);
+                text(QRect(row.left()+72,row.top()+38,identityWidth,20),metadata,12,false,true);
+            }
             if (wide) {
                 text(QRect(row.right()-302,row.top()+12,150,22),state,12,false,true);
                 text(QRect(row.right()-302,row.top()+38,150,20),duration,12,false,true);

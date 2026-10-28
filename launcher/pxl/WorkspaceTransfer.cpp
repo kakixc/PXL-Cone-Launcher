@@ -24,7 +24,7 @@ constexpr qint64 ManifestLimit = 16 * 1024 * 1024;
 constexpr qint64 FileLimit = 32LL * 1024 * 1024 * 1024;
 constexpr qint64 TotalLimit = 256LL * 1024 * 1024 * 1024;
 constexpr int EntryLimit = 500000;
-const QStringList PortableSettings = { "notes", "OverrideMemory", "MinMemAlloc", "MaxMemAlloc", "PermGen",
+const QStringList PortableSettings = { "notes", "PXLDescription", "OverrideMemory", "MinMemAlloc", "MaxMemAlloc", "PermGen",
                                        "OverrideWindow", "MinecraftWinWidth", "MinecraftWinHeight", "LaunchMaximized",
                                        "lastLaunchTime", "lastTimePlayed", "totalTimePlayed", "ManagedPack", "ManagedPackType",
                                        "ManagedPackID", "ManagedPackName", "ManagedPackVersionID", "ManagedPackVersionName", "ManagedPackURL" };

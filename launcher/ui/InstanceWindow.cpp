@@ -1,3 +1,4 @@
+#include "ui/pxl/InstanceDescription.h"
 // SPDX-License-Identifier: GPL-3.0-only
 /*
  *  Prism Launcher - Minecraft Launcher
@@ -101,6 +102,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         auto* layout = new QVBoxLayout(body);
         layout->setContentsMargins(24, 16, 24, 24);
         layout->setSpacing(16);
+        layout->addWidget(Pxl::instanceDescriptionCard(m_instance, body));
         auto* tabs = new QHBoxLayout;
         if (auto* versions = dynamic_cast<VersionPage*>(m_container->getPage("version"))) versions->usePxlPresentation();
         if (auto* worlds = dynamic_cast<WorldListPage*>(m_container->getPage("worlds"))) worlds->usePxlPresentation();

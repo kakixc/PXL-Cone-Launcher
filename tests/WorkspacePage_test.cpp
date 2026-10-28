@@ -1,3 +1,4 @@
+#include <ui/pxl/InstanceDescription.h>
 // SPDX-License-Identifier: GPL-3.0-only
 
 #include <QSignalSpy>
@@ -1392,6 +1393,7 @@ class WorkspacePageTest : public QObject {
         }
         InstanceList instances(globalSettings.get(), root);
         instances.loadList();
+        instances.getInstanceById("pack1")->setDescription("Survival with friends\nBuilding our first base together");
         instances.setInstanceGroup("pack0", "Survival");
         WorkspacePage page(&instances, nullptr, globalSettings.get());
         page.resize(1080, 820);
@@ -1509,6 +1511,57 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(QImage(source).pixelColor(0,0),QColor("#416d72"));
     }
 
+    void descriptionsPersistAndKeepEmptyPresentation()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        const auto root = temporary.filePath("pack");
+        QVERIFY(QDir().mkpath(root));
+        const auto config = root + "/instance.cfg";
+        const auto description = QString::fromUtf8("Играем с другом с модами\nВторая строка <текст> & детали");
+        {
+            MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(config), root);
+            QCOMPARE(instance.description(), QString());
+            QWidget surface; surface.resize(900, 400); surface.show();
+            auto* card = Pxl::instanceDescriptionCard(&instance, &surface);
+            QVERIFY(card->isHidden());
+            QSignalSpy changes(&instance, &BaseInstance::propertiesChanged);
+            Pxl::InstanceDescriptionEditor editor(&instance, &surface);
+            editor.setPlainText(description);
+            QCOMPARE(instance.description(), QString()); // Editing alone does not save.
+            editor.saveDescription();
+            QCOMPARE(instance.description(), description);
+            editor.clear();
+            editor.loadDescription();
+            QCOMPARE(editor.toPlainText(), description);
+            QCOMPARE(changes.count(), 1);
+            instance.setDescription(description);
+            QCOMPARE(changes.count(), 1);
+            QVERIFY(!card->isHidden());
+            QCOMPARE(card->findChild<QTextBrowser*>("instanceDescriptionText")->toPlainText(), description);
+            instance.setName("Renamed pack");
+            QCOMPARE(instance.description(), description);
+        }
+        {
+            MinecraftInstance reloaded(global.get(), std::make_unique<INISettingsObject>(config), root);
+            QCOMPARE(reloaded.description(), description);
+            QCOMPARE(reloaded.name(), QString("Renamed pack"));
+            QVERIFY(QDir().mkpath(temporary.filePath("copy")));
+            const auto copiedConfig = temporary.filePath("copy/instance.cfg");
+            QVERIFY(QFile::copy(config, copiedConfig));
+            MinecraftInstance copy(global.get(), std::make_unique<INISettingsObject>(copiedConfig), temporary.filePath("copy"));
+            QCOMPARE(copy.description(), description);
+            Pxl::InstanceDescriptionEditor editor(&copy, nullptr);
+            editor.clear();
+            editor.saveDescription();
+            QCOMPARE(reloaded.description(), description);
+        }
+        MinecraftInstance cleared(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("copy/instance.cfg")), temporary.filePath("copy"));
+        QCOMPARE(cleared.description(), QString());
+        QCOMPARE(Pxl::briefInstanceDescription(description), QString::fromUtf8("Играем с другом с модами Вторая строка <текст> & детали"));
+        QVERIFY(Pxl::briefInstanceDescription(QString(500, 'x')).size() <= 240);
+    }
+
     void populatedLibraryFiltersSelectionAndLaunches()
     {
         QTemporaryDir temporary;
@@ -1533,6 +1586,7 @@ class WorkspacePageTest : public QObject {
             instance->getPackProfile()->setComponentVersion("net.minecraft", "1.21.1");
             if (i != 1) instance->getPackProfile()->setComponentVersion("net.fabricmc.fabric-loader", "0.16.14");
         }
+        instances.getInstanceById("pack2")->setDescription("Performance profile\nwith friends <literal>");
         instances.setInstanceGroup("pack0", "Survival");
         WorkspacePage page(&instances);
         page.resize(1080, 820);
@@ -1566,6 +1620,14 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(activated.takeFirst().first().toString(), QString("pack0"));
         page.findChild<QPushButton*>("workspaceLibrary")->click();
         QCOMPARE(cards->model()->rowCount(), 5);
+        for (int row = 0; row < cards->model()->rowCount(); ++row) {
+            const auto index = cards->model()->index(row, 0);
+            if (index.data(InstanceList::InstanceIDRole).toString() == "pack2") {
+                QVERIFY(index.data(Qt::ToolTipRole).toString().contains("Performance profile with friends &lt;literal&gt;"));
+                instances.getInstanceById("pack2")->setDescription({});
+                QCOMPARE(index.data(Qt::ToolTipRole).toString(), instances.getInstanceById("pack2")->instanceRoot());
+            }
+        }
         search->setText("Vanilla");
         QCOMPARE(cards->model()->rowCount(), 1);
         QVERIFY(!play->isEnabled());

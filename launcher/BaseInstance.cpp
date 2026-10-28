@@ -81,6 +81,7 @@ BaseInstance::BaseInstance(SettingsObject* globalSettings, std::unique_ptr<Setti
     m_settings->registerSetting("name", "Unnamed Instance");
     m_settings->registerSetting("iconKey", "default");
     m_settings->registerSetting("notes", "");
+    m_settings->registerSetting("PXLDescription", "");
 
     m_settings->registerSetting("lastLaunchTime", 0);
     m_settings->registerSetting("totalTimePlayed", 0);
@@ -398,6 +399,18 @@ void BaseInstance::setLastLaunch(qint64 val)
 {
     // FIXME: if no change, do not set. setting involves saving a file.
     m_settings->set("lastLaunchTime", val);
+    emit propertiesChanged(this);
+}
+
+QString BaseInstance::description() const
+{
+    return m_settings->get("PXLDescription").toString();
+}
+
+void BaseInstance::setDescription(const QString& value)
+{
+    if (description() == value) return;
+    m_settings->set("PXLDescription", value);
     emit propertiesChanged(this);
 }
 

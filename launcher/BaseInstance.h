@@ -157,6 +157,9 @@ class BaseInstance : public QObject {
     QString iconKey() const;
     void setIconKey(QString val);
 
+    QString description() const;
+    void setDescription(const QString& value);
+
     QString notes() const;
     void setNotes(QString val);
 

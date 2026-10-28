@@ -40,6 +40,8 @@
 #include "JavaSettingsWidget.h"
 #include "minecraft/MinecraftInstance.h"
 
+namespace Pxl { class InstanceDescriptionEditor; }
+
 namespace Ui {
 class MinecraftSettingsWidget;
 }
@@ -65,4 +67,5 @@ class MinecraftSettingsWidget : public QWidget {
     Ui::MinecraftSettingsWidget* m_ui;
     JavaSettingsWidget* m_javaSettings = nullptr;
     bool m_quickPlaySingleplayer = false;
+    Pxl::InstanceDescriptionEditor* m_description = nullptr;
 };

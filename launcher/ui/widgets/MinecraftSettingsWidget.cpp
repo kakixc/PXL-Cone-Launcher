@@ -41,6 +41,8 @@
 #include "ui_MinecraftSettingsWidget.h"
 
 #include <QFileDialog>
+#include <QPlainTextEdit>
+#include "ui/pxl/InstanceDescription.h"
 #include "Application.h"
 #include "BuildConfig.h"
 #include "Json.h"
@@ -146,6 +148,18 @@ MinecraftSettingsWidget::MinecraftSettingsWidget(MinecraftInstance* instance, QW
     connect(m_ui->useNativeOpenALCheck, &QAbstractButton::toggled, m_ui->lineEditOpenALPath, &QWidget::setEnabled);
     connect(m_ui->useNativeGLFWCheck, &QAbstractButton::toggled, m_ui->lineEditGLFWPath, &QWidget::setEnabled);
 
+    if (m_instance) {
+        auto* overview = new QWidget(m_ui->settingsTabs);
+        auto* layout = new QVBoxLayout(overview);
+        layout->setContentsMargins(0, 8, 0, 0);
+        auto* card = Pxl::settingsCard(overview, tr("Description"), tr("Describe what you use this instance for. Only you decide what to write."));
+        m_description = new Pxl::InstanceDescriptionEditor(m_instance, card);
+        static_cast<QVBoxLayout*>(card->layout())->addWidget(m_description);
+        layout->addWidget(card);
+        layout->addStretch();
+        m_ui->settingsTabs->insertTab(0, overview, tr("Overview"));
+        m_ui->settingsTabs->setCurrentWidget(overview);
+    }
     loadSettings();
     if (!m_instance) {
         // General uses new PXL controls; native/commands/environment keep their existing handlers.
@@ -170,6 +184,7 @@ MinecraftSettingsWidget::~MinecraftSettingsWidget()
 
 void MinecraftSettingsWidget::loadSettings()
 {
+    if (m_description) m_description->loadDescription();
     SettingsObject* settings;
 
     if (m_instance != nullptr)
@@ -328,6 +343,7 @@ void MinecraftSettingsWidget::loadSettings()
 
 void MinecraftSettingsWidget::saveSettings()
 {
+    if (m_description) m_description->saveDescription();
     SettingsObject* settings;
 
     if (m_instance != nullptr)

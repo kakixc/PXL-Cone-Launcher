@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #include "WorkspacePage.h"
+#include "InstanceDescription.h"
 #include "LauncherUpdateDialog.h"
 #include "Animations.h"
 #include "TaskHistory.h"
@@ -271,6 +272,11 @@ class WorkspaceInstanceModel final : public QSortFilterProxyModel {
                 return app->icons()->getIcon(key);
             const QIcon fallback(":/icons/multimc/scalable/instances/" + key + ".svg");
             return fallback.isNull() ? QIcon(":/icons/breeze_dark/scalable/minecraft.svg") : fallback;
+        }
+        if (role == Qt::ToolTipRole) {
+            auto* instance = static_cast<BaseInstance*>(QSortFilterProxyModel::data(index, InstanceList::InstancePointerRole).value<void*>());
+            if (instance && !instance->description().trimmed().isEmpty())
+                return QStringLiteral("<qt>%1</qt>").arg(Pxl::briefInstanceDescription(instance->description()).toHtmlEscaped());
         }
         if (role == kWorkspaceMetadataRole)
             return m_metadata.value(QSortFilterProxyModel::data(index, InstanceList::InstanceIDRole).toString());

@@ -2698,6 +2698,22 @@ msgctxt "Pxl::NumberField"
 msgid "Increase"
 msgstr "Увеличить"
 
+msgctxt "MinecraftSettingsWidget"
+msgid "Description"
+msgstr "Описание"
+
+msgctxt "MinecraftSettingsWidget"
+msgid "Describe what you use this instance for. Only you decide what to write."
+msgstr "Расскажите, для чего нужна эта сборка."
+
+msgctxt "MinecraftSettingsWidget"
+msgid "For example: Survival with friends and mods"
+msgstr "Например: выживание с друзьями и модами"
+
+msgctxt "MinecraftSettingsWidget"
+msgid "Overview"
+msgstr "О сборке"
+
 msgctxt "PageContainer"
 msgid "No matching settings"
 msgstr "Настройки не найдены"

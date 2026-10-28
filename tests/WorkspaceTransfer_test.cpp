@@ -32,6 +32,11 @@ class WorkspaceTransferTest : public QObject {
         put(dir.filePath(".minecraft/screenshots/test.png"), "screenshot");
         put(dir.filePath(".minecraft/accounts.json"), "secret");
         put(dir.filePath(".minecraft/logs/latest.log"), "private log");
+        INIFile metadata;
+        if (metadata.loadFile(dir.filePath("instance.cfg"))) {
+            metadata.set("PXLDescription", QString::fromUtf8("Выживание с другом\nМоды и приключения"));
+            metadata.saveFile(dir.filePath("instance.cfg"));
+        }
         Pxl::Workspace workspace;
         workspace.root = root;
         workspace.name = "Survival";
@@ -75,6 +80,7 @@ class WorkspaceTransferTest : public QObject {
         QVERIFY(!QFileInfo::exists(destination + "/minecraft/screenshots/test.png"));
         INIFile cfg;
         QVERIFY(cfg.loadFile(destination + "/instance.cfg"));
+        QCOMPARE(cfg.get("PXLDescription", QString()).toString(), QString::fromUtf8("Выживание с другом\nМоды и приключения"));
         QVERIFY(!cfg.contains("PreLaunchCommand"));
         QVERIFY(!cfg.contains("JavaPath"));
         QCOMPARE(cfg.get("MaxMemAlloc", 0).toInt(), 4096);
@@ -98,6 +104,9 @@ class WorkspaceTransferTest : public QObject {
             Pxl::Workspace restored;
             QCOMPARE(Pxl::prepareArchiveInstance(path, i, destination, restored), QString());
             QCOMPARE(Pxl::verifyInstance(restored, destination), QString());
+            INIFile metadata;
+            QVERIFY(metadata.loadFile(destination + "/instance.cfg"));
+            QCOMPARE(metadata.get("PXLDescription", QString()).toString(), QString::fromUtf8("Выживание с другом\nМоды и приключения"));
             QVERIFY(!QFileInfo::exists(destination + "/minecraft/saves"));
             QVERIFY(QFileInfo::exists(destination + "/minecraft/screenshots/test.png"));
         }
@@ -171,6 +180,9 @@ class WorkspaceTransferTest : public QObject {
         const auto destination = temp.path() + "/imported";
         QVERIFY(QDir().mkpath(destination));
         QCOMPARE(Pxl::copyLauncherInstance(found[0], destination), QString());
+        INIFile copiedMetadata;
+        QVERIFY(copiedMetadata.loadFile(destination + "/instance.cfg"));
+        QCOMPARE(copiedMetadata.get("PXLDescription", QString()).toString(), QString::fromUtf8("Выживание с другом\nМоды и приключения"));
         QCOMPARE(Pxl::fileHash(destination + "/minecraft/saves/World/level.dat"), original);
         QCOMPARE(Pxl::fileHash(workspace.root + "/.minecraft/saves/World/level.dat"), original);
         QVERIFY(!Pxl::copyLauncherInstance(found[0], workspace.root).isEmpty());
