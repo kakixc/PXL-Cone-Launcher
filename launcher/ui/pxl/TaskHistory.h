@@ -22,6 +22,7 @@ class TaskHistory final : public QObject {
         QString status;
         QString details;
         QString error;
+        QStringList warnings;
         QIcon icon;
         qint64 current = 0;
         qint64 total = 0;

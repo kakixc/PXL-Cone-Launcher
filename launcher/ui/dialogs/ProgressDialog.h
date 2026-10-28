@@ -38,6 +38,7 @@
 #include <QDialog>
 #include <QHash>
 #include <QUuid>
+#include <QPointer>
 #include <memory>
 
 #include "QObjectPtr.h"
@@ -68,6 +69,7 @@ class ProgressDialog : public QDialog {
     int execWithTask(std::unique_ptr<Task>& task);
 
     void setSkipButton(bool present, QString label = QString());
+    void setBackgroundable();
 
     Task* getTask();
 
@@ -94,7 +96,8 @@ class ProgressDialog : public QDialog {
    private:
     Ui::ProgressDialog* ui;
 
-    Task* m_task = nullptr;
+    QPointer<Task> m_task;
+    bool m_backgroundable = false;
     QPushButton* m_detailsButton = nullptr;
     QLabel* m_percentage = nullptr;
     bool m_showDetails = false;

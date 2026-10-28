@@ -25,17 +25,23 @@ public:
         button->setIcon(QIcon(":/pxl/icons/download-simple.svg"));
         button->setCursor(Qt::PointingHandCursor);
         layout->addWidget(button);
-        auto* title = new QLabel(this);
+        auto* operation = new QWidget(this);
+        operation->setMaximumWidth(600);
+        auto* body = new QVBoxLayout(operation);
+        body->setContentsMargins(0, 0, 0, 0);
+        body->setSpacing(5);
+        layout->addWidget(operation, 1);
+        layout->addStretch();
+        auto* title = new QLabel(operation);
         title->setTextFormat(Qt::PlainText);
         title->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         title->setMinimumWidth(0);
-        layout->addWidget(title, 1);
-        auto* progress = new QProgressBar(this);
+        body->addWidget(title);
+        auto* progress = new QProgressBar(operation);
         progress->setObjectName("taskActivityProgress");
         progress->setTextVisible(false);
         progress->setFixedHeight(5);
-        progress->setMaximumWidth(300);
-        layout->addWidget(progress, 1);
+        body->addWidget(progress);
         connect(button, &QPushButton::clicked, history, [history, button] { history->showTasks(button); });
         auto refresh = [this, history, button, title, progress] {
             int count = 0;

@@ -2501,3 +2501,31 @@ msgstr "Непрозрачность"
 msgctxt "Pxl::AppearanceSections"
 msgid "Cat opacity"
 msgstr "Непрозрачность кота"
+
+msgctxt "ProgressDialog"
+msgid "Hide"
+msgstr "Скрыть"
+
+msgctxt "ProgressDialog"
+msgid "Continue in Downloads & tasks"
+msgstr "Загрузка продолжится в разделе «Загрузки и задачи»"
+
+msgctxt "InstanceWindow"
+msgid "Minecraft components"
+msgstr "Компоненты Minecraft"
+
+msgctxt "InstanceWindow"
+msgid "Launch options and help"
+msgstr "Варианты запуска и справка"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Copy image"
+msgstr "Скопировать изображение"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "Could not copy image"
+msgstr "Не удалось скопировать изображение"
+
+msgctxt "Pxl::ScreenshotGallery"
+msgid "The screenshot could not be read. The clipboard was not changed."
+msgstr "Не удалось прочитать скриншот. Буфер обмена не изменён."

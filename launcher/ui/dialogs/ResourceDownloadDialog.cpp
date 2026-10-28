@@ -175,20 +175,29 @@ void ResourceDownloadDialog::connectButtons()
     connect(helpButton, &QPushButton::clicked, m_container, &PageContainer::help);
 }
 
-void ResourceDownloadDialog::useEmbeddedPresentation()
+void ResourceDownloadDialog::useEmbeddedPresentation(bool hasOuterMargins)
 {
     m_embedded = true;
     setWindowFlags(Qt::Widget);
     setWindowModality(Qt::NonModal);
     setMinimumSize(0, 0);
     setStyleSheet("QDialog#ResourceDownloadDialog { background: transparent; }");
-    m_vertical_layout.setContentsMargins(0, 0, 0, 0);
+    // A standalone embedded catalog owns the same gutter as the workspace
+    // heading. ContentBrowser already supplies it around its category tabs.
+    m_vertical_layout.setContentsMargins(hasOuterMargins ? 0 : 28, 0, hasOuterMargins ? 0 : 28, hasOuterMargins ? 0 : 16);
     m_vertical_layout.setSpacing(12);
     for (auto* label : findChildren<QLabel*>(QString(), Qt::FindDirectChildrenOnly)) label->hide();
     m_buttons.button(QDialogButtonBox::Cancel)->hide();
     m_buttons.button(QDialogButtonBox::Help)->hide();
     m_buttons.button(QDialogButtonBox::Ok)->setAutoDefault(false);
     m_buttons.button(QDialogButtonBox::Ok)->setDefault(false);
+    // Reserve a real footer outside the provider's page grid. The results must
+    // never paint behind a transparent, grid-spanning confirmation button.
+    m_container->layout()->removeWidget(&m_buttons);
+    m_buttons.setParent(this);
+    m_buttons.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    m_buttons.setContentsMargins(0, 8, 0, 0);
+    m_vertical_layout.addWidget(&m_buttons);
     m_container->setPageHeadingVisible(false);
     m_container->hidePageList();
     if (auto* grid = qobject_cast<QGridLayout*>(m_container->layout())) {

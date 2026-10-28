@@ -55,7 +55,7 @@ class ResourceDownloadDialog : public QDialog, public BasePageProvider {
 
     void initializeContainer();
     void connectButtons();
-    void useEmbeddedPresentation();
+    void useEmbeddedPresentation(bool hasOuterMargins = false);
     bool hasProviders() const;
 
     //: String that gets appended to the download dialog title ("Download " + resourcesString())

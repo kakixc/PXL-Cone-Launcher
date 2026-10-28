@@ -222,15 +222,22 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
     });
     footer->addWidget(versions,1);
     auto* select = new QPushButton(&details);
+    select->setObjectName("projectPreviewSelect");
     select->setProperty("pxlPrimary",true);
     select->setAutoDefault(false);
     auto updateAction = [pageGuard,select] {
         if (!pageGuard) { select->setEnabled(false); return; }
         const auto current=pageGuard->getCurrentPack();
-        select->setEnabled(pageGuard->m_selectedVersionIndex>=0 && pageGuard->m_ui->resourceSelectionButton->isEnabled());
+        const int version = pageGuard->m_selectedVersionIndex;
+        select->setEnabled(current && current->versionsLoaded && version >= 0 && version < current->versions.size()
+                           && pageGuard->m_model->checkVersionFilters(current->versions[version]));
         select->setText(current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
+        select->ensurePolished();
+        select->setMinimumWidth(select->fontMetrics().horizontalAdvance(select->text()) + 40);
     };
-    connect(select,&QPushButton::clicked,&details,[pageGuard,updateAction] { if (pageGuard) pageGuard->m_ui->resourceSelectionButton->click(); updateAction(); });
+    // The overlay disables its underlying page. Calling a hidden source button
+    // would silently do nothing; invoke the same checked engine handler directly.
+    connect(select,&QPushButton::clicked,&details,[pageGuard,updateAction] { if (pageGuard) pageGuard->onResourceSelected(); updateAction(); });
     auto deferAction = [&details,updateAction] { QTimer::singleShot(0,&details,updateAction); };
     connect(m_ui->versionSelectionBox,qOverload<int>(&QComboBox::currentIndexChanged),&details,deferAction);
     connect(versions->model(),&QAbstractItemModel::rowsInserted,&details,deferAction);

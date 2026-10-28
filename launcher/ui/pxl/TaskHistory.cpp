@@ -119,7 +119,8 @@ void TaskHistory::watch(Task* task, const QString& title, const QIcon& icon)
         if (auto* entry = record(id)) {
             entry->state = state;
             entry->error = error;
-            if (!task->warnings().isEmpty()) entry->details += '\n' + task->warnings().join('\n');
+            entry->warnings = task->warnings();
+            if (!entry->warnings.isEmpty()) entry->details += '\n' + entry->warnings.join('\n');
             entry->finishedAt = QDateTime::currentDateTime();
         }
         notifyChanged();
@@ -212,10 +213,11 @@ void TaskHistory::showTasks(QWidget* parent)
     empty->setWordWrap(true);
     empty->setProperty("pxlFlowHint", true);
     layout->addWidget(empty);
-    auto refresh = [this, list, clear, empty, dialog, parent] {
+    auto refresh = [this, list, clear, empty, dialog, parent, header] {
         const int position = list->verticalScrollBar()->value();
         list->clear();
         bool completed = false;
+        int rowsHeight = 0;
         for (auto it = m_records.crbegin(); it != m_records.crend(); ++it) {
             const auto& entry = *it;
             completed |= !entry.active();
@@ -233,6 +235,8 @@ void TaskHistory::showTasks(QWidget* parent)
             title->setStyleSheet("font-weight: 700;");
             line->addWidget(title, 1);
             auto* details = new QPushButton(tr("Details"), row);
+            details->setObjectName("taskRecordDetails");
+            details->setVisible(entry.active() || entry.state == Task::State::Failed || !entry.warnings.isEmpty());
             details->setStyleSheet("font-size: 12px; padding: 5px;");
             details->setProperty("pxlQuiet", true);
             line->addWidget(details);
@@ -268,12 +272,13 @@ void TaskHistory::showTasks(QWidget* parent)
             }
             auto* item = new QListWidgetItem(list);
             item->setSizeHint(QSize(0, row->sizeHint().height()));
+            rowsHeight += row->sizeHint().height() + 2 * list->spacing();
             list->setItemWidget(item, row);
         }
         clear->setVisible(completed);
         empty->setVisible(m_records.isEmpty());
         list->setVisible(!m_records.isEmpty());
-        const int desiredHeight = m_records.isEmpty() ? 112 : qMin(520, 76 + int(m_records.size()) * 100);
+        const int desiredHeight = m_records.isEmpty() ? 112 : qMin(520, 24 + header->sizeHint().height() + 8 + rowsHeight + 4);
         const auto screenSize = parent ? parent->screen()->availableGeometry().size() - QSize(16, 16) : QSize(400, 520);
         dialog->resize(qMin(m_records.isEmpty() ? 336 : 400, screenSize.width()), qMin(desiredHeight, screenSize.height()));
         if (parent) {

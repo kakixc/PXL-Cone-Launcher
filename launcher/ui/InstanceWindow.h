@@ -51,6 +51,7 @@ class QPushButton;
 class PageContainer;
 class QStackedWidget;
 class ContentBrowser;
+class QComboBox;
 class InstanceWindow : public QMainWindow, public BasePageContainer {
     Q_OBJECT
 
@@ -94,6 +95,8 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
     PageContainer* m_container = nullptr;
     QPushButton* m_closeButton = nullptr;
     QToolButton* m_launchButton = nullptr;
+    QPushButton* m_pxlLaunchButton = nullptr;
+    QComboBox* m_advancedChoice = nullptr;
     QPushButton* m_killButton = nullptr;
     bool m_embedded = false;
     QList<QPushButton*> m_editorTabs;

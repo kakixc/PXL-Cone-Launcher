@@ -41,6 +41,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QPushButton>
+#include <QEventLoop>
 #include <algorithm>
 #include <limits>
 
@@ -129,6 +130,29 @@ void ProgressDialog::setSkipButton(bool present, QString label)
     updateSize();
 }
 
+void ProgressDialog::setBackgroundable()
+{
+    if (m_backgroundable) return;
+    m_backgroundable = true;
+    const auto center = parentWidget() ? parentWidget()->mapToGlobal(parentWidget()->rect().center()) : geometry().center();
+    // This dialog is stack-owned by the launch controller. Navigating away
+    // must not delete it through an embedded editor's QObject ownership.
+    setParent(nullptr, Qt::Dialog);
+    setAttribute(Qt::WA_QuitOnClose, false);
+    move(center - QPoint(width() / 2, height() / 2));
+    ui->verticalLayout->removeWidget(ui->skipButton);
+    auto* footer = new QHBoxLayout;
+    footer->addStretch();
+    auto* hideButton = new QPushButton(tr("Hide"), this);
+    hideButton->setObjectName("progressHide");
+    hideButton->setAutoDefault(false);
+    hideButton->setToolTip(tr("Continue in Downloads & tasks"));
+    connect(hideButton, &QPushButton::clicked, this, &QWidget::hide);
+    footer->addWidget(hideButton);
+    footer->addWidget(ui->skipButton);
+    ui->verticalLayout->addLayout(footer);
+}
+
 void ProgressDialog::on_skipButton_clicked(bool checked)
 {
     Q_UNUSED(checked);
@@ -199,7 +223,10 @@ int ProgressDialog::execWithTask(Task* task)
     this->m_taskConnections.push_back(connect(task, &Task::details, this, &ProgressDialog::changeStatus));
     this->m_taskConnections.push_back(connect(task, &Task::stepProgress, this, &ProgressDialog::changeStepProgress));
     this->m_taskConnections.push_back(connect(task, &Task::progress, this, &ProgressDialog::changeProgress));
-    this->m_taskConnections.push_back(connect(task, &Task::aborted, this, &ProgressDialog::hide));
+    this->m_taskConnections.push_back(connect(task, &Task::aborted, this, [this] {
+        if (m_backgroundable) reject();
+        else hide();
+    }));
     this->m_taskConnections.push_back(connect(task, &Task::abortStatusChanged, ui->skipButton, &QPushButton::setEnabled));
     this->m_taskConnections.push_back(connect(task, &Task::abortButtonTextChanged, ui->skipButton, &QPushButton::setText));
 
@@ -216,7 +243,19 @@ int ProgressDialog::execWithTask(Task* task)
         changeProgress(task->getProgress(), task->getTotalProgress());
     }
 
-    return QDialog::exec();
+    if (!m_backgroundable) return QDialog::exec();
+
+    // QDialog::exec() returns when hidden. Keep the launch stack waiting for
+    // the actual task result instead; Hide only changes presentation.
+    QEventLoop wait;
+    connect(this, &QDialog::finished, &wait, &QEventLoop::quit);
+    const auto destroyed = connect(task, &QObject::destroyed, this, &QDialog::reject);
+    setWindowModality(Qt::ApplicationModal);
+    show();
+    if (!task->isFinished()) wait.exec();
+    disconnect(destroyed);
+    hide();
+    return this->result();
 }
 
 // TODO: only provide the unique_ptr overloads
@@ -318,6 +357,11 @@ void ProgressDialog::changeProgress(qint64 current, qint64 total)
 
 void ProgressDialog::keyPressEvent(QKeyEvent* e)
 {
+    if (m_backgroundable && e->key() == Qt::Key_Escape && m_task && m_task->isRunning()) {
+        hide();
+        e->accept();
+        return;
+    }
     if (ui->skipButton->isVisible()) {
         if (e->key() == Qt::Key_Escape) {
             on_skipButton_clicked(true);
@@ -337,6 +381,7 @@ void ProgressDialog::closeEvent(QCloseEvent* e)
 {
     if (m_task && m_task->isRunning()) {
         e->ignore();
+        if (m_backgroundable) hide();
     } else {
         QDialog::closeEvent(e);
     }

@@ -48,6 +48,9 @@
 #include <QScrollBar>
 #include <QStackedWidget>
 #include "ui/pxl/ContentBrowser.h"
+#include "ui/pxl/LibraryControls.h"
+#include "ui/pxl/ActionMenu.h"
+#include <QSignalBlocker>
 
 #include "ui/widgets/PageContainer.h"
 
@@ -118,6 +121,17 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         }
         tabs->addStretch();
         layout->addLayout(tabs);
+        m_advancedChoice = new Pxl::ChoiceChip(body);
+        m_advancedChoice->setObjectName("instanceAdvancedSection");
+        m_advancedChoice->setMinimumWidth(260);
+        for (auto* page : m_container->getPages()) {
+            if (QStringList{"mods", "resourcepacks", "texturepacks", "shaderpacks", "worlds", "console"}.contains(page->id())) continue;
+            if (page->shouldDisplay()) m_advancedChoice->addItem(page->id() == "version" ? tr("Minecraft components") : page->displayName(), page->id());
+        }
+        connect(m_advancedChoice, qOverload<int>(&QComboBox::activated), this, [this](int row) {
+            selectPage(m_advancedChoice->itemData(row).toString());
+        });
+        layout->addWidget(m_advancedChoice, 0, Qt::AlignLeft);
         auto* actions = new QHBoxLayout;
         m_browseContent = new QPushButton(tr("Browse content"), body);
         m_browseContent->setIcon(QIcon(":/pxl/icons/download-simple.svg"));
@@ -156,6 +170,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         auto btnHelp = new QPushButton(this);
         btnHelp->setText(tr("Help"));
         horizontalLayout->addWidget(btnHelp);
+        btnHelp->setVisible(!m_embedded);
         connect(btnHelp, &QPushButton::clicked, m_container, &PageContainer::help);
 
         auto spacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -166,7 +181,34 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         m_launchButton->setToolTip(tr("Launch the instance"));
         m_launchButton->setPopupMode(QToolButton::MenuButtonPopup);
         m_launchButton->setMinimumWidth(80);  // HACK!!
-        horizontalLayout->addWidget(m_launchButton);
+        if (!m_embedded) horizontalLayout->addWidget(m_launchButton);
+        else {
+            m_launchButton->hide();
+            m_pxlLaunchButton = new QPushButton(tr("Play"), this);
+            m_pxlLaunchButton->setObjectName("instancePlay");
+            m_pxlLaunchButton->setIcon(QIcon(":/pxl/icons/play.svg"));
+            m_pxlLaunchButton->setProperty("pxlPrimary", true);
+            horizontalLayout->addWidget(m_pxlLaunchButton);
+            connect(m_pxlLaunchButton, &QPushButton::clicked, this, [this] { if (saveAll()) APPLICATION->launch(m_instance); });
+            auto* options = new QPushButton(this);
+            options->setIcon(QIcon(":/pxl/icons/dots-three-vertical.svg"));
+            options->setToolTip(tr("Launch options and help"));
+            options->setAccessibleName(tr("Launch options and help"));
+            horizontalLayout->addWidget(options);
+            connect(options, &QPushButton::clicked, this, [this, options] {
+                Pxl::FrostedMenu menu(this);
+                menu.setParent(nullptr, menu.windowFlags());
+                connect(this, &QObject::destroyed, &menu, &QMenu::close);
+                if (auto* source = m_launchButton->menu())
+                    for (auto* command : source->actions()) {
+                        if (command->isSeparator()) menu.addSeparator();
+                        else Pxl::forwardMenuAction(&menu, command, command->text());
+                    }
+                menu.addSeparator();
+                menu.addAction(tr("Help"), m_container, &PageContainer::help);
+                menu.exec(options->mapToGlobal(QPoint(0, options->height())));
+            });
+        }
         connect(m_launchButton, &QPushButton::clicked, this, [this] {
             if (!m_embedded || saveAll()) APPLICATION->launch(m_instance);
         });
@@ -183,6 +225,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         m_closeButton = new QPushButton(this);
         m_closeButton->setText(tr("Close"));
         horizontalLayout->addWidget(m_closeButton);
+        m_closeButton->setVisible(!m_embedded);
         connect(m_closeButton, &QPushButton::clicked, this, [this] {
             if (m_embedded) emit backRequested();
             else close();
@@ -191,6 +234,7 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
         m_container->addButtons(horizontalLayout);
 
         connect(m_instance, &BaseInstance::profilerChanged, this, &InstanceWindow::updateButtons);
+        connect(m_instance, &BaseInstance::propertiesChanged, this, &InstanceWindow::updateButtons);
         connect(APPLICATION, &Application::globalSettingsApplied, this, &InstanceWindow::updateButtons);
     }
 
@@ -237,7 +281,9 @@ void InstanceWindow::updateButtons()
     m_killButton->setEnabled(m_instance->isRunning());
     if (m_embedded) {
         const bool running = m_instance->isRunning();
-        m_launchButton->setVisible(!running);
+        m_launchButton->hide();
+        m_pxlLaunchButton->setVisible(!running);
+        m_pxlLaunchButton->setEnabled(m_instance->canLaunch());
         m_launchButton->setText(tr("Play"));
         m_launchButton->setIcon(QIcon(":/pxl/icons/play.svg"));
         m_launchButton->setProperty("pxlPrimary", true);
@@ -375,7 +421,12 @@ void InstanceWindow::updateEditorNavigation(const QString& page)
     const bool ownControls=widget && widget->property("pxlInstalledContent").toBool();
     m_browseContent->setVisible(content && !ownControls);
     m_addContent->setVisible(content && !ownControls);
-    m_container->setPageListVisible(!common);
-    m_container->setPageHeadingVisible(!common);
+    m_container->setPageListVisible(false);
+    m_container->setPageHeadingVisible(false);
+    m_advancedChoice->setVisible(!common);
+    if (!common) {
+        const QSignalBlocker blocker(m_advancedChoice);
+        m_advancedChoice->setCurrentIndex(m_advancedChoice->findData(page));
+    }
     if (!common && !m_editorTabs.isEmpty()) m_editorTabs.last()->setChecked(true);
 }

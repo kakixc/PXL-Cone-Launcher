@@ -498,6 +498,7 @@ void LaunchController::onFailed(QString reason)
 void LaunchController::onProgressRequested(Task* task) const
 {
     ProgressDialog progDialog(m_parentWidget);
+    progDialog.setBackgroundable();
     progDialog.setSkipButton(true, tr("Abort"));
     m_launcher->proceed();
     progDialog.execWithTask(task);

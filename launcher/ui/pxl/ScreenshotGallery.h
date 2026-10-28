@@ -10,6 +10,8 @@
 #include <minecraft/MinecraftInstance.h>
 #include <QAbstractListModel>
 #include <QApplication>
+#include <QClipboard>
+#include <QImageReader>
 #include <algorithm>
 #include <QCache>
 #include <QDesktopServices>
@@ -32,6 +34,17 @@ struct ScreenshotEntry {
     qint64 modified = 0;
 };
 inline QString screenshotText(const char* text) { return QCoreApplication::translate("Pxl::ScreenshotGallery",text); }
+inline bool copyScreenshotImage(const QString& path)
+{
+    QImageReader reader(path);
+    reader.setAutoTransform(true);
+    const auto size = reader.size();
+    if (!size.isValid() || size.width() > 16384 || size.height() > 16384 || qint64(size.width()) * size.height() > 64000000) return false;
+    const auto image = reader.read();
+    if (image.isNull()) return false;
+    QApplication::clipboard()->setImage(image);
+    return true;
+}
 inline QList<ScreenshotEntry> scanScreenshots(const QList<ScreenshotEntry>& roots)
 {
     QList<ScreenshotEntry> result;
@@ -325,6 +338,10 @@ private:
             }
             menu.addSeparator();
         }
+        auto* copyImage=menu.addAction(screenshotText("Copy image"));
+        connect(copyImage,&QAction::triggered,this,[this,item] {
+            if (!copyScreenshotImage(item.file)) showNotice(this,screenshotText("Could not copy image"),screenshotText("The screenshot could not be read. The clipboard was not changed."));
+        });
         auto* exportAction=menu.addAction(screenshotText("Export to folder…"));
         connect(exportAction,&QAction::triggered,this,[this] {
             const auto destination=QFileDialog::getExistingDirectory(this,screenshotText("Export screenshots to folder")); if (destination.isEmpty()) return;

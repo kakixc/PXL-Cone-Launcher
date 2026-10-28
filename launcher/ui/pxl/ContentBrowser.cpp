@@ -163,7 +163,7 @@ void ContentBrowser::showCategory(const QString& category)
         m_stack->setCurrentWidget(m_notice);
         return;
     }
-    dialog->useEmbeddedPresentation();
+    dialog->useEmbeddedPresentation(true);
     dialog->setProperty("pxlReviewInstanceName", m_instance->name());
     dialog->setProperty("pxlReviewInstanceIcon", APPLICATION->icons()->getIcon(m_instance->iconKey()));
     dialog->setProperty("pxlReviewInstanceCover", Pxl::instanceCoverPath(m_instance->instanceRoot()));

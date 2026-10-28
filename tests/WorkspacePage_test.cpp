@@ -51,6 +51,8 @@
 #include <ui/pxl/NoWheelSelection.h>
 #include <ui/pxl/ComponentView.h>
 #include <ui/pxl/WorldsView.h>
+#include <ui/pages/instance/WorldListPage.h>
+#include <minecraft/WorldList.h>
 #include <ui/pxl/LogSurface.h>
 #include <QIdentityProxyModel>
 #include <ui/pages/modplatform/ResourcePage.h>
@@ -99,22 +101,32 @@ public:
     QList<BasePage*> getPages() override { return {}; }
 };
 
+class PreviewResourceModel final : public ResourceDownload::ResourceModel {
+public:
+    PreviewResourceModel() : ResourceModel(nullptr) {}
+    QString metaEntryBase() const override { return {}; }
+    ResourceAPI::SearchArgs createSearchArguments() override { return {}; }
+    ResourceAPI::VersionSearchArgs createVersionsArguments(const QModelIndex&) override { return {}; }
+    ResourceAPI::ProjectInfoArgs createInfoArguments(const QModelIndex&) override { return {}; }
+    void append(ModPlatform::IndexedPack::Ptr pack) { m_packs.append(std::move(pack)); }
+    void loadEntry(const QModelIndex&) override {}
+};
+
 // The real page/container layout with deterministic data and no network requests.
 class LayoutCatalogPage final : public ResourceDownload::ResourcePage {
 public:
     LayoutCatalogPage(ResourceDownload::ResourceDownloadDialog* parent, BaseInstance& instance)
         : ResourcePage(parent, instance)
     {
-        auto* model = new QStandardItemModel(this);
+        auto* model = new PreviewResourceModel;
+        model->setParent(this);
+        m_model = model;
         for (int i = 0; i < 8; ++i) {
             auto pack = std::make_shared<ModPlatform::IndexedPack>();
             pack->name = QString("Resource pack %1").arg(i + 1);
             pack->authors.append(ModPlatform::ModpackAuthor{"Example creator", {}});
-            auto* item = new QStandardItem;
-            item->setData(QVariant::fromValue(pack), Qt::UserRole);
-            item->setData("A resource pack description showing how the full catalog uses its available space.", UserDataTypes::DESCRIPTION);
-            item->setData(QIcon(":/pxl/icons/squares-four.svg"), Qt::DecorationRole);
-            model->appendRow(item);
+            pack->description = "A resource pack description showing how the full catalog uses its available space.";
+            model->append(pack);
         }
         findChild<QListView*>("packView")->setModel(model);
         auto* sorting = findChild<QComboBox*>("sortByBox");
@@ -136,6 +148,23 @@ public:
         findChild<QLineEdit*>("searchEdit")->setPlaceholderText("Search resource packs");
     }
     void previewFirst() { showProjectDetails(findChild<QListView*>("packView")->model()->index(0,0)); }
+    void prepareSelectablePreview()
+    {
+        auto* view = findChild<QListView*>("packView");
+        view->setCurrentIndex(view->model()->index(0, 0));
+        auto pack = getCurrentPack();
+        pack->versionsLoaded = true;
+        ModPlatform::IndexedVersion version;
+        version.version = "Compatible version";
+        version.downloadUrl = "https://example.invalid/pack.zip";
+        pack->versions.append(version);
+        versionListUpdated(view->currentIndex());
+        m_selectedVersionIndex = 0;
+    }
+    void addResourceToPage(ModPlatform::IndexedPack::Ptr, ModPlatform::IndexedVersion& version,
+                           ResourceFolderModel*, QString) override { ++selections; version.is_currently_selected = true; }
+    void removeResourceFromPage(const QString&) override {}
+    int selections = 0;
     int sortChanges = 0;
 protected:
     void triggerSearch() override {}
@@ -951,6 +980,7 @@ class WorkspacePageTest : public QObject {
         dialog.useEmbeddedPresentation();
         auto* page=dynamic_cast<LayoutCatalogPage*>(dialog.findChild<PageContainer*>()->selectedPage());
         QVERIFY(page);
+        page->prepareSelectablePreview();
         page->findChild<QTextBrowser*>("packDescription")->setHtml("<h2>A detailed project description</h2><p>Project content and screenshots appear here.</p>");
         QTimer::singleShot(50,&dialog,[&] {
             auto* preview=surface.findChild<QDialog*>("pxlProjectPreview");
@@ -958,6 +988,14 @@ class WorkspacePageTest : public QObject {
             QVERIFY(preview);
             QVERIFY(preview->findChild<QComboBox*>());
             QCOMPARE(preview->findChildren<QTextBrowser*>().size(),1);
+            auto* select = preview->findChild<QPushButton*>("projectPreviewSelect");
+            QVERIFY(select);
+            QVERIFY(!page->isEnabled());
+            QVERIFY(select->isEnabled());
+            select->click();
+            QCOMPARE(page->selections, 1);
+            QCoreApplication::processEvents();
+            QVERIFY(select->width() >= select->fontMetrics().horizontalAdvance(select->text()) + 28);
             const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
             if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("content-preview.png")));
             preview->accept();
@@ -1124,6 +1162,11 @@ class WorkspacePageTest : public QObject {
             QVERIFY(source->height() <= 48);
             QVERIFY(search->height() <= 48);
             QVERIFY(sort->height() <= 40);
+            auto* back = surface.findChild<QPushButton*>("workspaceBack");
+            QVERIFY(back);
+            QVERIFY(source->mapTo(&surface, QPoint()).x() >= back->mapTo(&surface, QPoint()).x());
+            QVERIFY(search->mapTo(&surface, QPoint()).x() >= back->mapTo(&surface, QPoint()).x());
+            QVERIFY(results->mapTo(&surface, QPoint()).x() >= back->mapTo(&surface, QPoint()).x());
             const int searchBottom = search->mapTo(dialog, QPoint(0, search->height())).y();
             const int sourceBottom = source->mapTo(dialog, QPoint(0, source->height())).y();
             const int searchTop = search->mapTo(dialog, QPoint()).y();
@@ -1131,6 +1174,9 @@ class WorkspacePageTest : public QObject {
             const int resultTop = results->mapTo(dialog, QPoint()).y();
             QVERIFY2(resultTop - searchBottom < 100, "Catalog controls must not consume the result area with blank bands");
             QVERIFY(results->height() > dialog->height() / 2);
+            auto* footer = dialog->findChild<QDialogButtonBox*>();
+            QVERIFY(footer);
+            QVERIFY(results->mapTo(dialog, QPoint(0, results->height())).y() <= footer->mapTo(dialog, QPoint()).y());
             QCOMPARE(results->model()->rowCount(), 8);
             const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
             if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath(QString("catalog-full-%1.png").arg(size.width()))));
@@ -1667,6 +1713,66 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(cancelledTask.getState(), Task::State::AbortedByUser);
     }
 
+    void hidingProgressKeepsTaskAndCallerAlive()
+    {
+        auto* parent = new QWidget;
+        ProgressDialog dialog(parent);
+        dialog.setBackgroundable();
+        ManualHistoryTask task;
+        bool hiddenWhileRunning = false;
+        bool returned = false;
+        QTimer::singleShot(30, &dialog, [&] {
+            auto* hide = dialog.findChild<QPushButton*>("progressHide");
+            if (hide) hide->click();
+            hiddenWhileRunning = hide && !dialog.isVisible() && task.isRunning() && !returned;
+            delete parent;
+            parent = nullptr;
+        });
+        QTimer::singleShot(80, &dialog, [&] { task.complete(); });
+        QTimer::singleShot(1000, &dialog, [&] { dialog.reject(); });
+        const auto result = dialog.execWithTask(&task);
+        returned = true;
+        delete parent;
+        QCOMPARE(result, int(QDialog::Accepted));
+        QVERIFY(hiddenWhileRunning);
+        QVERIFY(task.wasSuccessful());
+    }
+
+    void worldImportUsesOriginalCommand()
+    {
+        QTemporaryDir temporary;
+        WorldList worlds(temporary.path(), nullptr);
+        WorldListPage page(nullptr, &worlds);
+        page.usePxlPresentation();
+        auto* original = page.findChild<QAction*>("actionAdd");
+        QVERIFY(original);
+        // Observe forwarding without opening the native file chooser.
+        QObject::disconnect(original, &QAction::triggered, &page, nullptr);
+        QSignalSpy triggered(original, &QAction::triggered);
+        page.resize(900, 600);
+        page.show();
+        QPushButton* import = nullptr;
+        for (auto* button : page.findChildren<QPushButton*>())
+            if (button->text() == "Import world" && button->isVisible()) import = button;
+        QVERIFY(import);
+        QVERIFY(import->isEnabled());
+        import->click();
+        QCOMPARE(triggered.count(), 1);
+    }
+
+    void screenshotClipboardKeepsOriginalResolution()
+    {
+        QTemporaryDir temporary;
+        const auto path = temporary.filePath("full.png");
+        QImage original(1800, 1100, QImage::Format_ARGB32);
+        original.fill(QColor("#ab752e"));
+        QVERIFY(original.save(path));
+        QVERIFY(Pxl::copyScreenshotImage(path));
+        QCOMPARE(QApplication::clipboard()->image().size(), original.size());
+        QVERIFY(!Pxl::copyScreenshotImage(temporary.filePath("missing.png")));
+        QCOMPARE(QApplication::clipboard()->image().size(), original.size());
+    }
+
     void taskHistoryTracksCompletionCancellationAndDestroyedTasks()
     {
         Pxl::TaskHistory history;
@@ -1690,6 +1796,8 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(history.activeCount(), 0);
         QCOMPARE(history.records().first().state, Task::State::Succeeded);
         QTest::qWait(120);
+        auto* details = dialog->findChild<QPushButton*>("taskRecordDetails");
+        QVERIFY(details && details->isHidden());
         if (!screenshots.isEmpty()) QVERIFY(dialog->grab().save(QDir(screenshots).filePath("task-center-complete.png")));
 
         PreviewInstallTask cancelled;
@@ -1802,6 +1910,10 @@ class WorkspacePageTest : public QObject {
         QTRY_VERIFY(activity->isVisible());
         auto* progress = activity->findChild<QProgressBar*>("taskActivityProgress");
         QCOMPARE(progress->value(), 250);
+        auto* title = progress->parentWidget()->findChild<QLabel*>();
+        QVERIFY(title);
+        QCOMPARE(title->parentWidget(), progress->parentWidget());
+        QVERIFY(progress->y() >= title->geometry().bottom());
         task.setProgress(0, 0);
         QTRY_COMPARE(progress->maximum(), 0);
         const QString screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");

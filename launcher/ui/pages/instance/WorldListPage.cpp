@@ -150,7 +150,10 @@ void WorldListPage::usePxlPresentation()
     ui->toolBar->hide();
     auto* model = static_cast<QSortFilterProxyModel*>(ui->worldTreeView->model());
     model->setFilterCaseSensitivity(Qt::CaseInsensitive);
-    auto commands = ui->toolBar->actions();
+    // WideBar::actions() exposes QWidgetAction button wrappers, not commands.
+    QList<QAction*> commands{ui->actionAdd, ui->actionJoin, ui->actionRename, ui->actionCopy,
+        ui->actionRemove, ui->actionMCEdit, ui->actionData_Packs, ui->actionReset_Icon,
+        ui->actionCopy_Seed, ui->actionRefresh, ui->actionView_Folder};
     if (!m_inst || !m_inst->traits().contains("feature:is_quick_play_singleplayer")) commands.removeAll(ui->actionJoin);
     setCentralWidget(new Pxl::WorldsView(model, ui->worldTreeView->selectionModel(), commands, this));
 }
