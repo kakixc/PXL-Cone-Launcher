@@ -21,6 +21,9 @@ class WideBar : public QToolBar {
     void addAction(QAction* action);
     void addSeparator();
 
+    // Logical commands in display order, without QWidgetAction button wrappers.
+    QList<QAction*> commandActions() const;
+
     void insertSpacer(QAction* action);
     void insertSeparator(QAction* before);
     void insertActionBefore(QAction* before, QAction* action);

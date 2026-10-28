@@ -1009,6 +1009,7 @@ void MainWindow::runModalTask(Task* task)
             ->show();
     });
     ProgressDialog loadDialog(this);
+    loadDialog.setBackgroundable();
     loadDialog.setSkipButton(true, tr("Abort"));
     loadDialog.execWithTask(task);
 }

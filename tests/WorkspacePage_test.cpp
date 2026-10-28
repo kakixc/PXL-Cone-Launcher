@@ -217,9 +217,11 @@ public:
 #include <ui/pxl/TaskHistory.h>
 #include <ui/pxl/TaskActivity.h>
 #include <ui/pxl/AppearanceSections.h>
+#include <ui/pxl/JavaAdvancedSections.h>
 #include <ui/pxl/DialogOverlay.h>
 #include <ui/pxl/Backdrop.h>
 #include <ui/widgets/VersionSelectWidget.h>
+#include <ui/widgets/WideBar.h>
 #include <translations/POTranslator.h>
 #include <minecraft/MinecraftInstance.h>
 #include <minecraft/PackProfile.h>
@@ -519,7 +521,9 @@ class WorkspacePageTest : public QObject {
         QAction change("Change version", &source); change.setObjectName("actionChange_version");
         QAction loader("Install loader", &source); loader.setObjectName("actionInstall_Loader");
         QSignalSpy changes(&change, &QAction::triggered);
-        Pxl::ComponentView view(&filter, &selection, {&change, &loader}, nullptr);
+        WideBar commands;
+        commands.addAction(&change); commands.addAction(&loader);
+        Pxl::ComponentView view(&filter, &selection, commands.commandActions(), nullptr);
         view.resize(950, 500); view.show();
         auto* search = view.findChild<QLineEdit*>("componentSearch");
         auto* list = view.findChild<QListView*>("componentList");
@@ -730,9 +734,14 @@ class WorkspacePageTest : public QObject {
         QAction remove("Remove",&source); remove.setObjectName("actionRemoveItem");
         QSignalSpy adds(&add,&QAction::triggered), removes(&remove,&QAction::triggered);
         int browse=0;
-        Pxl::InstalledContentView view(&proxy,&selection,{"Enable","Image","Name","Version","File Name"},{&add,&remove},"mods",[&] { ++browse; });
+        WideBar commands;
+        commands.addAction(&add); commands.addSeparator(); commands.addAction(&remove);
+        QCOMPARE(commands.commandActions().first(), &add);
+        QVERIFY(commands.commandActions()[1]->isSeparator());
+        Pxl::InstalledContentView view(&proxy,&selection,{"Enable","Image","Name","Version","File Name"},commands.commandActions(),"mods",[&] { ++browse; });
         view.resize(980,540); view.show(); QTest::qWait(30);
         auto* list=view.findChild<QListView*>("installedContentList"); QVERIFY(list);
+        QVERIFY(view.findChild<QPushButton*>("installedAddFiles")->isEnabled());
         view.findChild<QPushButton*>("installedBrowse")->click(); QCOMPARE(browse,1);
         view.findChild<QPushButton*>("installedAddFiles")->click(); QCOMPARE(adds.count(),1);
         const auto index=proxy.index(0,2); const auto rect=list->visualRect(index);
@@ -1713,6 +1722,50 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(cancelledTask.getState(), Task::State::AbortedByUser);
     }
 
+    void javaAdvancedCardsPreserveOriginalSettingsControls()
+    {
+        QWidget surface;
+        auto* layout = new QVBoxLayout(&surface);
+        auto* legacy = new QWidget(&surface);
+        auto* optimized = new QCheckBox(legacy);
+        auto* compatibility = new QCheckBox(legacy);
+        auto* wizard = new QCheckBox(legacy);
+        optimized->setObjectName("optimized");
+        optimized->setChecked(true);
+        QList<QRadioButton*> collectors;
+        for (const auto* name : {"None", "G1GC", "Shenandoah", "ZGC"}) collectors.append(new QRadioButton(name, legacy));
+        collectors[1]->setChecked(true);
+        auto* generated = new QLineEdit("-XX:+UseG1GC", legacy);
+        auto* custom = new QPlainTextEdit(legacy);
+        auto* notice = new QLabel("Runtime compatibility notice", legacy);
+        auto* permGen = new QSpinBox(legacy);
+        permGen->setValue(64);
+        auto* cards = Pxl::javaAdvancedSections({optimized, compatibility, wizard, collectors, generated, custom, notice, permGen}, &surface);
+        legacy->hide();
+        layout->addWidget(cards);
+        surface.resize(820, 850);
+        surface.show();
+        QCoreApplication::processEvents();
+        QCOMPARE(cards->findChildren<QFrame*>("pxlSettingsCard").size(), 3);
+        auto* preset = cards->findChild<QComboBox*>("pxlCollectorPreset");
+        QCOMPARE(preset->currentIndex(), 1);
+        preset->setCurrentIndex(2);
+        QMetaObject::invokeMethod(preset, "activated", Q_ARG(int, 2));
+        QVERIFY(collectors[2]->isChecked());
+        collectors[3]->setChecked(true);
+        QCOMPARE(preset->currentIndex(), 3);
+        auto* toggle = cards->findChild<QCheckBox*>("pxl-optimized");
+        QVERIFY(toggle && toggle->isChecked());
+        toggle->click();
+        QVERIFY(!optimized->isChecked());
+        custom->setPlainText("-Dexample=value");
+        QCOMPARE(cards->findChildren<QPlainTextEdit*>().size(), 1);
+        QCOMPARE(custom->toPlainText(), QString("-Dexample=value"));
+        QVERIFY(custom->height() <= 132);
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("java-advanced.png")));
+    }
+
     void hidingProgressKeepsTaskAndCallerAlive()
     {
         auto* parent = new QWidget;
@@ -1723,6 +1776,8 @@ class WorkspacePageTest : public QObject {
         bool returned = false;
         QTimer::singleShot(30, &dialog, [&] {
             auto* hide = dialog.findChild<QPushButton*>("progressHide");
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (hide && !screenshots.isEmpty()) dialog.grab().save(QDir(screenshots).filePath("progress-with-hide.png"));
             if (hide) hide->click();
             hiddenWhileRunning = hide && !dialog.isVisible() && task.isRunning() && !returned;
             delete parent;
@@ -1736,6 +1791,35 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(result, int(QDialog::Accepted));
         QVERIFY(hiddenWhileRunning);
         QVERIFY(task.wasSuccessful());
+    }
+
+    void taskRowsWrapLongTitlesWithoutClipping()
+    {
+        Pxl::TaskHistory history;
+        ManualHistoryTask task;
+        task.setAbortable(true);
+        const QString name = QString::fromUtf8("Установка дополнений: моя сборка Minecraft 26.3");
+        history.watch(&task, name);
+        task.start();
+        task.setStatus(QString::fromUtf8("Выполнение 4 задач (0 из 4 готовы)"));
+        QWidget anchor;
+        anchor.show();
+        history.showTasks(&anchor);
+        QTest::qWait(120);
+        auto* popup = anchor.findChild<QDialog*>("pxlTaskPopover");
+        QVERIFY(popup);
+        auto* list = popup->findChild<QListWidget*>("taskHistoryList");
+        QVERIFY(list && list->count() == 1);
+        auto* row = list->itemWidget(list->item(0));
+        QLabel* title = nullptr;
+        for (auto* label : row->findChildren<QLabel*>()) if (label->text() == name) title = label;
+        QVERIFY(title);
+        QVERIFY2(title->height() >= title->heightForWidth(title->width()), "Task title must fit its wrapped text");
+        QVERIFY(list->visualItemRect(list->item(0)).height() >= row->layout()->totalHeightForWidth(row->width()));
+        const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(popup->grab().save(QDir(screenshots).filePath("task-center-long-title.png")));
+        task.complete();
+        popup->close();
     }
 
     void worldImportUsesOriginalCommand()

@@ -359,7 +359,7 @@ void ExternalResourcesPage::usePxlPresentation(std::function<void()> browse)
     // Retain the original selection and commands, not the original visual layout.
     auto* original=takeCentralWidget(); original->hide(); original->setParent(this);
     auto* view=new Pxl::InstalledContentView(m_filterModel,ui->treeView->selectionModel(),m_model->columnNames(false),
-                                            ui->actionsToolbar->actions(),id(),m_pxlBrowse,this);
+                                            ui->actionsToolbar->commandActions(),id(),m_pxlBrowse,this);
     setCentralWidget(view);
     ui->actionsToolbar->hide();
 }

@@ -54,6 +54,9 @@ ContentBrowser::ContentBrowser(MinecraftInstance* instance, QWidget* parent) : Q
     categories->addStretch();
     layout->addLayout(categories);
     m_stack = new QStackedWidget(this);
+    connect(m_stack, &QStackedWidget::currentChanged, this, [this] {
+        QTimer::singleShot(0, m_stack, [this] { Pxl::animatePage(m_stack->currentWidget()); });
+    });
     layout->addWidget(m_stack, 1);
 }
 

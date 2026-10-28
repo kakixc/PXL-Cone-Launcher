@@ -194,7 +194,7 @@ void VersionPage::usePxlPresentation()
     legacy->setParent(this);
     legacy->hide();
     ui->toolBar->hide();
-    m_componentView = new Pxl::ComponentView(m_filterModel, ui->packageView->selectionModel(), ui->toolBar->actions(), this);
+    m_componentView = new Pxl::ComponentView(m_filterModel, ui->packageView->selectionModel(), ui->toolBar->commandActions(), this);
     setCentralWidget(m_componentView);
     packageCurrent(ui->packageView->currentIndex(), {});
 }

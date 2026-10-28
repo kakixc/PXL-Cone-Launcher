@@ -234,12 +234,15 @@ void TaskHistory::showTasks(QWidget* parent)
             title->setWordWrap(true);
             title->setStyleSheet("font-weight: 700;");
             line->addWidget(title, 1);
+            body->addLayout(line);
+            auto* controls = new QHBoxLayout;
             auto* details = new QPushButton(tr("Details"), row);
             details->setObjectName("taskRecordDetails");
             details->setVisible(entry.active() || entry.state == Task::State::Failed || !entry.warnings.isEmpty());
             details->setStyleSheet("font-size: 12px; padding: 5px;");
             details->setProperty("pxlQuiet", true);
-            line->addWidget(details);
+            controls->addStretch();
+            controls->addWidget(details);
             connect(details, &QPushButton::clicked, row, [this, id = entry.id, details, dialog] {
                 if (const auto* item = record(id))
                     QToolTip::showText(details->mapToGlobal(QPoint(0, details->height())),
@@ -247,10 +250,9 @@ void TaskHistory::showTasks(QWidget* parent)
             });
             if (entry.state == Task::State::Running && entry.task && entry.canAbort) {
                 auto* cancel = new QPushButton(tr("Cancel"), row);
-                line->addWidget(cancel);
+                controls->addWidget(cancel);
                 connect(cancel, &QPushButton::clicked, row, [this, id = entry.id] { this->cancel(id); });
             }
-            body->addLayout(line);
             QString status = entry.status;
             if (!entry.active()) {
                 status = entry.state == Task::State::Succeeded ? tr("Complete")
@@ -263,6 +265,8 @@ void TaskHistory::showTasks(QWidget* parent)
             state->setProperty("pxlFlowHint", true);
             state->setStyleSheet("font-size: 12px; color: #abb3bf;");
             body->addWidget(state);
+            if (!details->isHidden() || (entry.state == Task::State::Running && entry.task && entry.canAbort)) body->addLayout(controls);
+            else delete controls;
             if (entry.active()) {
                 auto* progress = new QProgressBar(row);
                 progress->setTextVisible(false);
@@ -271,8 +275,12 @@ void TaskHistory::showTasks(QWidget* parent)
                 body->addWidget(progress);
             }
             auto* item = new QListWidgetItem(list);
-            item->setSizeHint(QSize(0, row->sizeHint().height()));
-            rowsHeight += row->sizeHint().height() + 2 * list->spacing();
+            // Measure wrapping at the real compact popup width. An unconstrained
+            // sizeHint assumes a single title line and clips Cyrillic titles.
+            const int rowWidth = qMax(180, dialog->width() - 48);
+            const int rowHeight = qMax(row->sizeHint().height(), body->totalHeightForWidth(rowWidth));
+            item->setSizeHint(QSize(rowWidth, rowHeight));
+            rowsHeight += rowHeight + 2 * list->spacing();
             list->setItemWidget(item, row);
         }
         clear->setVisible(completed);

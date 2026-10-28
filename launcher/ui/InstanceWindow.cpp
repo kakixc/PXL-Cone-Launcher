@@ -50,6 +50,8 @@
 #include "ui/pxl/ContentBrowser.h"
 #include "ui/pxl/LibraryControls.h"
 #include "ui/pxl/ActionMenu.h"
+#include "ui/pxl/Icons.h"
+#include "ui/pxl/Animations.h"
 #include <QSignalBlocker>
 
 #include "ui/widgets/PageContainer.h"
@@ -186,9 +188,10 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
             m_launchButton->hide();
             m_pxlLaunchButton = new QPushButton(tr("Play"), this);
             m_pxlLaunchButton->setObjectName("instancePlay");
-            m_pxlLaunchButton->setIcon(QIcon(":/pxl/icons/play.svg"));
+            m_pxlLaunchButton->setIcon(Pxl::primaryIcon("play"));
             m_pxlLaunchButton->setProperty("pxlPrimary", true);
             horizontalLayout->addWidget(m_pxlLaunchButton);
+            horizontalLayout->addSpacing(8);
             connect(m_pxlLaunchButton, &QPushButton::clicked, this, [this] { if (saveAll()) APPLICATION->launch(m_instance); });
             auto* options = new QPushButton(this);
             options->setIcon(QIcon(":/pxl/icons/dots-three-vertical.svg"));
@@ -199,12 +202,16 @@ InstanceWindow::InstanceWindow(BaseInstance* instance, QWidget* parent, bool emb
                 Pxl::FrostedMenu menu(this);
                 menu.setParent(nullptr, menu.windowFlags());
                 connect(this, &QObject::destroyed, &menu, &QMenu::close);
+                auto* profilers = new Pxl::FrostedMenu(&menu);
+                profilers->setTitle(tr("Advanced: profilers"));
                 if (auto* source = m_launchButton->menu())
                     for (auto* command : source->actions()) {
-                        if (command->isSeparator()) menu.addSeparator();
+                        if (command->isSeparator()) continue;
+                        if (command->isCheckable()) Pxl::forwardMenuAction(profilers, command, command->text());
                         else Pxl::forwardMenuAction(&menu, command, command->text());
                     }
                 menu.addSeparator();
+                if (!profilers->actions().isEmpty()) menu.addMenu(profilers);
                 menu.addAction(tr("Help"), m_container, &PageContainer::help);
                 menu.exec(options->mapToGlobal(QPoint(0, options->height())));
             });
@@ -378,8 +385,11 @@ QString InstanceWindow::instanceId()
 
 bool InstanceWindow::selectPage(QString pageId)
 {
+    const auto* previous = selectedPage();
     const bool selected = m_container->selectPage(pageId);
     if (m_embedded && selectedPage()) updateEditorNavigation(selectedPage()->id());
+    if (m_embedded && previous != selectedPage())
+        Pxl::animatePage(dynamic_cast<QWidget*>(selectedPage()));
     return selected;
 }
 
