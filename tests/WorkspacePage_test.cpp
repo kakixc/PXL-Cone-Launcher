@@ -110,6 +110,8 @@ public:
     ResourceAPI::ProjectInfoArgs createInfoArguments(const QModelIndex&) override { return {}; }
     void append(ModPlatform::IndexedPack::Ptr pack) { m_packs.append(std::move(pack)); }
     void loadEntry(const QModelIndex&) override {}
+    QVariant getInstalledPackVersion(ModPlatform::IndexedPack::Ptr) const override { return installedId; }
+    QVariant installedId;
 };
 
 // The real page/container layout with deterministic data and no network requests.
@@ -129,6 +131,8 @@ public:
             model->append(pack);
         }
         findChild<QListView*>("packView")->setModel(model);
+        connect(findChild<QComboBox*>("versionSelectionBox"), &QComboBox::currentIndexChanged,
+                this, &LayoutCatalogPage::onVersionSelectionChanged);
         auto* sorting = findChild<QComboBox*>("sortByBox");
         sorting->addItems({"Relevance", "Downloads"});
         connect(sorting, &QComboBox::currentIndexChanged, this, [this] { ++sortChanges; });
@@ -148,7 +152,7 @@ public:
         findChild<QLineEdit*>("searchEdit")->setPlaceholderText("Search resource packs");
     }
     void previewFirst() { showProjectDetails(findChild<QListView*>("packView")->model()->index(0,0)); }
-    void prepareSelectablePreview()
+    void prepareSelectablePreview(bool installed = false)
     {
         auto* view = findChild<QListView*>("packView");
         view->setCurrentIndex(view->model()->index(0, 0));
@@ -156,8 +160,15 @@ public:
         pack->versionsLoaded = true;
         ModPlatform::IndexedVersion version;
         version.version = "Compatible version";
+        version.fileId = "file-0";
         version.downloadUrl = "https://example.invalid/pack.zip";
         pack->versions.append(version);
+        if (installed) {
+            static_cast<PreviewResourceModel*>(m_model)->installedId = version.fileId;
+            version.fileId = "file-1";
+            version.version = "Another compatible version";
+            pack->versions.append(version);
+        }
         versionListUpdated(view->currentIndex());
         m_selectedVersionIndex = 0;
     }
@@ -853,6 +864,12 @@ class WorkspacePageTest : public QObject {
         QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, row.center());
         QCOMPARE(selections, 1);
         QCOMPARE(details, 1);
+        model.setData(model.index(0,0), Qt::Unchecked, Qt::CheckStateRole);
+        model.setData(model.index(0,0), true, UserDataTypes::INSTALLED);
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, Pxl::CatalogCardDelegate::actionRect(row).center());
+        QCOMPARE(selections, 1);
+        QTest::mouseClick(view.viewport(), Qt::LeftButton, Qt::NoModifier, row.center());
+        QCOMPARE(details, 2);
         const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
         if (!screenshots.isEmpty()) QVERIFY(view.grab().save(QDir(screenshots).filePath("catalog-cards.png")));
     }
@@ -1008,6 +1025,39 @@ class WorkspacePageTest : public QObject {
             const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
             if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("content-preview.png")));
             preview->accept();
+        });
+        page->previewFirst();
+    }
+
+    void installedPreviewAllowsSelectingAnotherVersion()
+    {
+        QTemporaryDir temporary;
+        auto globalSettings = settings(temporary);
+        auto instanceSettings = std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg"));
+        MinecraftInstance instance(globalSettings.get(), std::move(instanceSettings), temporary.filePath("pack"));
+        QWidget surface; surface.resize(1080, 740); surface.show();
+        LayoutCatalogDialog dialog(&surface, instance);
+        dialog.useEmbeddedPresentation();
+        auto* page = dynamic_cast<LayoutCatalogPage*>(dialog.selectedPage());
+        QVERIFY(page);
+        page->prepareSelectablePreview(true);
+        QTimer::singleShot(50, &dialog, [&] {
+            auto* preview = surface.findChild<QDialog*>("pxlProjectPreview");
+            if (!preview) preview = dialog.findChild<QDialog*>("pxlProjectPreview");
+            QVERIFY(preview);
+            auto* action = preview->findChild<QPushButton*>("projectPreviewSelect");
+            QVERIFY(action && !action->isEnabled());
+            QCOMPARE(action->text(), QString("Installed"));
+            auto* versions = preview->findChild<QComboBox*>();
+            versions->setCurrentIndex(1);
+            QCoreApplication::processEvents();
+            QVERIFY(action->isEnabled());
+            action->click();
+            QCOMPARE(page->selections, 1);
+            preview->accept();
+        });
+        QTimer::singleShot(1000, &dialog, [&] {
+            if (auto* preview = surface.findChild<QDialog*>("pxlProjectPreview")) preview->reject();
         });
         page->previewFirst();
     }

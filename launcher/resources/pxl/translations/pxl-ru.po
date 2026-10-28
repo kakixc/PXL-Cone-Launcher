@@ -2581,3 +2581,11 @@ msgstr "Память PermGen для старой Java"
 msgctxt "InstanceWindow"
 msgid "Advanced: profilers"
 msgstr "Для разработчиков: профилировщики"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Installed"
+msgstr "Установлено"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Check for updates"
+msgstr "Проверить обновления"

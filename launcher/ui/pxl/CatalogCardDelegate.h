@@ -25,6 +25,7 @@ public:
         painter->setRenderHint(QPainter::Antialiasing);
         const auto area = option.rect.adjusted(1, 2, -1, -4);
         const bool selected = index.data(Qt::CheckStateRole).toInt() == Qt::Checked;
+        const bool installed = index.data(UserDataTypes::INSTALLED).toBool() && !selected;
         const bool hover = option.state.testFlag(QStyle::State_MouseOver);
         painter->setBrush(hover ? QColor("#30343c") : QColor("#22262c"));
         painter->setPen(selected ? QColor(242, 163, 101, 150) : QColor("#363c44"));
@@ -69,14 +70,10 @@ public:
         text.draw(painter, QPointF(left, area.top() + 71));
         const auto action = actionRect(option.rect);
         painter->setPen(Qt::NoPen);
-        painter->setBrush(selected ? QColor(242, 163, 101, 36) : QColor("#f2a365"));
+        painter->setBrush(installed ? QColor(143, 164, 155, 26) : selected ? QColor(242, 163, 101, 36) : QColor("#f2a365"));
         painter->drawRoundedRect(action, 9, 9);
-        painter->setPen(selected ? QColor("#f2b27f") : QColor("#231a13"));
-        painter->drawText(action, Qt::AlignCenter, selected ? label("Added") : label("Add"));
-        if (index.data(UserDataTypes::INSTALLED).toBool()) {
-            painter->setPen(QColor("#aebbaa"));
-            painter->drawText(QRect(action.left(), area.bottom() - 26, action.width(), 20), Qt::AlignCenter, label("Installed"));
-        }
+        painter->setPen(installed ? QColor("#aebbaa") : selected ? QColor("#f2b27f") : QColor("#231a13"));
+        painter->drawText(action, Qt::AlignCenter, installed ? label("Installed") : selected ? label("Added") : label("Add"));
         painter->restore();
     }
     bool editorEvent(QEvent* event, QAbstractItemModel*, const QStyleOptionViewItem& option, const QModelIndex& index) override
@@ -88,7 +85,9 @@ public:
         const bool action = actionRect(option.rect).contains(mouse->pos());
         if (!option.rect.contains(mouse->pos())) return false;
         if (event->type() == QEvent::MouseButtonRelease) {
-            if (action) m_select(index);
+            if (action) {
+                if (!index.data(UserDataTypes::INSTALLED).toBool() || index.data(Qt::CheckStateRole).toInt() == Qt::Checked) m_select(index);
+            }
             else m_details(index);
         }
         return true;

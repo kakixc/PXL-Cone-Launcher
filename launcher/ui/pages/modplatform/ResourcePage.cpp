@@ -229,9 +229,12 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
         if (!pageGuard) { select->setEnabled(false); return; }
         const auto current=pageGuard->getCurrentPack();
         const int version = pageGuard->m_selectedVersionIndex;
+        const auto installedId = current ? pageGuard->m_model->getInstalledPackVersion(current) : QVariant();
+        const bool installed = current && version >= 0 && version < current->versions.size() && installedId.isValid()
+                               && current->versions[version].fileId == installedId && !current->versions[version].is_currently_selected;
         select->setEnabled(current && current->versionsLoaded && version >= 0 && version < current->versions.size()
-                           && pageGuard->m_model->checkVersionFilters(current->versions[version]));
-        select->setText(current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
+                           && !installed && pageGuard->m_model->checkVersionFilters(current->versions[version]));
+        select->setText(installed ? tr("Installed") : current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
         select->ensurePolished();
         select->setMinimumWidth(select->fontMetrics().horizontalAdvance(select->text()) + 40);
     };
@@ -475,7 +478,7 @@ void ResourcePage::versionListUpdated(const QModelIndex& index)
                 if (version.version_type.isValid()) {
                     versionText += QString(" [%1]").arg(version.version_type.toString());
                 }
-                if (version.fileId == installedVersion) {
+                if (installedVersion.isValid() && version.fileId == installedVersion) {
                     versionText += tr(" [installed]", "Mod version select");
                 }
 
@@ -580,6 +583,8 @@ void ResourcePage::onResourceSelected()
     }
 
     auto& version = currentPack->versions[m_selectedVersionIndex];
+    const auto installedId = m_model->getInstalledPackVersion(currentPack);
+    if (!version.is_currently_selected && installedId.isValid() && installedId == version.fileId) return;
     Q_ASSERT(!version.downloadUrl.isNull());
     if (version.is_currently_selected) {
         removeResourceFromDialog(currentPack->name);

@@ -130,6 +130,14 @@ public:
         auto* search=new LibrarySearch(this); search->setObjectName("installedContentSearch"); search->setPlaceholderText(installedText("Search installed content")); tools->addWidget(search,1);
         auto* browseButton=new QPushButton(QIcon(":/pxl/icons/magnifying-glass.svg"),installedText("Browse content"),this); browseButton->setObjectName("installedBrowse"); tools->addWidget(browseButton);
         auto findAction=[&](const char* name)->QAction* { for (auto* action : actions) if (action->objectName()==name) return action; return nullptr; };
+        if (auto* updateAction = findAction("actionUpdateItem")) {
+            auto* update = new QPushButton(installedText("Check for updates"), this);
+            update->setObjectName("installedCheckUpdates");
+            update->setEnabled(updateAction->isEnabled());
+            connect(updateAction, &QAction::changed, update, [update, updateAction] { update->setEnabled(updateAction->isEnabled()); });
+            connect(update, &QPushButton::clicked, updateAction, &QAction::trigger);
+            tools->addWidget(update);
+        }
         auto* addAction=findAction("actionAddItem");
         auto* add=new QPushButton(QIcon(":/pxl/icons/plus.svg"),installedText("Add files"),this); add->setObjectName("installedAddFiles"); tools->addWidget(add);
         auto* more=new QPushButton(QStringLiteral("•••"),this); more->setAccessibleName(installedText("Content actions")); tools->addWidget(more);
