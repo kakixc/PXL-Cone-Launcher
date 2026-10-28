@@ -153,8 +153,10 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         m_ui->verticalLayout->addWidget(workspace);
         m_languageWidget = new LanguageSelectionWidget(this);
         m_languageWidget->setObjectName("appearanceLanguage");
+        m_languageWidget->setSizePolicy(QSizePolicy::Preferred,QSizePolicy::Maximum);
         m_ui->verticalLayout->addWidget(m_languageWidget);
         auto* advancedButton = new QPushButton(tr("Icons, console and mascot"), this);
+        advancedButton->setObjectName("appearanceAdvancedDisclosure");
         advancedButton->setCheckable(true);
         advancedButton->setProperty("pxlDisclosure", true);
         m_ui->verticalLayout->addWidget(advancedButton, 0, Qt::AlignLeft);

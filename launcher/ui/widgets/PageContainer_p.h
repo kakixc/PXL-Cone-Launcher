@@ -96,6 +96,11 @@ class PageView : public QListView {
         int width = sizeHintForColumn(0) + frameWidth() * 2 + 5;
         if (verticalScrollBar()->isVisible())
             width += verticalScrollBar()->width();
+        if (property("pxlCompactNavigation").toBool() && model()) {
+            int height = contentsMargins().top()+contentsMargins().bottom()+frameWidth()*2;
+            for (int row=0; row<model()->rowCount(); ++row) height += qMax(32,sizeHintForRow(row));
+            return QSize(width,qMax(52,height));
+        }
         return QSize(width, 100);
     }
 

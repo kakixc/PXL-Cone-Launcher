@@ -1157,7 +1157,7 @@ void WorkspacePage::changeEvent(QEvent* event)
 void WorkspacePage::retranslateUi()
 {
     if (auto* checker = qobject_cast<ReleaseUpdateChecker*>(m_updater.data())) {
-        m_updateButton->setText(checker->release().isAvailable() ? tr("Update available") : tr("Updates"));
+        m_updateButton->setText(tr("Update available"));
         m_updateButton->setMinimumWidth(QFontMetrics(m_updateButton->font()).horizontalAdvance(m_updateButton->text()) + 64);
         m_updateButton->setToolTip(checker->release().isAvailable() ? checker->release().tag : tr("Check for updates"));
     }
@@ -1293,11 +1293,12 @@ void WorkspacePage::bindUpdater(ExternalUpdater* updater)
     if (m_updater) disconnect(m_updater,nullptr,this,nullptr);
     m_updater = updater;
     auto* checker = qobject_cast<ReleaseUpdateChecker*>(updater);
-    m_updateButton->setVisible(checker != nullptr);
+    m_updateButton->setVisible(checker && checker->release().isAvailable());
     if (!checker) return;
     auto refreshUpdate = [this,checker] {
         const bool available = checker->release().isAvailable();
-        m_updateButton->setText(available ? tr("Update available") : tr("Updates"));
+        m_updateButton->setText(tr("Update available"));
+        m_updateButton->setVisible(available);
         m_updateButton->setProperty("available",available);
         m_updateButton->style()->unpolish(m_updateButton);
         m_updateButton->style()->polish(m_updateButton);
@@ -1312,8 +1313,13 @@ void WorkspacePage::bindUpdater(ExternalUpdater* updater)
 void WorkspacePage::showLauncherUpdates()
 {
     auto* checker = qobject_cast<ReleaseUpdateChecker*>(m_updater.data());
-    if (!checker || findChild<QDialog*>("pxlLauncherUpdates")) return;
+    if (!checker) return;
+    // Classic/native settings can be active while the workspace is hidden.
+    // A child overlay on that hidden page would have no accessible Close action.
+    QWidget* surface = isVisible() ? this : QApplication::activeModalWidget();
+    if (!surface) surface = QApplication::activeWindow();
+    if (!surface || !surface->isVisible() || surface->findChild<QDialog*>("pxlLauncherUpdates")) return;
     if (!checker->checking() && !checker->release().isAvailable()) checker->checkForUpdates();
     Pxl::LauncherUpdateDialog dialog(checker);
-    Pxl::DialogOverlay::run(&dialog,this);
+    Pxl::DialogOverlay::run(&dialog,surface);
 }

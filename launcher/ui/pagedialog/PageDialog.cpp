@@ -18,6 +18,7 @@
 #include <QDialogButtonBox>
 #include <QKeyEvent>
 #include <QPushButton>
+#include <QStyle>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -65,18 +66,31 @@ PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidge
         mainLayout->setContentsMargins(24, 8, 24, 20);
         mainLayout->setSpacing(16);
         auto* search = new Pxl::LibrarySearch(this);
+        search->setObjectName("pxlSettingsSearch");
+        search->setMaximumWidth(500);
+        search->setMinimumWidth(0);
         search->setPlaceholderText(tr("Search settings"));
         search->setClearButtonEnabled(true);
-        auto* toolbar = new QHBoxLayout;
+        auto* topControls = new QWidget(this);
+        topControls->setObjectName("pxlSettingsToolbar");
+        topControls->setProperty("pxlTransientControl",true);
+        auto* toolbar = new QHBoxLayout(topControls);
+        toolbar->setContentsMargins(0,0,0,0);
         toolbar->setSpacing(16);
-        toolbar->addWidget(search, 1);
         auto* advancedMode = new Pxl::ToggleSwitch(tr("Advanced mode"), this);
         advancedMode->setObjectName("pxlAdvancedSettingsMode");
         advancedMode->setProperty("pxlDisclosure", true);
         advancedMode->setToolTip(tr("Show technical settings, services, tools and proxy configuration."));
         advancedMode->setChecked(APPLICATION_DYN && APPLICATION_DYN->settings()->get("WorkspaceAdvancedSettings").toBool());
+        advancedMode->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+        advancedMode->ensurePolished();
+        // Equal flanks center the search in the content column, independently of the mode control.
+        toolbar->addSpacerItem(new QSpacerItem(advancedMode->sizeHint().width()+toolbar->spacing(),0,QSizePolicy::Fixed,QSizePolicy::Minimum));
+        toolbar->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
+        toolbar->addWidget(search,1);
+        toolbar->addSpacerItem(new QSpacerItem(0,0,QSizePolicy::Expanding,QSizePolicy::Minimum));
         toolbar->addWidget(advancedMode);
-        mainLayout->addLayout(toolbar);
+        m_container->setTopControls(topControls);
         m_container->setAdvancedMode(advancedMode->isChecked());
         connect(advancedMode, &QCheckBox::toggled, this, [this](bool advanced) {
             m_container->setAdvancedMode(advanced);
@@ -90,28 +104,35 @@ PageDialog::PageDialog(BasePageProvider* pageProvider, QString defaultId, QWidge
         footer->addWidget(hint);
         footer->addStretch();
         auto* apply = new QPushButton(tr("Apply changes"), this);
-        apply->setProperty("pxlPrimary", true);
+        m_applyButton = apply;
+        apply->setObjectName("pxlApplySettings");
+        setDirty(false);
         footer->addWidget(apply);
         mainLayout->addLayout(footer);
         connect(apply, &QPushButton::clicked, this, [this] { applyChanges(); });
+        auto transient = [this](QWidget* control) {
+            for (auto* widget=control; widget && widget!=m_container; widget=widget->parentWidget())
+                if (widget->property("pxlTransientControl").toBool()) return true;
+            return false;
+        };
         for (auto* edit : m_container->findChildren<QLineEdit*>())
-            connect(edit, &QLineEdit::textChanged, this, [this] { m_dirty = true; });
+            if (!transient(edit)) connect(edit, &QLineEdit::textChanged, this, [this] { setDirty(true); });
         for (auto* button : m_container->findChildren<QAbstractButton*>())
-            if (!button->property("pxlDisclosure").toBool())
-                connect(button, &QAbstractButton::clicked, this, [this] { m_dirty = true; });
+            if (!transient(button) && !button->property("pxlDisclosure").toBool())
+                connect(button, &QAbstractButton::clicked, this, [this] { setDirty(true); });
         for (auto* combo : m_container->findChildren<QComboBox*>())
-            connect(combo, qOverload<int>(&QComboBox::activated), this, [this] { m_dirty = true; });
+            connect(combo, qOverload<int>(&QComboBox::activated), this, [this] { setDirty(true); });
         for (auto* spin : m_container->findChildren<QSpinBox*>())
-            connect(spin, &QSpinBox::valueChanged, this, [this] { m_dirty = true; });
+            connect(spin, &QSpinBox::valueChanged, this, [this] { setDirty(true); });
         for (auto* spin : m_container->findChildren<QDoubleSpinBox*>())
-            connect(spin, &QDoubleSpinBox::valueChanged, this, [this] { m_dirty = true; });
+            connect(spin, &QDoubleSpinBox::valueChanged, this, [this] { setDirty(true); });
         for (auto* slider : m_container->findChildren<QAbstractSlider*>())
             if (!qobject_cast<QScrollBar*>(slider))
-                connect(slider, &QAbstractSlider::valueChanged, this, [this] { m_dirty = true; });
+                connect(slider, &QAbstractSlider::valueChanged, this, [this] { setDirty(true); });
         for (auto* edit : m_container->findChildren<QTextEdit*>())
-            connect(edit, &QTextEdit::textChanged, this, [this] { m_dirty = true; });
+            connect(edit, &QTextEdit::textChanged, this, [this] { setDirty(true); });
         for (auto* edit : m_container->findChildren<QPlainTextEdit*>())
-            connect(edit, &QPlainTextEdit::textChanged, this, [this] { m_dirty = true; });
+            connect(edit, &QPlainTextEdit::textChanged, this, [this] { setDirty(true); });
         return;
     }
 
@@ -157,6 +178,17 @@ void PageDialog::closeEvent(QCloseEvent* event)
         QDialog::closeEvent(event);
 }
 
+void PageDialog::setDirty(bool dirty)
+{
+    m_dirty = dirty;
+    if (!m_applyButton) return;
+    m_applyButton->setProperty("pxlPrimary", dirty);
+    m_applyButton->setEnabled(dirty);
+    m_applyButton->style()->unpolish(m_applyButton);
+    m_applyButton->style()->polish(m_applyButton);
+    m_applyButton->update();
+}
+
 bool PageDialog::applyChanges()
 {
     {
@@ -165,7 +197,7 @@ bool PageDialog::applyChanges()
         if (!m_container->saveAll()) return false;
     }
     emit applied();
-    m_dirty = false;
+    setDirty(false);
     return true;
 }
 
@@ -180,7 +212,7 @@ bool PageDialog::requestLeave()
         if (choice != QMessageBox::Save && choice != QMessageBox::Discard) return false;
         if (choice == QMessageBox::Save && !applyChanges()) return false;
     }
-    m_dirty = false;
+    setDirty(false);
     deleteLater();
     return true;
 }

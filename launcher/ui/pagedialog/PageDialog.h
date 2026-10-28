@@ -19,6 +19,7 @@
 #include "ui/pages/BasePageProvider.h"
 
 class PageContainer;
+class QPushButton;
 class PageDialog : public QDialog {
     Q_OBJECT
    public:
@@ -35,9 +36,11 @@ class PageDialog : public QDialog {
     void accept() override;
     void closeEvent(QCloseEvent* event) override;
     bool handleClose();
+    void setDirty(bool dirty);
 
    private:
     PageContainer* m_container;
+    QPushButton* m_applyButton = nullptr;
     bool m_embedded = false;
     bool m_dirty = false;
 };

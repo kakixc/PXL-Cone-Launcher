@@ -62,6 +62,7 @@ JavaPage::JavaPage(QWidget* parent) : QWidget(parent), ui(new Ui::JavaPage)
 {
     ui->setupUi(this);
     ui->tabWidget->setDocumentMode(true);
+    ui->tabWidget->tabBar()->setDrawBase(false);
     ui->tabWidget->setStyleSheet("QTabWidget::pane { border: none; background: transparent; } QTabBar::tab { padding: 9px 16px; margin-right: 8px; border-radius: 8px; background: rgba(255,238,218,15); } QTabBar::tab:selected { background: rgba(242,163,101,35); color: #ffc08e; }");
     ui->tabWidget->setTabText(0, tr("Runtime"));
     ui->tabWidget->setTabText(1, tr("Managed runtimes"));

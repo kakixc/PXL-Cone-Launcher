@@ -61,6 +61,7 @@ class PageContainer : public QWidget, public BasePageContainer {
 
     void addButtons(QWidget* buttons);
     void addButtons(QLayout* buttons);
+    void setTopControls(QWidget* controls);
 
     void useSidebarStyle(bool sidebar);
     void useConeStyle();

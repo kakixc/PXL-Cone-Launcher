@@ -37,6 +37,7 @@
 
 #include "PageContainer.h"
 #include "ui/pxl/SettingsMode.h"
+#include "ui/pxl/SettingsSearch.h"
 #include "BuildConfig.h"
 #include "PageContainer_p.h"
 #include "ui/pxl/Animations.h"
@@ -106,7 +107,7 @@ class PageEntryFilterModel : public QSortFilterProxyModel {
                 for (auto* button : widget->findChildren<QAbstractButton*>()) if (searchable(button)) text += " " + button->text();
                 for (auto* group : widget->findChildren<QGroupBox*>()) if (searchable(group)) text += " " + group->title();
             }
-            return text.contains(query, Qt::CaseInsensitive);
+            return Pxl::settingsSearchMatches(text,query);
         }
         // Regular contents check, then check page-filter.
         return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
@@ -243,12 +244,57 @@ void PageContainer::retranslate()
 
 void PageContainer::addButtons(QWidget* buttons)
 {
-    m_layout->addWidget(buttons, 2, 1, 1, 2);
+    m_layout->addWidget(buttons, property("pxlTopControls").toBool() ? 3 : 2, 1, 1, 2);
 }
 
 void PageContainer::addButtons(QLayout* buttons)
 {
-    m_layout->addLayout(buttons, 2, 1, 1, 2);
+    m_layout->addLayout(buttons, property("pxlTopControls").toBool() ? 3 : 2, 1, 1, 2);
+}
+
+void PageContainer::setTopControls(QWidget* controls)
+{
+    if (!controls || property("pxlTopControls").toBool()) return;
+    auto* heading = m_layout->itemAtPosition(0,1);
+    auto* page = m_layout->itemAtPosition(1,1);
+    auto* navigation = m_layout->itemAtPosition(0,0);
+    auto* buttons = m_layout->itemAtPosition(2,1);
+    if (!heading || !page || !navigation) return;
+    // Global settings pages share a single content edge, including their headings.
+    if (auto* headingLayout = heading->layout()) {
+        headingLayout->setContentsMargins(0,0,0,0);
+        if (headingLayout->count() && headingLayout->itemAt(0)->spacerItem()) delete headingLayout->takeAt(0);
+    }
+    for (auto* entry : m_model->pages())
+        if (auto* widget = dynamic_cast<QWidget*>(entry); widget && widget->layout()) widget->layout()->setContentsMargins(0,0,0,0);
+    auto* empty = m_pageStack->widget(0);
+    empty->setObjectName("pxlSettingsSearchEmpty");
+    auto* emptyLayout = new QVBoxLayout(empty);
+    emptyLayout->setContentsMargins(24,24,24,24);
+    emptyLayout->setSpacing(14);
+    emptyLayout->addStretch();
+    auto* icon = new QLabel(empty);
+    icon->setPixmap(QIcon(":/pxl/icons/magnifying-glass.svg").pixmap(40,40));
+    icon->setAlignment(Qt::AlignCenter);
+    emptyLayout->addWidget(icon);
+    auto* title = new QLabel(tr("No matching settings"),empty);
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet("font-size:20px; font-weight:600; background:transparent;");
+    emptyLayout->addWidget(title);
+    auto* hint = new QLabel(tr("Try another word or clear the search."),empty);
+    hint->setWordWrap(true); hint->setAlignment(Qt::AlignCenter);
+    hint->setProperty("pxlFlowHint",true);
+    emptyLayout->addWidget(hint);
+    emptyLayout->addStretch(2);
+    m_header->setVisible(!m_currentPage || m_currentPage->id() != "about");
+    // Move the existing layout items without replacing their widgets or owners.
+    for (auto* item : {heading,page,navigation,buttons}) if (item) m_layout->removeItem(item);
+    m_layout->addItem(heading,1,1);
+    m_layout->addItem(page,2,1);
+    m_layout->addItem(navigation,0,0,4,1,Qt::AlignTop);
+    if (buttons) m_layout->addItem(buttons,3,1,1,2);
+    m_layout->addWidget(controls,0,1);
+    setProperty("pxlTopControls",true);
 }
 
 void PageContainer::useSidebarStyle(bool sidebar)
@@ -262,6 +308,13 @@ void PageContainer::useConeStyle()
     m_proxyModel->setProperty("pxlIcons", true);
     useSidebarStyle(false);
     m_pageList->setObjectName("conePageNavigation");
+    m_pageList->setProperty("pxlCompactNavigation",true);
+    m_pageList->setSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::Preferred);
+    m_layout->setAlignment(m_pageList,Qt::AlignTop);
+    connect(m_proxyModel,&QAbstractItemModel::rowsInserted,m_pageList,&QWidget::updateGeometry);
+    connect(m_proxyModel,&QAbstractItemModel::rowsRemoved,m_pageList,&QWidget::updateGeometry);
+    connect(m_proxyModel,&QAbstractItemModel::modelReset,m_pageList,&QWidget::updateGeometry);
+    connect(m_proxyModel,&QAbstractItemModel::layoutChanged,m_pageList,&QWidget::updateGeometry);
     m_pageList->setIconSize(QSize(22, 22));
     m_pageList->setMinimumWidth(180);
     m_pageList->setMaximumWidth(230);
@@ -297,8 +350,16 @@ void PageContainer::setSearchText(const QString& text)
 {
     m_proxyModel->setProperty("pxlSearchText", text);
     m_proxyModel->invalidate();
-    if (m_proxyModel->rowCount() > 0 && !m_pageList->currentIndex().isValid())
-        m_pageList->setCurrentIndex(m_proxyModel->index(0, 0));
+    if (m_proxyModel->rowCount() == 0) {
+        m_pageList->setCurrentIndex({});
+        showPage(-1);
+        return;
+    }
+    auto selected = m_currentPage ? m_proxyModel->mapFromSource(m_model->index(m_currentPage->listIndex)) : QModelIndex();
+    if (!selected.isValid()) selected = m_proxyModel->index(0,0);
+    m_pageList->setCurrentIndex(selected);
+    auto* page = m_model->pages().at(m_proxyModel->mapToSource(selected).row());
+    if (page != m_currentPage) showPage(page->listIndex);
 }
 
 void PageContainer::showPage(int row)
@@ -315,14 +376,17 @@ void PageContainer::showPage(int row)
     if (m_currentPage) {
         m_pageStack->setCurrentIndex(m_currentPage->stackIndex);
         m_header->setText(m_currentPage->displayName());
+        m_header->setVisible(!property("pxlTopControls").toBool() || m_currentPage->id() != "about");
         m_currentPage->opened();
         if (auto* widget = dynamic_cast<QWidget*>(m_currentPage)) {
             widget->show();
             widget->update();
+            if (m_pageList->property("pxlCompactNavigation").toBool()) Pxl::animatePage(widget);
         }
     } else {
         m_pageStack->setCurrentIndex(0);
         m_header->setText(QString());
+        if (property("pxlTopControls").toBool()) m_header->hide();
     }
 }
 

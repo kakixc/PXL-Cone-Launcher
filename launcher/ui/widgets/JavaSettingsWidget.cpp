@@ -36,6 +36,7 @@
  */
 
 #include "JavaSettingsWidget.h"
+#include "ui/pxl/NumberField.h"
 #include "ui/pxl/SettingsMode.h"
 
 #include <QFileDialog>
@@ -149,8 +150,8 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
 
         auto* memory = Pxl::settingsCard(this, tr("Memory"), tr("Memory limits apply to the game. More allocated memory does not always improve performance."));
         auto* memoryLayout = static_cast<QVBoxLayout*>(memory->layout());
-        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Minimum memory"), m_ui->minMemSpinBox));
-        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Maximum memory"), m_ui->maxMemSpinBox));
+        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Minimum memory"), new Pxl::NumberField(m_ui->minMemSpinBox,memory)));
+        memoryLayout->addWidget(Pxl::settingsRow(memory, tr("Maximum memory"), new Pxl::NumberField(m_ui->maxMemSpinBox,memory)));
         m_ui->minMemSpinBox->show();
         m_ui->maxMemSpinBox->show();
         memoryLayout->addWidget(m_ui->lowMemWarningCheckBox);

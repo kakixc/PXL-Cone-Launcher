@@ -2665,3 +2665,43 @@ msgstr "Проверить обновления"
 msgctxt "ReleaseUpdateChecker"
 msgid "Development preview"
 msgstr "Тестовая сборка"
+
+msgctxt "Pxl::AboutPage"
+msgid "About"
+msgstr "О приложении"
+
+msgctxt "Pxl::AboutPage"
+msgid "Build"
+msgstr "Сборка"
+
+msgctxt "Pxl::AboutPage"
+msgid "System"
+msgstr "Система"
+
+msgctxt "Pxl::AboutPage"
+msgid "Qt version"
+msgstr "Версия Qt"
+
+msgctxt "Pxl::AboutPage"
+msgid "Development preview"
+msgstr "Тестовая сборка"
+
+msgctxt "Pxl::AboutPage"
+msgid "Check for updates"
+msgstr "Проверить обновления"
+
+msgctxt "Pxl::NumberField"
+msgid "Decrease"
+msgstr "Уменьшить"
+
+msgctxt "Pxl::NumberField"
+msgid "Increase"
+msgstr "Увеличить"
+
+msgctxt "PageContainer"
+msgid "No matching settings"
+msgstr "Настройки не найдены"
+
+msgctxt "PageContainer"
+msgid "Try another word or clear the search."
+msgstr "Попробуйте другое слово или очистите поиск."
