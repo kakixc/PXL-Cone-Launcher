@@ -22,6 +22,9 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTimer>
+#include <QThreadPool>
+#include <GZip.h>
+#include <ui/pxl/NameEntryPanel.h>
 #include <QStringListModel>
 #include <QWheelEvent>
 #include <QVBoxLayout>
@@ -711,6 +714,78 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No matching worlds"));
         search->clear(); source.removeRows(0, source.rowCount()); QTest::qWait(20);
         QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No worlds yet"));
+    }
+
+    void worldActionsUsePxlNamesAndCancelOrRefreshCannotDeleteAnotherWorld()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg")),
+                                   temporary.filePath("pack"));
+        const QString saves = temporary.filePath("saves");
+        QVERIFY(QDir().mkpath(saves + "/Fixture"));
+        // A minimal real NBT compound: Data.LevelName = Fixture.
+        const auto nbt = QByteArray::fromHex("0a00000a0004446174610800094c6576656c4e616d650007466978747572650000");
+        QByteArray compressed;
+        QVERIFY(GZip::zip(nbt, compressed));
+        QFile level(saves + "/Fixture/level.dat");
+        QVERIFY(level.open(QIODevice::WriteOnly));
+        QCOMPARE(level.write(compressed), compressed.size());
+        level.close();
+        WorldList worlds(saves, &instance);
+        QVERIFY(worlds.update());
+        QCOMPARE(worlds.rowCount(), 1);
+        WorldListPage page(&instance, &worlds);
+        page.usePxlPresentation();
+        page.resize(1000, 650);
+        page.show();
+        auto* selectionView = page.findChild<QTreeView*>("worldTreeView");
+        QVERIFY(selectionView);
+        auto choose = [&] { selectionView->setCurrentIndex(selectionView->model()->index(0, 0)); };
+        auto enterName = [&](const QString& value) {
+            QTimer::singleShot(20, &page, [&, value] {
+                auto* dialog = page.findChild<QDialog*>("pxlNameEntry");
+                QVERIFY(dialog);
+                QVERIFY(!dialog->isWindow());
+                auto* input = dialog->findChild<QLineEdit*>("pxlEnteredName");
+                auto* save = dialog->findChild<QPushButton*>("pxlNameSave");
+                input->setText("  ");
+                QVERIFY(!save->isEnabled());
+                input->setText(value);
+                QVERIFY(save->isEnabled());
+                const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+                if (!screenshots.isEmpty())
+                    QVERIFY(page.grab().save(QDir(screenshots).filePath("world-name-entry.png")));
+                save->click();
+            });
+        };
+        choose();
+        enterName("Renamed world");
+        QVERIFY(QMetaObject::invokeMethod(&page, "on_actionRename_triggered", Qt::DirectConnection));
+        QCOMPARE(worlds.rowCount(), 1);
+        QCOMPARE(worlds.allWorlds().first().name(), QString("Renamed world"));
+        choose();
+        enterName("Copied world");
+        QVERIFY(QMetaObject::invokeMethod(&page, "on_actionCopy_triggered", Qt::DirectConnection));
+        QCOMPARE(worlds.rowCount(), 2);
+        QStringList names;
+        for (const auto& world : worlds.allWorlds()) names.append(world.name());
+        QVERIFY(names.contains("Renamed world"));
+        QVERIFY(names.contains("Copied world"));
+        for (const bool refresh : {false, true}) {
+            choose();
+            QTimer::singleShot(20, &page, [&] {
+                auto* dialog = page.findChild<QDialog*>("pxlMessagePanel");
+                QVERIFY(dialog);
+                if (refresh) { worlds.update(); dialog->accept(); }
+                else dialog->reject();
+            });
+            QVERIFY(QMetaObject::invokeMethod(&page, "on_actionRemove_triggered", Qt::DirectConnection));
+            QCOMPARE(worlds.rowCount(), 2);
+            for (const auto& world : worlds.allWorlds()) QVERIFY(world.container().exists());
+        }
+        QThreadPool::globalInstance()->waitForDone();
+        QCoreApplication::processEvents();
     }
 
     void logSurfaceUsesExistingStreamViewAndClearEmptyState()

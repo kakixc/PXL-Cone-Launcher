@@ -37,6 +37,8 @@
 
 #include "WorldListPage.h"
 #include "ui/pxl/WorldsView.h"
+#include "ui/pxl/MessagePanel.h"
+#include "ui/pxl/NameEntryPanel.h"
 #include "minecraft/WorldList.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui_WorldListPage.h"
@@ -49,6 +51,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPersistentModelIndex>
 #include <QPushButton>
 #include <QSortFilterProxyModel>
 #include <QTreeView>
@@ -204,20 +207,21 @@ bool WorldListPage::eventFilter(QObject* obj, QEvent* ev)
 
 void WorldListPage::on_actionRemove_triggered()
 {
-    auto proxiedIndex = getSelectedWorld();
+    QPersistentModelIndex proxiedIndex = getSelectedWorld();
 
     if (!proxiedIndex.isValid())
         return;
 
-    auto result = CustomMessageBox::selectable(this, tr("Confirm Deletion"),
-                                               tr("You are about to delete \"%1\".\n"
+    const auto warning = tr("You are about to delete \"%1\".\n"
                                                   "The world may be gone forever (A LONG TIME).\n\n"
                                                   "Are you sure?")
-                                                   .arg(m_worlds->allWorlds().at(proxiedIndex.row()).name()),
-                                               QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                      ->exec();
+                                                   .arg(m_worlds->allWorlds().at(proxiedIndex.row()).name());
+    const bool confirmed = m_pxlPresentation
+        ? Pxl::messagePanel(window(), tr("Confirm Deletion"), warning, tr("Delete world"), true)
+        : CustomMessageBox::selectable(this, tr("Confirm Deletion"), warning,
+                                      QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)->exec() == QMessageBox::Yes;
 
-    if (result != QMessageBox::Yes) {
+    if (!confirmed || !proxiedIndex.isValid()) {
         return;
     }
     m_worlds->stopWatching();
@@ -428,6 +432,10 @@ bool WorldListPage::isWorldSafe(QModelIndex)
 bool WorldListPage::worldSafetyNagQuestion(const QString& actionType)
 {
     if (!isWorldSafe(getSelectedWorld())) {
+        if (m_pxlPresentation)
+            return Pxl::messagePanel(window(), actionType,
+                tr("Changing a world while Minecraft is running is potentially unsafe.\nDo you wish to proceed?"),
+                tr("Continue anyway"), true);
         auto result = QMessageBox::question(
             this, actionType, tr("Changing a world while Minecraft is running is potentially unsafe.\nDo you wish to proceed?"));
         if (result == QMessageBox::No) {
@@ -439,16 +447,26 @@ bool WorldListPage::worldSafetyNagQuestion(const QString& actionType)
 
 void WorldListPage::on_actionCopy_triggered()
 {
-    QModelIndex index = getSelectedWorld();
+    QPersistentModelIndex index = getSelectedWorld();
     if (!index.isValid()) {
         return;
     }
 
-    if (!worldSafetyNagQuestion(tr("Copy World")))
+    if (!worldSafetyNagQuestion(tr("Copy World")) || !index.isValid())
         return;
 
     auto worldVariant = m_worlds->data(index, WorldList::ObjectRole);
     auto world = (World*)worldVariant.value<void*>();
+    if (m_pxlPresentation) {
+        auto selectedWorld = *world;
+        const auto name = Pxl::nameEntryPanel(window(), tr("Copy World"), tr("Enter a new name for the copy."),
+                                            selectedWorld.name(), tr("Create copy"));
+        if (name) {
+            if (selectedWorld.install(m_worlds->dir().absolutePath(), *name)) m_worlds->update();
+            else Pxl::showNotice(window(), tr("Error"), tr("Couldn't copy the world."));
+        }
+        return;
+    }
     bool ok = false;
     QString name =
         QInputDialog::getText(this, tr("World name"), tr("Enter a new name for the copy."), QLineEdit::Normal, world->name(), &ok);
@@ -460,17 +478,27 @@ void WorldListPage::on_actionCopy_triggered()
 
 void WorldListPage::on_actionRename_triggered()
 {
-    QModelIndex index = getSelectedWorld();
+    QPersistentModelIndex index = getSelectedWorld();
     if (!index.isValid()) {
         return;
     }
 
-    if (!worldSafetyNagQuestion(tr("Rename World")))
+    if (!worldSafetyNagQuestion(tr("Rename World")) || !index.isValid())
         return;
 
     auto worldVariant = m_worlds->data(index, WorldList::ObjectRole);
     auto world = (World*)worldVariant.value<void*>();
 
+    if (m_pxlPresentation) {
+        auto selectedWorld = *world;
+        const auto name = Pxl::nameEntryPanel(window(), tr("Rename World"), tr("Enter a new world name."),
+                                            selectedWorld.name(), tr("Rename"));
+        if (name) {
+            if (selectedWorld.rename(*name)) m_worlds->update();
+            else Pxl::showNotice(window(), tr("Error"), tr("Couldn't rename the world."));
+        }
+        return;
+    }
     bool ok = false;
     QString name = QInputDialog::getText(this, tr("World name"), tr("Enter a new world name."), QLineEdit::Normal, world->name(), &ok);
 

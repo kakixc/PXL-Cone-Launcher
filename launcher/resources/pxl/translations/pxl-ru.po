@@ -3176,3 +3176,27 @@ msgstr "Обновить моды"
 msgctxt "ModFolderPage"
 msgid "Remove metadata"
 msgstr "Удалить метаданные"
+
+msgctxt "WorldListPage"
+msgid "Delete world"
+msgstr "Удалить мир"
+
+msgctxt "WorldListPage"
+msgid "Continue anyway"
+msgstr "Всё равно продолжить"
+
+msgctxt "WorldListPage"
+msgid "Create copy"
+msgstr "Создать копию"
+
+msgctxt "WorldListPage"
+msgid "Rename"
+msgstr "Переименовать"
+
+msgctxt "WorldListPage"
+msgid "Couldn't copy the world."
+msgstr "Не удалось скопировать мир."
+
+msgctxt "WorldListPage"
+msgid "Couldn't rename the world."
+msgstr "Не удалось переименовать мир."
