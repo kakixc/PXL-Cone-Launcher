@@ -3033,3 +3033,47 @@ msgstr "Аккаунт не добавлен. Попробуйте ещё раз
 msgctxt "MSALoginDialog"
 msgid "Close"
 msgstr "Закрыть"
+
+msgctxt "Pxl::AboutPage"
+msgid "Explore PXL Cone"
+msgstr "Знакомство с PXL"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Rename instance"
+msgstr "Переименовать сборку"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Instance name"
+msgstr "Название сборки"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Rename"
+msgstr "Переименовать"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Rename the folder too?"
+msgstr "Переименовать также папку?"
+
+msgctxt "Pxl::RenamePanel"
+msgid "The instance name has changed. You can keep its current folder name."
+msgstr "Название сборки изменено. Имя её папки можно оставить прежним."
+
+msgctxt "Pxl::RenamePanel"
+msgid "Remember my choice"
+msgstr "Запомнить мой выбор"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Keep folder name"
+msgstr "Оставить имя папки"
+
+msgctxt "Pxl::RenamePanel"
+msgid "Rename folder"
+msgstr "Переименовать папку"
+
+msgctxt "JavaSettingsWidget"
+msgid "Warn when there is not enough memory available"
+msgstr "Предупреждать, если доступной памяти недостаточно"

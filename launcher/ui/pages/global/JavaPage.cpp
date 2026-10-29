@@ -35,6 +35,7 @@
  */
 
 #include "JavaPage.h"
+#include "ui/pxl/ManagedJavaPresentation.h"
 #include "BuildConfig.h"
 #include "JavaCommon.h"
 #include "java/JavaInstall.h"
@@ -77,9 +78,13 @@ JavaPage::JavaPage(QWidget* parent) : QWidget(parent), ui(new Ui::JavaPage)
     if (BuildConfig.JAVA_DOWNLOADER_ENABLED) {
         ui->managedJavaList->initialize(new JavaInstallList(this, true));
         ui->managedJavaList->setResizeOn(2);
+        Pxl::styleManagedJavaList(ui->managedJavaList->view(),ui->managedJavaList->findChild<QLineEdit*>());
         ui->managedJavaList->selectCurrent();
         ui->managedJavaList->setEmptyString(tr("No managed Java versions are installed"));
         ui->managedJavaList->setEmptyErrorString(tr("Couldn't load the managed Java list!"));
+        auto updateActions=[this] { ui->removeJavaButton->setEnabled(bool(ui->managedJavaList->selectedVersion())); };
+        connect(ui->managedJavaList,&VersionSelectWidget::selectedVersionChanged,this,updateActions);
+        updateActions();
     } else
         ui->tabWidget->tabBar()->hide();
 }

@@ -96,7 +96,7 @@ public:
     void retranslate() override
     {
         m_check->setText(text("Check for updates"));
-        m_welcome->setText(text("First steps & setup"));
+        m_welcome->setText(text("Explore PXL Cone"));
         const QStringList keys{text("Build"),text("System"),text("Qt version")};
         for (auto* label : findChildren<QLabel*>()) {
             if (label->property("aboutKey").isValid()) label->setText(keys.value(label->property("aboutKey").toInt()));

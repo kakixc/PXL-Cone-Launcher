@@ -857,6 +857,8 @@ SET(LAUNCHER_SOURCES
     ui/MainWindow.cpp
     ui/pxl/WorkspacePage.h
     ui/pxl/WorkspacePage.cpp
+    ui/pxl/RenamePanel.h
+    ui/pxl/ManagedJavaPresentation.h
     ui/pxl/WelcomeSetup.h
     ui/pxl/WelcomeTour.h
     ui/pxl/LoginErrorPanel.h

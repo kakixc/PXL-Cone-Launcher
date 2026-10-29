@@ -172,6 +172,7 @@ class MainWindow : public QMainWindow {
     void on_actionExportInstanceFlamePack_triggered();
 
     void on_actionRenameInstance_triggered();
+    void finishInstanceRename(const QString& before, const QString& after);
 
     void on_actionEditInstance_triggered();
 

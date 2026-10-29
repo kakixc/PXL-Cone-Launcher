@@ -230,6 +230,8 @@ public:
 #include <ui/pxl/TaskActivity.h>
 #include <ui/pxl/AppearanceSections.h>
 #include <ui/pxl/JavaAdvancedSections.h>
+#include <ui/pxl/ManagedJavaPresentation.h>
+#include <ui/pxl/RenamePanel.h>
 #include <ui/pxl/DialogOverlay.h>
 #include <ui/pxl/Backdrop.h>
 #include <ui/widgets/VersionSelectWidget.h>
@@ -963,6 +965,48 @@ class WorkspacePageTest : public QObject {
             QTest::keyClick(preview,Qt::Key_Escape);
         });
         QTest::mouseClick(gallery.view()->viewport(),Qt::LeftButton,Qt::NoModifier,gallery.view()->visualRect(gallery.view()->model()->index(0,0)).center());
+    }
+
+    void renamePanelShowsEditableNameAndCancelsWithoutChanges()
+    {
+        QWidget surface; surface.resize(900,600); surface.show();
+        bool inspected=false;
+        QTimer::singleShot(40,&surface,[&] {
+            auto* panel=surface.findChild<QDialog*>("pxlRenameInstance");
+            QVERIFY(panel); auto* field=panel->findChild<QLineEdit*>("instanceNewName");
+            QVERIFY(field && field->isVisible()); QCOMPARE(field->text(),QString("Survival"));
+            QVERIFY(panel->rect().contains(QRect(field->mapTo(panel,QPoint()),field->size())));
+            field->setText(QString(300, QLatin1Char('A'))); QCOMPARE(field->text().size(),128);
+            field->setText("New visible name"); QCOMPARE(field->text(),QString("New visible name"));
+            inspected=true; panel->reject();
+        });
+        const auto result=Pxl::renameInstance(&surface,"Survival");
+        QVERIFY(inspected); QVERIFY(!result.has_value());
+    }
+
+    void managedJavaCardsKeepModelSelectionAndFitLongPaths()
+    {
+        QWidget surface; surface.resize(840,360);
+        auto* layout=new QVBoxLayout(&surface);
+        auto* search=new QLineEdit(&surface);
+        auto* view=new QTreeView(&surface);
+        QStandardItemModel model(2,3);
+        for (int row=0;row<2;++row) {
+            const auto index=model.index(row,0);
+            model.setData(index,row ? "21.0.9" : "17.0.12",BaseVersionList::VersionRole);
+            model.setData(index,"x86_64",BaseVersionList::CPUArchitectureRole);
+            model.setData(index,QString("D:/Minecraft/Java/%1/bin/javaw.exe").arg(row ? "temurin-21" : "temurin-17"),BaseVersionList::PathRole);
+        }
+        view->setModel(&model); layout->addWidget(view); layout->addWidget(search);
+        Pxl::styleManagedJavaList(view,search);
+        surface.show(); QCoreApplication::processEvents();
+        QVERIFY(view->isHeaderHidden()); QVERIFY(view->isColumnHidden(1));
+        QCOMPARE(layout->indexOf(search),0);
+        QTest::mouseClick(view->viewport(),Qt::LeftButton,Qt::NoModifier,view->visualRect(model.index(1,0)).center());
+        QCOMPARE(view->currentIndex().row(),1);
+        QCOMPARE(view->currentIndex().data(BaseVersionList::VersionRole).toString(),QString("21.0.9"));
+        if (const auto path=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR"); !path.isEmpty())
+            QVERIFY(surface.grab().save(path+"/managed-java-cards.png"));
     }
 
     void screenshotLightboxAnimatesAndSupportsImmediateClose()

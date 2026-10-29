@@ -33,6 +33,7 @@
  */
 
 #include "InstanceDirUpdate.h"
+#include "ui/pxl/RenamePanel.h"
 
 #include <QCheckBox>
 
@@ -68,6 +69,12 @@ QString askToUpdateInstanceDirName(BaseInstance* instance, const QString& oldNam
 
     // Ask if we should rename
     if (renamingMode == "AskEverytime") {
+        if (parent && parent->objectName()=="pxlWorkspace") {
+            bool remember=false;
+            const bool rename=Pxl::confirmFolderRename(parent,oldName,newName,remember);
+            if (remember) APPLICATION->settings()->set("InstRenamingMode",rename ? "PhysicalDir" : "MetadataOnly");
+            if (!rename) return QString();
+        } else {
         auto checkBox = new QCheckBox(QObject::tr("&Remember my choice"), parent);
         auto dialog =
             CustomMessageBox::selectable(parent, QObject::tr("Rename instance folder"),
@@ -86,6 +93,7 @@ QString askToUpdateInstanceDirName(BaseInstance* instance, const QString& oldNam
         }
         if (res == QMessageBox::No)
             return QString();
+        }
     }
 
     // Check for linked instances

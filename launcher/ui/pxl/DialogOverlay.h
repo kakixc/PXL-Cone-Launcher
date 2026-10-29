@@ -10,6 +10,8 @@
 #include <QVariant>
 #include <QPropertyAnimation>
 #include <QPainterPath>
+#include <QVariantAnimation>
+#include <functional>
 #include "Animations.h"
 #include "FrostedSurface.h"
 
@@ -45,6 +47,17 @@ public:
         }
     }
 
+    bool closeAnimated(std::function<void()> completion)
+    {
+        if (m_closing) return true;
+        if (!m_dialog || !m_dialog->property("pxlAnimateLifecycle").toBool() ||
+            !isVisible() || !QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) return false;
+        m_closing = true;
+        m_transition->stop();
+        animateLifecycle(false, std::move(completion));
+        return true;
+    }
+
     static int run(QDialog* dialog, QWidget* surface)
     {
         const QPointer<QWidget> originalParent = dialog->parentWidget();
@@ -70,7 +83,9 @@ public:
         dialog->show();
         // Animate geometry, not an opacity snapshot of a composite scroll view.
         // Cached effects can retain pixels from the underlying workspace.
-        if (QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) {
+        if (dialog->property("pxlAnimateLifecycle").toBool() && QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) {
+            overlay->animateLifecycle(true);
+        } else if (QApplication::isEffectEnabled(Qt::UI_AnimateMenu)) {
             const auto target = dialog->geometry();
             dialog->move(target.topLeft() + QPoint(0, 6));
             overlay->m_transition->setStartValue(dialog->geometry());
@@ -117,7 +132,7 @@ protected:
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
-        painter.fillRect(rect(), QColor(0, 0, 0, 135));
+        painter.fillRect(rect(), QColor(0, 0, 0, qRound(135 * m_reveal)));
         if (m_dialog) {
             painter.setRenderHint(QPainter::Antialiasing);
             const auto panel = m_dialog->geometry();
@@ -125,14 +140,37 @@ protected:
             crop.setDevicePixelRatio(m_backdrop.devicePixelRatio());
             crop.fill(Qt::transparent);
             { QPainter background(&crop); background.drawPixmap(-panel.topLeft(), m_backdrop); }
+            painter.setOpacity(m_reveal);
             paintFrostedPanel(painter, panel, crop, 16);
         }
     }
 
 private:
+    void animateLifecycle(bool entering, std::function<void()> completion = {})
+    {
+        if (m_lifecycle) { m_lifecycle->stop(); m_lifecycle->deleteLater(); }
+        QPointer<QGraphicsOpacityEffect> effect = qobject_cast<QGraphicsOpacityEffect*>(m_dialog->graphicsEffect());
+        if (!effect) { effect = new QGraphicsOpacityEffect(m_dialog); m_dialog->setGraphicsEffect(effect); }
+        effect->setEnabled(true);
+        auto* animation = new QVariantAnimation(this); m_lifecycle = animation;
+        animation->setObjectName(entering ? "pxlOverlayEnter" : "pxlOverlayExit");
+        animation->setDuration(entering ? 200 : 150);
+        animation->setEasingCurve(entering ? QEasingCurve::OutCubic : QEasingCurve::InCubic);
+        animation->setStartValue(entering ? 0.0 : m_reveal); animation->setEndValue(entering ? 1.0 : 0.0);
+        connect(animation, &QVariantAnimation::valueChanged, this, [this, effect](const QVariant& value) {
+            m_reveal = value.toReal(); if (effect) effect->setOpacity(m_reveal);
+            if (m_dialog) m_dialog->move(m_target.topLeft() + QPoint(0, qRound(16 * (1 - m_reveal))));
+            update();
+        });
+        connect(animation, &QVariantAnimation::finished, this, [this, effect, completion] {
+            if (effect) effect->setEnabled(false);
+            if (m_dialog && completion) completion();
+        });
+        animation->start();
+    }
     void arrange(bool animated = false)
     {
-        if (!m_dialog) return;
+        if (!m_dialog || m_closing) return;
         auto desired = m_dialog->property("pxlPreferredSize").toSize();
         if (!desired.isValid()) desired = QSize(620, 680);
         const auto available = size() - QSize(32, 32);
@@ -149,6 +187,9 @@ private:
         } else m_dialog->setGeometry(target);
     }
     QPointer<QDialog> m_dialog;
+    QPointer<QVariantAnimation> m_lifecycle;
+    qreal m_reveal = 1.0;
+    bool m_closing = false;
     QPropertyAnimation* m_transition = nullptr;
     QRect m_target;
     QPixmap m_backdrop;

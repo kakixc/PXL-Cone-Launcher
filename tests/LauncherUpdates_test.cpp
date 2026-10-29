@@ -193,6 +193,7 @@ private slots:
         workspace.resize(1080, 820); workspace.show();
         POTranslator russian(":/pxl/translations/pxl-ru.po");
         AccountList accounts;
+        accounts.addAccount(MinecraftAccount::createOffline("ExistingProfile"));
         Pxl::WelcomeSetup dialog(&preferences, true, [&](const QString& language) {
             if (language == "ru") QCoreApplication::installTranslator(&russian);
             else QCoreApplication::removeTranslator(&russian);
@@ -227,6 +228,8 @@ private slots:
                     auto* ely = dialog.findChild<QPushButton*>("welcomeEly");
                     auto* offline = dialog.findChild<QPushButton*>("welcomeOffline");
                     QVERIFY(microsoft && ely && offline);
+                    auto* accountPage=microsoft->parentWidget();
+                    for (auto* profileScroll : accountPage->findChildren<QScrollArea*>()) QVERIFY(profileScroll->isHidden());
                     QCOMPARE(microsoft->x(), ely->x()); QCOMPARE(ely->x(), offline->x());
                     QCOMPARE(microsoft->width(), offline->width()); QVERIFY(microsoft->height() >= 62);
                     QVERIFY(ely->y() > microsoft->geometry().bottom()); QVERIFY(offline->y() > ely->geometry().bottom());

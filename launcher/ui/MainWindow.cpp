@@ -44,6 +44,7 @@
 #include "FileSystem.h"
 
 #include "MainWindow.h"
+#include "ui/pxl/RenamePanel.h"
 #include "ui_MainWindow.h"
 
 #include <QDir>
@@ -317,22 +318,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setFrameShape(QFrame::NoFrame);
         // do not show ugly blue border on the mac
         view->setAttribute(Qt::WA_MacShowFocusRect, false);
-        connect(delegate, &ListViewDelegate::textChanged, this, [this](QString before, QString after) {
-            if (auto newRoot = askToUpdateInstanceDirName(m_selectedInstance, before, after, this); !newRoot.isEmpty()) {
-                auto oldID = m_selectedInstance->id();
-                auto newID = QFileInfo(newRoot).fileName();
-                QString origGroup(APPLICATION->instances()->getInstanceGroup(oldID));
-                bool syncGroup = origGroup != GroupId() && oldID != newID;
-                if (syncGroup)
-                    APPLICATION->instances()->setInstanceGroup(oldID, GroupId());
-
-                refreshInstances();
-                setSelectedInstanceById(newID);
-
-                if (syncGroup)
-                    APPLICATION->instances()->setInstanceGroup(newID, origGroup);
-            }
-        });
+        connect(delegate, &ListViewDelegate::textChanged, this, &MainWindow::finishInstanceRename);
 
         view->installEventFilter(this);
         view->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -1748,11 +1734,37 @@ void MainWindow::on_actionExportInstanceFlamePack_triggered()
     }
 }
 
+void MainWindow::finishInstanceRename(const QString& before, const QString& after)
+{
+    if (!m_selectedInstance) return;
+    if (auto newRoot = askToUpdateInstanceDirName(m_selectedInstance, before, after, m_workspaceViews->currentWidget()==m_workspacePage ? static_cast<QWidget*>(m_workspacePage) : this); !newRoot.isEmpty()) {
+        auto oldID = m_selectedInstance->id();
+        auto newID = QFileInfo(newRoot).fileName();
+        QString origGroup(APPLICATION->instances()->getInstanceGroup(oldID));
+        bool syncGroup = origGroup != GroupId() && oldID != newID;
+        if (syncGroup)
+            APPLICATION->instances()->setInstanceGroup(oldID, GroupId());
+
+        refreshInstances();
+        setSelectedInstanceById(newID);
+
+        if (syncGroup)
+            APPLICATION->instances()->setInstanceGroup(newID, origGroup);
+    }
+}
+
 void MainWindow::on_actionRenameInstance_triggered()
 {
-    if (m_selectedInstance) {
-        view->edit(view->currentIndex());
-    }
+    if (!m_selectedInstance) return;
+    if (m_workspaceViews->currentWidget()==m_workspacePage) {
+        const QPointer<BaseInstance> instance=m_selectedInstance;
+        const auto before=instance->name();
+        const auto name=Pxl::renameInstance(m_workspacePage,before);
+        if (!instance || !name || name->isEmpty() || *name==before) return;
+        instance->setName(*name);
+        setSelectedInstanceById(instance->id());
+        finishInstanceRename(before,*name);
+    } else view->edit(view->currentIndex());
 }
 
 void MainWindow::on_actionViewSelectedInstFolder_triggered()

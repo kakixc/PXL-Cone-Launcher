@@ -245,7 +245,7 @@ private:
     }
     void rebuild()
     {
-        if (m_setup) m_profilesScroll->setVisible(!m_accounts->isEmpty());
+        if (m_setup) { m_profilesScroll->hide(); return; }
         while (auto* item=m_rows->takeAt(0)) { if (item->widget()) item->widget()->deleteLater(); delete item; }
         if (m_accounts->isEmpty()) {
             if (m_setup) { m_rows->addStretch(); return; }

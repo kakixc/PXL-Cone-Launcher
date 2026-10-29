@@ -59,6 +59,7 @@ public:
         setObjectName("pxlWelcomeSetup");
         setProperty("pxlFlow", true);
         setProperty("pxlEmbeddedAuth", true);
+        setProperty("pxlAnimateLifecycle", true);
         setProperty("pxlPreferredSize", QSize(760, 650));
         auto* root = new QVBoxLayout(this);
         root->setContentsMargins(26, 24, 26, 22); root->setSpacing(16);
@@ -195,6 +196,12 @@ protected:
     void done(int result) override
     {
         stopLanguageTransition();
+        if (auto* overlay = dynamic_cast<DialogOverlay*>(parentWidget()); overlay &&
+            overlay->closeAnimated([this, result] { finishClosing(result); })) return;
+        finishClosing(result);
+    }
+    void finishClosing(int result)
+    {
         if (result != QDialog::Accepted && m_chooseLanguage)
             m_chooseLanguage(m_settings->get("Language").toString());
         QDialog::done(result);
