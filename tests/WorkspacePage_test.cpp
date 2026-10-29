@@ -976,13 +976,28 @@ class WorkspacePageTest : public QObject {
         const bool previousGeneral=QApplication::isEffectEnabled(Qt::UI_General);
         QApplication::setEffectEnabled(Qt::UI_General,true);
         for (bool animated : {true,false}) {
+            surface.resize(900,600);
             QApplication::setEffectEnabled(Qt::UI_AnimateMenu,animated);
             const bool enabled=QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
             bool inspected=false;
+            QTimer watchdog;
+            watchdog.setSingleShot(true);
+            connect(&watchdog,&QTimer::timeout,&surface,[&] {
+                if (auto* layer=surface.findChild<QWidget*>("pxlScreenshotPreview")) layer->close();
+            });
+            watchdog.start(2000);
             QTimer::singleShot(animated ? 220 : 0,&surface,[&] {
                 auto* layer=surface.findChild<QWidget*>("pxlScreenshotPreview");
                 QVERIFY(layer); QVERIFY(!layer->isWindow()); QVERIFY(!background.isEnabled());
-                QTest::keyClick(layer,Qt::Key_Escape);
+                auto* close=layer->findChild<QPushButton*>("screenshotPreviewClose");
+                QVERIFY(close); QVERIFY(close->isVisible()); QVERIFY(!close->icon().isNull());
+                const auto before=close->pos();
+                surface.resize(780,540); QCoreApplication::processEvents();
+                QVERIFY(layer->rect().contains(close->geometry()));
+                QVERIFY(close->pos()!=before);
+                const auto screenshots=qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+                if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath("screenshot-lightbox-close.png")));
+                QTest::mouseClick(close,Qt::LeftButton);
                 QCOMPARE(layer->isVisible(),enabled);
                 inspected=true;
             });

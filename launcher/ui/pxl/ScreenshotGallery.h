@@ -184,17 +184,22 @@ protected:
         painter.setOpacity(m_reveal);
         QPainterPath clip; clip.addRoundedRect(QRectF(m_imageArea),18,18); painter.setClipPath(clip);
         painter.drawPixmap(m_imageArea,m_image); painter.setClipping(false);
-        m_closeArea=QRect(m_imageArea.right()-42,m_imageArea.top()+10,32,32);
-        {
-            painter.setPen(Qt::NoPen); painter.setBrush(QColor(15,19,24,200)); painter.drawEllipse(m_closeArea);
-            painter.setPen(QPen(QColor("#edf0f4"),2,Qt::SolidLine,Qt::RoundCap));
-            const auto center=m_closeArea.center(); painter.drawLine(center+QPoint(-5,-5),center+QPoint(5,5)); painter.drawLine(center+QPoint(-5,5),center+QPoint(5,-5));
-        }
+
     }
-    void mouseMoveEvent(QMouseEvent*) override { update(); }
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QWidget::resizeEvent(event);
+        if (!m_close) return;
+        // Anchor controls to the final image bounds, independently of the reveal animation.
+        const auto fit=m_image.size().scaled(size()-QSize(64,64),Qt::KeepAspectRatio);
+        const QRect target(QPoint((width()-fit.width())/2,(height()-fit.height())/2),fit);
+        const int x=qBound(8,target.right()-44,qMax(8,width()-44));
+        const int y=qBound(8,target.top()+12,qMax(8,height()-44));
+        m_close->move(x,y);
+    }
     void mousePressEvent(QMouseEvent* event) override
     {
-        if (event->button()==Qt::LeftButton && (!m_imageArea.contains(event->position().toPoint()) || m_closeArea.contains(event->position().toPoint()))) close();
+        if (event->button()==Qt::LeftButton && (!m_imageArea.contains(event->position().toPoint()))) close();
     }
     void keyPressEvent(QKeyEvent* event) override { if (event->key()==Qt::Key_Escape) close(); else event->accept(); }
     void closeEvent(QCloseEvent* event) override
@@ -216,6 +221,25 @@ private:
         setObjectName("pxlScreenshotPreview"); setGeometry(parent->rect()); parent->installEventFilter(this);
         setFocusPolicy(Qt::StrongFocus); setMouseTracking(true);
         setAccessibleName(screenshotText("Screenshot preview. Escape closes."));
+        m_close=new QPushButton(this);
+        m_close->setObjectName("screenshotPreviewClose");
+        m_close->setAccessibleName(screenshotText("Close"));
+        QPixmap closeGlyph(36,36); closeGlyph.fill(Qt::transparent);
+        {
+            QPainter painter(&closeGlyph); painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(QPen(QColor("#edf0f4"),3,Qt::SolidLine,Qt::RoundCap));
+            painter.drawLine(QPointF(9,9),QPointF(27,27));
+            painter.drawLine(QPointF(9,27),QPointF(27,9));
+        }
+        m_close->setIcon(QIcon(closeGlyph));
+        m_close->setIconSize(QSize(18,18));
+        m_close->setFixedSize(32,32);
+        m_close->setCursor(Qt::PointingHandCursor);
+        m_close->setStyleSheet("QPushButton { background: rgba(22,26,31,225); border: 1px solid rgba(255,255,255,35); border-radius: 16px; padding: 0; }"
+                              "QPushButton:hover { background: rgba(68,73,80,245); border-color: rgba(255,255,255,80); }"
+                              "QPushButton:pressed { background: rgba(45,49,55,245); }"
+                              "QPushButton:focus { border-color: #f5a665; }");
+        connect(m_close,&QPushButton::clicked,this,[this] { close(); });
         m_animation=new QVariantAnimation(this);
         m_animation->setEasingCurve(QEasingCurve::OutCubic);
         connect(m_animation,&QVariantAnimation::valueChanged,this,[this](const QVariant& value) { m_reveal=value.toReal(); update(); });
@@ -232,7 +256,8 @@ private:
     qreal m_reveal=0.0;
     bool m_closing=false;
     QPixmap m_image;
-    QRect m_imageArea,m_closeArea;
+    QRect m_imageArea;
+    QPushButton* m_close=nullptr;
     std::function<void()> finished;
 };
 

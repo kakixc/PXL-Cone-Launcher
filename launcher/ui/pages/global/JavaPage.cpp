@@ -61,6 +61,13 @@
 JavaPage::JavaPage(QWidget* parent) : QWidget(parent), ui(new Ui::JavaPage)
 {
     ui->setupUi(this);
+    // The scroll viewport otherwise paints an opaque palette Base behind PXL cards.
+    ui->generalScrollArea->setFrameShape(QFrame::NoFrame);
+    ui->generalScrollArea->setAutoFillBackground(false);
+    ui->generalScrollArea->viewport()->setAutoFillBackground(false);
+    ui->scrollAreaWidgetContents->setAutoFillBackground(false);
+    ui->general->setAutoFillBackground(false);
+    ui->generalScrollArea->setStyleSheet("QScrollArea#generalScrollArea, QWidget#scrollAreaWidgetContents { background: transparent; border: none; }");
     ui->tabWidget->setDocumentMode(true);
     ui->tabWidget->tabBar()->setDrawBase(false);
     ui->tabWidget->setStyleSheet("QTabWidget::pane { border: none; background: transparent; } QTabBar::tab { padding: 9px 16px; margin-right: 8px; border-radius: 8px; background: rgba(255,238,218,15); } QTabBar::tab:selected { background: rgba(242,163,101,35); color: #ffc08e; }");
