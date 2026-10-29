@@ -136,23 +136,30 @@ private:
 // PXL presentation over the existing account model and authentication services.
 class AccountsPage final : public QWidget {
 public:
-    explicit AccountsPage(AccountList* accounts, bool supportsMicrosoft, QWidget* parent=nullptr)
-        : QWidget(parent), m_accounts(accounts)
+    explicit AccountsPage(AccountList* accounts, bool supportsMicrosoft, QWidget* parent=nullptr, bool setup=false)
+        : QWidget(parent), m_accounts(accounts), m_setup(setup)
     {
         setObjectName("pxlAccountsPage");
         setProperty("pxlNavigation","workspaceAccounts");
         setProperty("pxlEmbeddedAuth",true);
         auto* layout=new QVBoxLayout(this);
-        layout->setContentsMargins(28,8,28,24); layout->setSpacing(18);
+        layout->setContentsMargins(setup ? 0 : 28,setup ? 0 : 8,setup ? 0 : 28,setup ? 0 : 24); layout->setSpacing(18);
         auto* hint=new QLabel(accountText("Choose the profile used to launch Minecraft. Your accounts stay on this computer."),this);
         hint->setWordWrap(true); hint->setProperty("pxlFlowHint",true); layout->addWidget(hint);
-        auto* actions=new QHBoxLayout;
+        hint->setVisible(!setup);
+        auto* actions=new QBoxLayout(setup ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+        actions->setSpacing(setup ? 10 : 8);
         auto* microsoft=button(accountText("Sign in with Microsoft"),"user-circle");
         microsoft->setVisible(supportsMicrosoft); actions->addWidget(microsoft);
         auto* ely=button(accountText("Sign in with Ely.by"),"user-circle"); actions->addWidget(ely);
         auto* offline=button(accountText("Offline profile"),"plus"); actions->addWidget(offline);
+        if (setup) { microsoft->setObjectName("welcomeMicrosoft"); ely->setObjectName("welcomeEly"); offline->setObjectName("welcomeOffline"); }
+        if (setup) for (auto* action : {microsoft, ely, offline}) {
+            action->setMinimumHeight(62); action->setIconSize(QSize(24,24));
+            action->setStyleSheet(action->styleSheet()+"QPushButton { text-align:left; padding:12px 18px; font-size:15px; }");
+        }
         actions->addStretch(); layout->addLayout(actions);
-        auto* scroll=new QScrollArea(this); scroll->setWidgetResizable(true); scroll->setFrameShape(QFrame::NoFrame);
+        auto* scroll=new QScrollArea(this); m_profilesScroll=scroll; scroll->setWidgetResizable(true); scroll->setFrameShape(QFrame::NoFrame);
         scroll->setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: none; }");
         m_content=new QWidget(scroll); m_rows=new QVBoxLayout(m_content); m_rows->setContentsMargins(0,0,0,0); m_rows->setSpacing(10);
         scroll->setWidget(m_content); layout->addWidget(scroll,1);
@@ -238,8 +245,10 @@ private:
     }
     void rebuild()
     {
+        if (m_setup) m_profilesScroll->setVisible(!m_accounts->isEmpty());
         while (auto* item=m_rows->takeAt(0)) { if (item->widget()) item->widget()->deleteLater(); delete item; }
         if (m_accounts->isEmpty()) {
+            if (m_setup) { m_rows->addStretch(); return; }
             m_rows->addStretch();
             auto* icon=new QLabel(m_content); icon->setAlignment(Qt::AlignCenter); icon->setPixmap(QIcon(":/pxl/icons/user-circle.svg").pixmap(52,52)); m_rows->addWidget(icon);
             auto* title=new QLabel(accountText("Your adventure starts with a profile"),m_content); title->setAlignment(Qt::AlignCenter);
@@ -307,5 +316,7 @@ private:
     QWidget* m_content;
     QVBoxLayout* m_rows;
     bool m_refreshPending=false;
+    bool m_setup=false;
+    QScrollArea* m_profilesScroll=nullptr;
 };
 } // namespace Pxl

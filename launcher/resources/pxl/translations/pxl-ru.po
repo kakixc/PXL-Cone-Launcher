@@ -2729,3 +2729,307 @@ msgstr "Выберите объём памяти для сборок и спос
 msgctxt "QObject"
 msgid "An auto-updater for PXL Cone"
 msgstr "Средство обновления PXL Cone"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Welcome to PXL Cone"
+msgstr "Добро пожаловать в PXL Cone"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Skip setup"
+msgstr "Пропустить"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Make yourself at home"
+msgstr "Устройтесь поудобнее"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Choose your language. You can change every choice later in Settings."
+msgstr "Выберите язык. Всё это можно изменить позже в настройках."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Your Minecraft profile"
+msgstr "Ваш профиль Minecraft"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Sign in now or continue without an account. You can add one before playing."
+msgstr "Войдите сейчас или продолжите без аккаунта. Его можно добавить перед запуском игры."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "The right Java for each instance"
+msgstr "Подходящая Java для каждой сборки"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Minecraft versions need different runtimes. PXL can choose and download the required Java when you launch a game."
+msgstr "Разным версиям Minecraft нужна разная Java. PXL может подобрать и скачать нужную версию при запуске игры."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Select and download Java automatically"
+msgstr "Подбирать и скачивать Java автоматически"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Your existing manual Java path is kept. You can adjust runtimes per instance in Settings."
+msgstr "Ваш ручной путь к Java сохранится. Для каждой сборки можно настроить свою версию."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Automatic downloads are unavailable in this build. Choose a local Java installation in Settings before playing."
+msgstr "В этой версии лаунчера нет автозагрузки Java. Перед игрой выберите установленную Java в настройках."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "A quick look around"
+msgstr "Знакомство с PXL"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "These miniature demos do not download files or change your instances."
+msgstr "Это мини-демонстрации: они не скачивают файлы и не меняют ваши сборки."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Create"
+msgstr "Создать"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Content"
+msgstr "Контент"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Downloads"
+msgstr "Загрузки"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Screenshots"
+msgstr "Скриншоты"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Replay demo"
+msgstr "Повторить"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Back"
+msgstr "Назад"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Next"
+msgstr "Далее"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Start using PXL Cone"
+msgstr "Начать пользоваться"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Build your next adventure"
+msgstr "Начните новое приключение"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Add something new"
+msgstr "Добавьте что-нибудь новое"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Keep using the launcher"
+msgstr "Пользуйтесь лаунчером во время загрузки"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Keep your favourite moments"
+msgstr "Сохраняйте любимые моменты"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "New instance → choose Minecraft and a loader → Create. Or import an existing pack from the library."
+msgstr "Новая сборка → версия Minecraft и загрузчик → Создать. Готовую сборку можно импортировать из библиотеки."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Open an instance → Browse content → select additions → review and install. Compatibility depends on the game version and loader."
+msgstr "Откройте сборку → Найти контент → выберите дополнения → подтвердите установку. Совместимость зависит от версии игры и загрузчика."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Hide the installation panel to continue browsing. The bottom progress strip and Downloads & tasks keep the operation visible."
+msgstr "Скройте панель установки и продолжайте пользоваться лаунчером. Прогресс виден снизу и в разделе «Загрузки и задачи»."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Press F2 in Minecraft. Open Screenshots, enlarge a thumbnail, or use its context menu to set an instance cover."
+msgstr "Нажмите F2 в Minecraft. В разделе «Скриншоты» можно увеличить снимок или через его меню сделать обложкой сборки."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Language"
+msgstr "Язык"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Account"
+msgstr "Аккаунт"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Java"
+msgstr "Java"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Meet PXL Cone"
+msgstr "Знакомство с PXL"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Step %1 of %2 · %3"
+msgstr "Шаг %1 из %2 · %3"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "No local Java installations found. Automatic setup can download the runtime when needed."
+msgstr "Установленная Java не найдена. Автонастройка сможет скачать её, когда она понадобится."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Found on this computer: Java %1"
+msgstr "Найдена на компьютере: Java %1"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Looking for installed Java…"
+msgstr "Ищем установленную Java…"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Java detection failed. You can check or select Java in Settings."
+msgstr "Не удалось найти Java. Проверьте или выберите её в настройках."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Library"
+msgstr "Библиотека"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "New instance"
+msgstr "Новая сборка"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Create an instance"
+msgstr "Создать сборку"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "My adventure"
+msgstr "Моё приключение"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Play"
+msgstr "Играть"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Browse content"
+msgstr "Найти контент"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Search mods, resource packs and shaders"
+msgstr "Поиск модов, ресурспаков и шейдеров"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Installed"
+msgstr "Установлено"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Add"
+msgstr "Добавить"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Review selected content"
+msgstr "Проверьте выбранные дополнения"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Install selected"
+msgstr "Установить выбранное"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Installing game files"
+msgstr "Установка файлов игры"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Hide"
+msgstr "Скрыть"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Downloads continue in the background"
+msgstr "Загрузки продолжаются в фоне"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Downloads & tasks"
+msgstr "Загрузки и задачи"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Completed"
+msgstr "Завершено"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Use as instance cover"
+msgstr "Сделать обложкой сборки"
+
+msgctxt "Pxl::AboutPage"
+msgid "First steps & setup"
+msgstr "Знакомство и первая настройка"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Your Minecraft. Your space."
+msgstr "Ваш Minecraft. Ваше пространство."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Instances, mods and favourite worlds — together, with room to make it yours."
+msgstr "Сборки, моды и любимые миры — в одном месте, с вашим оформлением."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Organise your instances and launch in a click"
+msgstr "Сборки под рукой, запуск в один клик"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Discover mods, resource packs and shaders"
+msgstr "Моды, ресурспаки и шейдеры внутри лаунчера"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Bring your existing Minecraft setup with you"
+msgstr "Перенос ваших сборок из других лаунчеров"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Continue"
+msgstr "Продолжить"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Automatic Java"
+msgstr "Автоматическая Java"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "No local Java installations found. Select Java in Settings before playing."
+msgstr "Установленная Java не найдена. Выберите Java в настройках перед игрой."
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "From scratch"
+msgstr "С нуля"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Find a modpack"
+msgstr "Найти готовую сборку"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Install from file"
+msgstr "Установить из файла"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Import from another launcher"
+msgstr "Перенести из другого лаунчера"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Make banner for this instance"
+msgstr "Баннер для этой сборки"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Make banner for another instance…"
+msgstr "Баннер для другой сборки…"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Copy image"
+msgstr "Скопировать изображение"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Set instance banner"
+msgstr "Установить баннер сборки"
+
+msgctxt "Pxl::WelcomeSetup"
+msgid "Use banner"
+msgstr "Использовать баннер"
+
+msgctxt "MSALoginDialog"
+msgid "Could not sign in"
+msgstr "Не удалось войти"
+
+msgctxt "MSALoginDialog"
+msgid "The account was not added. You can try again or add it later."
+msgstr "Аккаунт не добавлен. Попробуйте ещё раз или вернитесь к этому позже."
+
+msgctxt "MSALoginDialog"
+msgid "Close"
+msgstr "Закрыть"

@@ -857,6 +857,9 @@ SET(LAUNCHER_SOURCES
     ui/MainWindow.cpp
     ui/pxl/WorkspacePage.h
     ui/pxl/WorkspacePage.cpp
+    ui/pxl/WelcomeSetup.h
+    ui/pxl/WelcomeTour.h
+    ui/pxl/LoginErrorPanel.h
     ui/pxl/TaskHistory.h
     ui/pxl/ContentBrowser.h
     ui/pxl/ContentBrowser.cpp

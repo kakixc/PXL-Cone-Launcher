@@ -113,6 +113,8 @@
 #include "ui/instanceview/InstanceView.h"
 #include "ui/pxl/WorkspacePage.h"
 #include "ui/pxl/AccountsPage.h"
+#include "ui/pxl/WelcomeSetup.h"
+#include "translations/TranslationsModel.h"
 #include <QScreen>
 #include "ui/pages/instance/ModFolderPage.h"
 #include "ui/pxl/TransferDialog.h"
@@ -1798,6 +1800,41 @@ void MainWindow::showWorkspace()
     m_workspaceViews->setCurrentWidget(m_workspacePage);
     m_workspacePage->setFocus();
     updateMainToolBar();
+}
+
+void MainWindow::showWelcomeSetup()
+{
+    // A nested overlay or a second invocation must not create two setup flows.
+    auto* surface = Pxl::welcomeSetupSurface(this);
+    if (!isVisible() || surface->findChild<QDialog*>("pxlWelcomeSetup")) return;
+    if (surface == this) {
+        if (!m_workspacePage->leaveInstanceView()) return;
+        showWorkspace();
+    }
+    Pxl::WelcomeSetup dialog(APPLICATION->settings(), BuildConfig.JAVA_DOWNLOADER_ENABLED,
+        [](const QString& language) {
+            APPLICATION->translations()->selectLanguage(language);
+        }, [](QWidget* parent) -> QWidget* {
+            return new Pxl::AccountsPage(APPLICATION->accounts(), APPLICATION->capabilities() & Application::SupportsMSA, parent, true);
+        }, surface);
+    auto* runtimes = APPLICATION->javalist();
+    const auto updateRuntimes = [&dialog, runtimes] {
+        QStringList found;
+        for (int row = 0; row < runtimes->count(); ++row) {
+            const auto version = runtimes->at(row)->descriptor();
+            if (!found.contains(version)) found.append(version);
+        }
+        dialog.setJavaVersions(found);
+    };
+    connect(runtimes, &QAbstractItemModel::modelReset, &dialog, updateRuntimes);
+    auto detection = runtimes->getLoadTask();
+    if (detection) {
+        connect(detection.get(), &Task::succeeded, &dialog, updateRuntimes);
+        connect(detection.get(), &Task::failed, &dialog, [&dialog] {
+            dialog.setJavaDetectionFailed();
+        });
+    } else updateRuntimes();
+    Pxl::DialogOverlay::run(&dialog, surface);
 }
 
 void MainWindow::changeEvent(QEvent* event)

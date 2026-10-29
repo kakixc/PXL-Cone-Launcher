@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
 #include "Application.h"
+#include "ui/MainWindow.h"
 #include "BuildConfig.h"
 #include "SettingsCards.h"
 #include "updater/ReleaseUpdateChecker.h"
@@ -10,6 +11,7 @@
 #include <QPushButton>
 #include <QSysInfo>
 #include <QVBoxLayout>
+#include <QTimer>
 #include <functional>
 
 namespace Pxl {
@@ -74,6 +76,17 @@ public:
             else if (auto* app=APPLICATION_DYN) app->triggerUpdateCheck();
         });
         layout->addWidget(m_check,0,Qt::AlignHCenter);
+        m_welcome = new QPushButton(this);
+        m_welcome->setObjectName("aboutWelcomeSetup");
+        m_welcome->setProperty("pxlDisclosure", true);
+        m_welcome->setEnabled(APPLICATION_DYN != nullptr);
+        connect(m_welcome, &QPushButton::clicked, this, [] {
+            if (auto* app = APPLICATION_DYN) {
+                auto* window = app->showMainWindow();
+                QTimer::singleShot(0, window, &MainWindow::showWelcomeSetup);
+            }
+        });
+        layout->addWidget(m_welcome, 0, Qt::AlignHCenter);
         layout->addStretch(2);
         retranslate();
     }
@@ -83,6 +96,7 @@ public:
     void retranslate() override
     {
         m_check->setText(text("Check for updates"));
+        m_welcome->setText(text("First steps & setup"));
         const QStringList keys{text("Build"),text("System"),text("Qt version")};
         for (auto* label : findChildren<QLabel*>()) {
             if (label->property("aboutKey").isValid()) label->setText(keys.value(label->property("aboutKey").toInt()));
@@ -91,5 +105,6 @@ public:
     }
 private:
     QPushButton* m_check = nullptr;
+    QPushButton* m_welcome = nullptr;
 };
 }

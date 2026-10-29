@@ -659,6 +659,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("WorkspaceAdvancedSettings", false);
         m_settings->registerSetting("WorkspaceLibraryView", QStringLiteral("covers"));
         m_settings->registerSetting("WorkspaceLayoutRevision", 0);
+        m_settings->registerSetting("PXLWelcomeRevision", 0);
         m_settings->registerSetting("BackgroundCat", QString("kitteh"));
         m_settings->registerSetting("CatButtonVisible", true);
 
@@ -1235,6 +1236,22 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
 bool Application::createSetupWizard()
 {
+    // Ordinary PXL startup presents the skippable setup in the visible workspace.
+    // Keep legacy prerequisite handling for direct command-line game launches.
+    if (m_instanceIdToLaunch.isEmpty()) {
+        // The old wizard also repaired unset theme IDs on a clean profile.
+        // Keep that prerequisite without making it another onboarding step.
+        if (!m_themeManager->isValidIconTheme(settings()->get("IconTheme").toString()))
+            settings()->set("IconTheme", QStringLiteral("pe_colored"));
+        if (!m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString()))
+            settings()->set("ApplicationTheme", QStringLiteral("cone"));
+        if (settings()->get("Language").toString().isEmpty()) {
+            const auto language = QLocale::system().language() == QLocale::Russian ? QStringLiteral("ru") : QStringLiteral("en_US");
+            settings()->set("Language", language);
+            m_translations->selectLanguage(language);
+        }
+        return false;
+    }
     bool javaRequired = [this]() {
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED && settings()->get("AutomaticJavaDownload").toBool()) {
             return false;
@@ -1717,6 +1734,11 @@ MainWindow* Application::showMainWindow(bool minimized)
         }
 
         m_mainWindow->checkInstancePathForProblems();
+        if (!minimized && m_instanceIdToLaunch.isEmpty() && settings()->get("PXLWelcomeRevision").toInt() < 1) {
+            QTimer::singleShot(0, m_mainWindow, [this] {
+                if (m_mainWindow && m_mainWindow->isVisible()) m_mainWindow->showWelcomeSetup();
+            });
+        }
         connect(this, &Application::updateAllowedChanged, m_mainWindow, &MainWindow::updatesAllowedChanged);
         connect(m_mainWindow, &MainWindow::isClosing, this, &Application::on_windowClose);
         m_openWindows++;

@@ -16,6 +16,12 @@
 #include <ui/pxl/WorkspacePage.h>
 #include <ui/pxl/AboutPage.h>
 #include <ui/pxl/NumberField.h>
+#include <ui/pxl/WelcomeSetup.h>
+#include <settings/INISettingsObject.h>
+#include <translations/POTranslator.h>
+#include <ui/pxl/AccountsPage.h>
+#include <ui/pxl/LoginErrorPanel.h>
+#include <QScrollBar>
 #include <ui/pagedialog/PageDialog.h>
 #include <ui/widgets/PageContainer.h>
 #include <QListView>
@@ -109,6 +115,231 @@ private:
         {"tag_name":"not-a-version"}, {"tag_name":"v12.0.0"}])";
     }
 private slots:
+    void welcomeSetupPersistence()
+    {
+        QTemporaryDir directory;
+        const auto path = directory.filePath("welcome.ini");
+        const auto makeSettings = [&] {
+            auto settings = std::make_unique<INISettingsObject>(path);
+            settings->registerSetting("PXLWelcomeRevision", 0);
+            settings->registerSetting("Language", "en_US");
+            settings->registerSetting("AutomaticJavaDownload", false);
+            settings->registerSetting("AutomaticJavaSwitch", false);
+            settings->registerSetting("UserAskedAboutAutomaticJavaDownload", false);
+            settings->registerSetting("JavaPath", "original/java");
+            return settings;
+        };
+        {
+            auto settings = makeSettings();
+            QVERIFY(Pxl::needsWelcomeSetup(settings.get()));
+            QString previewLanguage;
+            Pxl::WelcomeSetup rejected(settings.get(), true, [&](const QString& value) { previewLanguage = value; }, {});
+            rejected.findChild<QPushButton*>("welcomeLanguage_ru")->click();
+            QCOMPARE(previewLanguage, QString("ru"));
+            QCOMPARE(settings->get("Language").toString(), QString("en_US"));
+            rejected.reject();
+            QCOMPARE(previewLanguage, QString("en_US"));
+            QVERIFY(Pxl::needsWelcomeSetup(settings.get()));
+            Pxl::WelcomeSetup skipped(settings.get(), true,
+                [&](const QString& value) { previewLanguage = value; }, {});
+            skipped.findChild<QPushButton*>("welcomeLanguage_ru")->click();
+            QCOMPARE(settings->get("Language").toString(), QString("en_US"));
+            skipped.findChild<QCheckBox*>("welcomeAutomaticJava")->setChecked(true);
+            skipped.findChild<QPushButton*>("welcomeSkip")->click();
+            QCOMPARE(skipped.result(), int(QDialog::Accepted));
+            QVERIFY(!Pxl::needsWelcomeSetup(settings.get()));
+            QVERIFY(!settings->get("AutomaticJavaDownload").toBool());
+            QCOMPARE(settings->get("Language").toString(), QString("ru"));
+        }
+        auto restored = makeSettings();
+        QVERIFY(!Pxl::needsWelcomeSetup(restored.get()));
+        QCOMPARE(restored->get("JavaPath").toString(), QString("original/java"));
+        for (bool download : {false, true}) {
+            restored->set("AutomaticJavaDownload", download);
+            restored->set("AutomaticJavaSwitch", !download);
+            Pxl::WelcomeSetup unchanged(restored.get(), true, {}, {});
+            auto* advance = unchanged.findChild<QPushButton*>("welcomeNext");
+            for (int step = 0; step < 4; ++step) advance->click();
+            QCOMPARE(restored->get("AutomaticJavaDownload").toBool(), download);
+            QCOMPARE(restored->get("AutomaticJavaSwitch").toBool(), !download);
+        }
+        int accountPageVisits = 0;
+        Pxl::WelcomeSetup finished(restored.get(), true, {}, [&](QWidget* parent) -> QWidget* {
+            ++accountPageVisits; return new QLabel("Existing account presentation", parent);
+        });
+        auto* next = finished.findChild<QPushButton*>("welcomeNext");
+        next->click(); QCOMPARE(finished.currentStep(), 1); QCOMPARE(accountPageVisits, 1);
+        finished.findChild<QPushButton*>("welcomeBack")->click(); QCOMPARE(finished.currentStep(), 0);
+        next->click(); QCOMPARE(accountPageVisits, 2);
+        next->click(); QCOMPARE(finished.currentStep(), 2);
+        finished.findChild<QCheckBox*>("welcomeAutomaticJava")->setChecked(true);
+        next->click(); QCOMPARE(finished.currentStep(), 3);
+        next->click(); QCOMPARE(finished.result(), int(QDialog::Accepted));
+        QVERIFY(restored->get("AutomaticJavaDownload").toBool());
+        QVERIFY(restored->get("AutomaticJavaSwitch").toBool());
+        QCOMPARE(restored->get("JavaPath").toString(), QString("original/java"));
+    }
+    void welcomeSetupResponsiveFrames()
+    {
+        QTemporaryDir directory;
+        INISettingsObject preferences(directory.filePath("welcome.ini"));
+        preferences.registerSetting("PXLWelcomeRevision", 0);
+        preferences.registerSetting("Language", "en_US");
+        preferences.registerSetting("AutomaticJavaDownload", true);
+        preferences.registerSetting("AutomaticJavaSwitch", true);
+        preferences.registerSetting("UserAskedAboutAutomaticJavaDownload", false);
+        WorkspacePage workspace(nullptr);
+        workspace.setImageBackground(true);
+        workspace.resize(1080, 820); workspace.show();
+        POTranslator russian(":/pxl/translations/pxl-ru.po");
+        AccountList accounts;
+        Pxl::WelcomeSetup dialog(&preferences, true, [&](const QString& language) {
+            if (language == "ru") QCoreApplication::installTranslator(&russian);
+            else QCoreApplication::removeTranslator(&russian);
+        }, [&](QWidget* parent) -> QWidget* {
+            return new Pxl::AccountsPage(&accounts, true, parent, true);
+        });
+        dialog.setJavaVersions({"17.0.12", "21.0.9"});
+        QTimer watchdog;
+        watchdog.setSingleShot(true);
+        connect(&watchdog, &QTimer::timeout, &dialog, &QDialog::reject);
+        watchdog.start(5000);
+        QTimer::singleShot(20, &dialog, [&] {
+            auto* next = dialog.findChild<QPushButton*>("welcomeNext");
+            dialog.findChild<QPushButton*>("welcomeLanguage_ru")->click();
+            QCOMPARE(dialog.findChild<QLabel*>("welcomeHeroTitle")->text(), QString::fromUtf8("Добро пожаловать в PXL Cone"));
+            QVERIFY(dialog.findChild<QLabel*>("welcomeJavaStatus")->text().startsWith(QString::fromUtf8("Найдена на компьютере:")));
+            for (int step = 0; step < 4; ++step) {
+                if (step) next->click();
+                QTest::qWait(190);
+                QVERIFY(workspace.rect().contains(dialog.geometry()));
+                QVERIFY(dialog.rect().contains(QRect(next->mapTo(&dialog, QPoint()), next->size())));
+                auto* stack = dialog.findChild<QStackedWidget*>("welcomeSteps");
+                auto* scroll = qobject_cast<QScrollArea*>(stack->currentWidget());
+                QVERIFY(scroll);
+                QCOMPARE(scroll->verticalScrollBar()->maximum(), 0);
+                if (step == 0) {
+                    auto* benefits = dialog.findChild<QWidget*>("welcomeBenefits");
+                    auto* title = dialog.findChild<QLabel*>("welcomeHeroTitle");
+                    QVERIFY(qAbs(benefits->mapTo(&dialog, benefits->rect().center()).x() - title->mapTo(&dialog, title->rect().center()).x()) <= 1);
+                } else if (step == 1) {
+                    auto* microsoft = dialog.findChild<QPushButton*>("welcomeMicrosoft");
+                    auto* ely = dialog.findChild<QPushButton*>("welcomeEly");
+                    auto* offline = dialog.findChild<QPushButton*>("welcomeOffline");
+                    QVERIFY(microsoft && ely && offline);
+                    QCOMPARE(microsoft->x(), ely->x()); QCOMPARE(ely->x(), offline->x());
+                    QCOMPARE(microsoft->width(), offline->width()); QVERIFY(microsoft->height() >= 62);
+                    QVERIFY(ely->y() > microsoft->geometry().bottom()); QVERIFY(offline->y() > ely->geometry().bottom());
+                }
+                if (const auto path = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR"); !path.isEmpty())
+                    QVERIFY(workspace.grab().save(path + "/welcome-step-" + QString::number(step) + ".png"));
+            }
+            const bool motion = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+            QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
+            for (int demo = 0; demo < 4; ++demo) {
+                dialog.findChild<QPushButton*>("welcomeDemo" + QString::number(demo))->click();
+                if (const auto path = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR"); !path.isEmpty())
+                    QVERIFY(workspace.grab().save(path + "/welcome-demo-" + QString::number(demo) + ".png"));
+            }
+            QApplication::setEffectEnabled(Qt::UI_AnimateMenu, motion);
+            workspace.resize(780, 580); QTest::qWait(200);
+            QVERIFY(workspace.rect().contains(dialog.geometry()));
+            QVERIFY(dialog.rect().contains(QRect(next->mapTo(&dialog, QPoint()), next->size())));
+            dialog.reject();
+        });
+        Pxl::DialogOverlay::run(&dialog, &workspace);
+        QCoreApplication::removeTranslator(&russian);
+        QVERIFY(Pxl::needsWelcomeSetup(&preferences));
+    }
+    void welcomeDemosAdvanceOnce()
+    {
+        const bool general = QApplication::isEffectEnabled(Qt::UI_General);
+        const bool motion = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+        QApplication::setEffectEnabled(Qt::UI_General, true);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, true);
+        QTemporaryDir directory;
+        INISettingsObject preferences(directory.filePath("welcome.ini"));
+        preferences.registerSetting("PXLWelcomeRevision", 0);
+        preferences.registerSetting("Language", "en_US");
+        preferences.registerSetting("AutomaticJavaDownload", true);
+        preferences.registerSetting("AutomaticJavaSwitch", true);
+        Pxl::WelcomeSetup dialog(&preferences, true, {}, {}); dialog.show();
+        auto* next = dialog.findChild<QPushButton*>("welcomeNext");
+        for (int step = 0; step < 3; ++step) next->click();
+        auto* preview = dialog.findChild<QWidget*>("pxlWelcomeTour");
+        preview->findChild<QVariantAnimation*>()->setDuration(30);
+        dialog.findChild<QTimer*>("welcomeAdvance")->setInterval(5);
+        dialog.findChild<QPushButton*>("welcomeDemo0")->click();
+        QTRY_VERIFY_WITH_TIMEOUT(dialog.findChild<QPushButton*>("welcomeDemo3")->isChecked(), 1000);
+        QTest::qWait(80);
+        QVERIFY(dialog.findChild<QPushButton*>("welcomeDemo3")->isChecked());
+        QVERIFY(!preview->findChild<QVariantAnimation*>()->state());
+        QVERIFY(Pxl::needsWelcomeSetup(&preferences));
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, motion);
+        QApplication::setEffectEnabled(Qt::UI_General, general);
+    }
+    void welcomeDemosStopWhenHidden()
+    {
+        const bool enabled = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+        const bool general = QApplication::isEffectEnabled(Qt::UI_General);
+        QApplication::setEffectEnabled(Qt::UI_General, true);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, true);
+        Pxl::WelcomeTour preview; preview.resize(640, 220); preview.show();
+        preview.selectDemo(2); QVERIFY(preview.isAnimating());
+        preview.hide(); QVERIFY(!preview.isAnimating());
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
+        preview.show(); preview.selectDemo(3);
+        QCOMPARE(preview.demo(), 3); QVERIFY(!preview.isAnimating());
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, enabled);
+        QApplication::setEffectEnabled(Qt::UI_General, general);
+    }
+    void welcomeLanguageCrossfadeAndEarlyNext()
+    {
+        const bool general = QApplication::isEffectEnabled(Qt::UI_General);
+        const bool motion = QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
+        QApplication::setEffectEnabled(Qt::UI_General, true);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, true);
+        QTemporaryDir directory; INISettingsObject preferences(directory.filePath("welcome.ini"));
+        preferences.registerSetting("Language", "en_US"); preferences.registerSetting("AutomaticJavaDownload", true);
+        preferences.registerSetting("AutomaticJavaSwitch", true);
+        QString preview = "en_US", accountLanguage;
+        Pxl::WelcomeSetup dialog(&preferences, true, [&](const QString& key) { preview = key; }, [&](QWidget* parent) -> QWidget* {
+            accountLanguage = preview; return new QLabel("Profiles", parent);
+        });
+        dialog.show(); dialog.findChild<QPushButton*>("welcomeLanguage_ru")->click();
+        auto* fade = dialog.findChild<QVariantAnimation*>("welcomeLanguageTransition");
+        QVERIFY(fade); QCOMPARE(fade->state(), QAbstractAnimation::Running);
+        QCOMPARE(preview, QString("en_US"));
+        dialog.findChild<QPushButton*>("welcomeNext")->click();
+        QCOMPARE(accountLanguage, QString("ru"));
+        QCOMPARE(preferences.get("Language").toString(), QString("en_US"));
+        dialog.reject(); QCOMPARE(preview, QString("en_US"));
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, motion);
+        QApplication::setEffectEnabled(Qt::UI_General, general);
+    }
+    void loginFailureUsesPlainReason()
+    {
+        QWidget parent;
+        auto* panel = Pxl::loginErrorPanel(&parent, "Host login.microsoftonline.com not found\n<details>");
+        QCOMPARE(panel->findChild<QTextEdit*>("loginFailureReason")->toPlainText(), QString("Host login.microsoftonline.com not found\n<details>"));
+    }
+    void welcomeUsesActiveModalSurface()
+    {
+        QWidget workspace; workspace.show();
+        QDialog modal(&workspace); modal.resize(900, 720);
+        bool accessible = false;
+        QTimer::singleShot(0, &modal, [&] {
+            auto* surface = Pxl::welcomeSetupSurface(&workspace);
+            accessible = surface == &modal;
+            QDialog welcome(surface); welcome.setProperty("pxlPreferredSize", QSize(600, 400));
+            QTimer::singleShot(30, &welcome, [&] {
+                accessible = accessible && welcome.isVisible() && welcome.isEnabled(); welcome.reject();
+            });
+            Pxl::DialogOverlay::run(&welcome, surface);
+            modal.reject();
+        });
+        modal.exec(); QVERIFY(accessible);
+    }
     void initTestCase()
     {
         ConeTheme theme;

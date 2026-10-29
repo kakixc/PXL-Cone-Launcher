@@ -35,6 +35,7 @@
 
 #include "MSALoginDialog.h"
 #include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/LoginErrorPanel.h"
 #include "Application.h"
 #include "settings/SettingsObject.h"
 
@@ -50,6 +51,7 @@
 #include <QPixmap>
 #include <QSize>
 #include <QUrl>
+#include <functional>
 #include <QtWidgets/QPushButton>
 
 #include "qrencode.h"
@@ -125,7 +127,7 @@ void MSALoginDialog::onTaskFailed(QString reason)
     QString processed;
     for (auto line : lines) {
         if (line.size()) {
-            processed += "<font color='red'>" + line + "</font><br />";
+            processed += "<font color='red'>" + line.toHtmlEscaped() + "</font><br />";
         } else {
             processed += "<br />";
         }
@@ -141,6 +143,24 @@ void MSALoginDialog::onTaskFailed(QString reason)
     disconnect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_authflow_task.get(), &Task::abort);
     disconnect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_devicecode_task.get(), &Task::abort);
     connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &MSALoginDialog::reject);
+    if (property("pxlFlow").toBool()) {
+        // A provider failure is not necessarily an expired session. Keep its
+        // original plain-text reason in a compact PXL state, without the QR UI.
+        std::function<void(QLayout*)> hideOld = [&](QLayout* layout) {
+            for (int row = 0; row < layout->count(); ++row) {
+                auto* item = layout->itemAt(row);
+                if (auto* widget = item->widget(); widget && widget != ui->buttonBox) widget->hide();
+                if (auto* nested = item->layout()) hideOld(nested);
+            }
+        };
+        hideOld(ui->verticalLayout_6);
+        ui->verticalLayout_6->setContentsMargins(24, 24, 24, 24);
+        ui->verticalLayout_6->setSpacing(16);
+        ui->verticalLayout_6->insertWidget(0, Pxl::loginErrorPanel(this, reason), 1);
+        ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Close"));
+        setProperty("pxlPreferredSize", QSize(560, 320));
+        QCoreApplication::postEvent(this, new QEvent(QEvent::LayoutRequest));
+    }
 }
 
 void MSALoginDialog::authorizeWithBrowser(const QUrl& url)
