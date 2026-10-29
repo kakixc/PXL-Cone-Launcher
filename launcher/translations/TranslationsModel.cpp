@@ -179,6 +179,7 @@ struct TranslationsModel::Private {
     QFileSystemWatcher* watcher = nullptr;
 
     bool m_noLanguageSet = false;
+    bool m_indexRequested = false;
 };
 
 TranslationsModel::TranslationsModel(const QString& path, QObject* parent) : QAbstractListModel(parent)
@@ -276,10 +277,12 @@ void TranslationsModel::reloadLocalFiles()
 
     const auto indexPath = d->m_dir.absoluteFilePath("index_v2.json");
     if (!QFileInfo::exists(indexPath)) {
-        downloadIndex();
-        return;
+        // A failed cached download creates/removes temporary files in this
+        // directory. Its watcher must not start an endless download loop.
+        if (!d->m_indexRequested) downloadIndex();
+    } else {
+        readIndex(indexPath, languages);
     }
-    readIndex(indexPath, languages);
     auto entries = d->m_dir.entryInfoList({ "mmc_*.qm", "*.po" }, QDir::Files | QDir::NoDotAndDotDot);
     for (auto& entry : entries) {
         auto completeSuffix = entry.completeSuffix();
@@ -585,6 +588,7 @@ void TranslationsModel::downloadIndex()
     if (d->m_indexJob || d->m_downloadJob) {
         return;
     }
+    d->m_indexRequested = true;
     qDebug() << "Downloading Translations Index...";
     d->m_indexJob.reset(new NetJob("Translations Index", APPLICATION->network()));
     const MetaEntryPtr entry = APPLICATION->metacache()->resolveEntry("translations", "index_v2.json");
