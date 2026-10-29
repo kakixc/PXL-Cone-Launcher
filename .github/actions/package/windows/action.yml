@@ -68,6 +68,10 @@ runs:
         }
         'enabled=true' >> $env:GITHUB_OUTPUT
 
+    - name: Test package manifest helper
+      shell: pwsh
+      run: ./tests/PackageManifest_test.ps1
+
     - name: Package (MinGW)
       if: ${{ inputs.msystem != '' }}
       shell: msys2 {0}
@@ -76,8 +80,6 @@ runs:
         INSTALL_DIR: install
       run: |
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }}
-        touch ${{ env.INSTALL_DIR }}/manifest.txt
-        for l in $(find ${{ env.INSTALL_DIR }} -type f); do l=$(cygpath -u $l); l=${l#$(pwd)/}; l=${l#${{ env.INSTALL_DIR }}/}; l=${l#./}; echo $l; done >> ${{ env.INSTALL_DIR }}/manifest.txt
 
     - name: Package (MSVC)
       if: ${{ inputs.msystem == '' }}
@@ -90,7 +92,9 @@ runs:
 
         cd ${{ github.workspace }}
 
-        Get-ChildItem ${{ env.INSTALL_DIR }} -Recurse | ForEach FullName | Resolve-Path -Relative | %{ $_.TrimStart('.\') } | %{ $_.TrimStart('${{ env.INSTALL_DIR }}') } | %{ $_.TrimStart('\') } | Out-File -FilePath ${{ env.INSTALL_DIR }}/manifest.txt
+    - name: Write binary package manifest
+      shell: pwsh
+      run: ./scripts/write-package-manifest.ps1 -PackageRoot install
 
     - name: Login to Azure
       if: ${{ steps.signing.outputs.enabled == 'true' }}
@@ -137,7 +141,6 @@ runs:
       run: |
         cp -r ${{ env.INSTALL_DIR }} ${{ env.INSTALL_PORTABLE_DIR }}  # cmake install on Windows is slow, let's just copy instead
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }} --prefix ${{ env.INSTALL_PORTABLE_DIR }} --component portable
-        for l in $(find ${{ env.INSTALL_PORTABLE_DIR }} -type f); do l=$(cygpath -u $l); l=${l#$(pwd)/}; l=${l#${{ env.INSTALL_PORTABLE_DIR }}/}; l=${l#./}; echo $l; done >> ${{ env.INSTALL_PORTABLE_DIR }}/manifest.txt
 
     - name: Package (MSVC, portable)
       if: ${{ inputs.msystem == '' }}
@@ -150,7 +153,9 @@ runs:
         cp -r ${{ env.INSTALL_DIR }} ${{ env.INSTALL_PORTABLE_DIR }}  # cmake install on Windows is slow, let's just copy instead
         cmake --install ${{ env.BUILD_DIR }} --config ${{ inputs.build-type }} --prefix ${{ env.INSTALL_PORTABLE_DIR }} --component portable
 
-        Get-ChildItem ${{ env.INSTALL_PORTABLE_DIR }} -Recurse | ForEach FullName | Resolve-Path -Relative | %{ $_.TrimStart('.\') } | %{ $_.TrimStart('${{ env.INSTALL_PORTABLE_DIR }}') } | %{ $_.TrimStart('\') } | Out-File -FilePath ${{ env.INSTALL_DIR }}/manifest.txt
+    - name: Write portable package manifest
+      shell: pwsh
+      run: ./scripts/write-package-manifest.ps1 -PackageRoot install-portable
 
     - name: Package (installer)
       shell: pwsh
