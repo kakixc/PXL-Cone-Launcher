@@ -3092,3 +3092,11 @@ msgstr "Здесь создаются новые сборки. Существу�
 msgctxt "InstallLoaderDialog"
 msgid "Install Loader"
 msgstr "Установить загрузчик"
+
+msgctxt "ResourceDownload::ResourcePage"
+msgid "Change version"
+msgstr "Сменить версию"
+
+msgctxt "ModFolderPage"
+msgid "No content provider is available for this instance."
+msgstr "Для этой сборки нет доступного источника дополнений."

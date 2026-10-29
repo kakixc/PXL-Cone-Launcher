@@ -99,7 +99,7 @@ class ResourcePage : public QWidget, public BasePage {
     void onVersionSelectionChanged(int index);
     void onResourceSelected();
     void onResourceToggle(const QModelIndex& index);
-    void showProjectDetails(const QModelIndex& index);
+    bool showProjectDetails(const QModelIndex& index);
 
     /** Associates regex expressions to pages in the order they're given in the map. */
     virtual QMap<QString, QString> urlHandlers() const = 0;

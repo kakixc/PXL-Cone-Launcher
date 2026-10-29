@@ -1209,6 +1209,46 @@ class WorkspacePageTest : public QObject {
         page->previewFirst();
     }
 
+    void installedVersionChangeUsesPreviewAndCancelLeavesSelectionUntouched()
+    {
+        for (const bool confirm : {false, true}) {
+            QTemporaryDir temporary;
+            auto global = settings(temporary);
+            MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg")),
+                                       temporary.filePath("pack"));
+            QWidget surface;
+            surface.resize(1000, 650);
+            surface.show();
+            LayoutCatalogDialog dialog(&surface, instance);
+            dialog.useEmbeddedPresentation();
+            dialog.setProperty("pxlVersionChange", true);
+            auto* page = dynamic_cast<LayoutCatalogPage*>(dialog.selectedPage());
+            QVERIFY(page);
+            page->prepareSelectablePreview(true);
+            QSignalSpy finished(&dialog, &QDialog::finished);
+            QTimer::singleShot(50, &dialog, [&] {
+                auto* preview = surface.findChild<QDialog*>("pxlProjectPreview");
+                QVERIFY(preview);
+                auto* action = preview->findChild<QPushButton*>("projectPreviewSelect");
+                QVERIFY(action && !action->isEnabled());
+                if (!confirm) { preview->reject(); return; }
+                preview->findChild<QComboBox*>()->setCurrentIndex(1);
+                QCoreApplication::processEvents();
+                QCOMPARE(action->text(), QString("Change version"));
+                QVERIFY(action->isEnabled());
+                action->click();
+            });
+            QTimer::singleShot(1000, &dialog, [&] {
+                if (auto* preview = surface.findChild<QDialog*>("pxlProjectPreview")) preview->reject();
+            });
+            page->openProject("fixture-project");
+            QTRY_COMPARE(finished.count(), 1);
+            QCOMPARE(finished.first().first().toInt(), confirm ? int(QDialog::Accepted) : int(QDialog::Rejected));
+            QCOMPARE(page->selections, confirm ? 1 : 0);
+            QVERIFY(!dialog.isWindow());
+        }
+    }
+
     void loaderVersionsBecomeSelectableAfterModelReload()
     {
         ResettableVersionList versions;

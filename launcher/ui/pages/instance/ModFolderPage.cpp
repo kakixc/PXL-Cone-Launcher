@@ -56,6 +56,7 @@
 #include "icons/IconList.h"
 #include "ui/pxl/DialogOverlay.h"
 #include "ui/pxl/InstanceCovers.h"
+#include "ui/pxl/MessagePanel.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
@@ -350,6 +351,7 @@ void ModFolderPage::deleteModMetadata()
 
 void ModFolderPage::changeModVersion()
 {
+    if (m_downloadDialog) return;
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }
@@ -371,11 +373,21 @@ void ModFolderPage::changeModVersion()
     }
 
     m_downloadDialog = new ResourceDownload::ModDownloadDialog(this, m_model, m_instance, true);
+    if (!m_downloadDialog->hasProviders()) {
+        m_downloadDialog->deleteLater();
+        Pxl::showNotice(window(), tr("Error"), tr("No content provider is available for this instance."));
+        return;
+    }
     connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
     connect(m_downloadDialog, &QDialog::finished, this, &ModFolderPage::downloadDialogFinished);
 
+    const bool pxlPresentation = property("pxlInstalledContent").toBool();
+    if (pxlPresentation) {
+        m_downloadDialog->useEmbeddedPresentation();
+        m_downloadDialog->setProperty("pxlVersionChange", true);
+    }
     m_downloadDialog->setResourceMetadata((*modsList.begin())->metadata());
-    m_downloadDialog->open();
+    if (!pxlPresentation && m_downloadDialog) m_downloadDialog->open();
 }
 
 void ModFolderPage::exportModMetadata()

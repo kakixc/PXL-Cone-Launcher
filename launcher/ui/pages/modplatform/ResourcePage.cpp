@@ -57,6 +57,7 @@
 #include "ui/pxl/CatalogCardDelegate.h"
 #include "ui/pxl/DialogOverlay.h"
 #include "ui/pxl/LibraryControls.h"
+#include "ui/pxl/MessagePanel.h"
 #include <QSignalBlocker>
 
 namespace ResourceDownload {
@@ -156,12 +157,13 @@ void ResourcePage::useCardPresentation()
     // Card body activation is owned by the delegate; avoid opening twice on double-click.
 }
 
-void ResourcePage::showProjectDetails(const QModelIndex& index)
+bool ResourcePage::showProjectDetails(const QModelIndex& index)
 {
-    if (!index.isValid()) return;
+    if (!index.isValid()) return false;
     m_ui->packView->setCurrentIndex(index);
     const auto pack = getCurrentPack();
-    if (!pack) return;
+    if (!pack) return false;
+    const bool changingVersion = m_parentDialog->property("pxlVersionChange").toBool();
     QDialog details(this);
     details.setObjectName("pxlProjectPreview");
     const QPointer<ResourcePage> pageGuard(this);
@@ -196,7 +198,7 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
     header->addLayout(identity,1);
     auto* close = new QPushButton(tr("Close"),&details);
     close->setAutoDefault(false);
-    connect(close,&QPushButton::clicked,&details,&QDialog::accept);
+    connect(close,&QPushButton::clicked,&details,&QDialog::reject);
     header->addWidget(close,0,Qt::AlignTop);
     layout->addLayout(header);
     // New presentation, shared document/data pipeline: network image loading,
@@ -225,7 +227,7 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
     select->setObjectName("projectPreviewSelect");
     select->setProperty("pxlPrimary",true);
     select->setAutoDefault(false);
-    auto updateAction = [pageGuard,select] {
+    auto updateAction = [pageGuard,select,changingVersion] {
         if (!pageGuard) { select->setEnabled(false); return; }
         const auto current=pageGuard->getCurrentPack();
         const int version = pageGuard->m_selectedVersionIndex;
@@ -234,13 +236,19 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
                                && current->versions[version].fileId == installedId && !current->versions[version].is_currently_selected;
         select->setEnabled(current && current->versionsLoaded && version >= 0 && version < current->versions.size()
                            && !installed && pageGuard->m_model->checkVersionFilters(current->versions[version]));
-        select->setText(installed ? tr("Installed") : current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
+        select->setText(installed ? tr("Installed") : changingVersion ? tr("Change version")
+            : current && current->isAnyVersionSelected() ? tr("Remove from selection") : tr("Add to selection"));
         select->ensurePolished();
         select->setMinimumWidth(select->fontMetrics().horizontalAdvance(select->text()) + 40);
     };
     // The overlay disables its underlying page. Calling a hidden source button
     // would silently do nothing; invoke the same checked engine handler directly.
-    connect(select,&QPushButton::clicked,&details,[pageGuard,updateAction] { if (pageGuard) pageGuard->onResourceSelected(); updateAction(); });
+    connect(select,&QPushButton::clicked,&details,[pageGuard,updateAction,changingVersion,&details] {
+        if (!pageGuard) return;
+        pageGuard->onResourceSelected();
+        if (changingVersion) details.accept();
+        else updateAction();
+    });
     auto deferAction = [&details,updateAction] { QTimer::singleShot(0,&details,updateAction); };
     connect(m_ui->versionSelectionBox,qOverload<int>(&QComboBox::currentIndexChanged),&details,deferAction);
     connect(versions->model(),&QAbstractItemModel::rowsInserted,&details,deferAction);
@@ -248,8 +256,7 @@ void ResourcePage::showProjectDetails(const QModelIndex& index)
     updateAction();
     footer->addWidget(select);
     layout->addLayout(footer);
-    Pxl::DialogOverlay::run(&details,window());
-
+    return Pxl::DialogOverlay::run(&details,window()) == QDialog::Accepted;
 }
 
 void ResourcePage::retranslate()
@@ -719,6 +726,31 @@ void ResourcePage::openUrl(const QUrl& url)
 
 void ResourcePage::openProject(const QVariant& projectID)
 {
+    if (m_parentDialog->property("pxlVersionChange").toBool()) {
+        m_doNotJumpToMod = true;
+        const auto openPreview = [this] {
+            const QPointer<ResourceDownloadDialog> dialog = m_parentDialog;
+            if (m_model->rowCount({}) > 0) {
+                const bool confirmed = showProjectDetails(m_model->index(0, 0));
+                if (!dialog) return;
+                if (confirmed) dialog->accept();
+                else dialog->QDialog::reject();
+            } else {
+                Pxl::showNotice(window(), tr("Error"), tr("The resource was not found"));
+                if (dialog) dialog->QDialog::reject();
+            }
+        };
+        {
+            const QSignalBlocker blocker(m_ui->searchEdit);
+            m_ui->searchEdit->setText("#" + projectID.toString());
+        }
+        m_searchTimer.stop();
+        triggerSearch();
+        if (m_model->hasActiveSearchJob())
+            connect(m_model->activeSearchJob().get(), &Task::finished, this, openPreview);
+        else QTimer::singleShot(0, this, openPreview);
+        return;
+    }
     m_ui->sortByBox->hide();
     m_ui->searchEdit->hide();
     m_ui->resourceFilterButton->hide();
