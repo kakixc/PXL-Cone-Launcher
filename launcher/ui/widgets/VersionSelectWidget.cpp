@@ -1,4 +1,5 @@
 #include "VersionSelectWidget.h"
+#include "ui/pxl/MessagePanel.h"
 
 #include <QApplication>
 #include <QEvent>
@@ -141,10 +142,10 @@ void VersionSelectWidget::loadList(bool forceReload)
     connect(m_load_task.get(), &Task::succeeded, this, &VersionSelectWidget::onTaskSucceeded);
     connect(m_load_task.get(), &Task::failed, this, &VersionSelectWidget::onTaskFailed);
     connect(m_load_task.get(), &Task::progress, this, &VersionSelectWidget::changeProgress);
+    sneakyProgressBar->setHidden(false);
     if (!m_load_task->isRunning()) {
         m_load_task->start();
     }
-    sneakyProgressBar->setHidden(false);
     syncCompactSelection();
 }
 
@@ -161,7 +162,12 @@ void VersionSelectWidget::onTaskSucceeded()
 
 void VersionSelectWidget::onTaskFailed(const QString& reason)
 {
-    CustomMessageBox::selectable(this, tr("Error"), tr("List update failed:\n%1").arg(reason), QMessageBox::Warning)->show();
+    if (m_compactCombo) {
+        const auto message = tr("List update failed:\n%1").arg(reason);
+        QTimer::singleShot(0, this, [this, message] { Pxl::showNotice(window(), tr("Error"), message); });
+    } else {
+        CustomMessageBox::selectable(this, tr("Error"), tr("List update failed:\n%1").arg(reason), QMessageBox::Warning)->show();
+    }
     onTaskSucceeded();
 }
 

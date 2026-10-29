@@ -3200,3 +3200,15 @@ msgstr "Не удалось скопировать мир."
 msgctxt "WorldListPage"
 msgid "Couldn't rename the world."
 msgstr "Не удалось переименовать мир."
+
+msgctxt "VersionSelectDialog"
+msgid "Apply version"
+msgstr "Применить версию"
+
+msgctxt "VersionPage"
+msgid "Remove component"
+msgstr "Удалить компонент"
+
+msgctxt "VersionPage"
+msgid "Revert customizations"
+msgstr "Отменить изменения"

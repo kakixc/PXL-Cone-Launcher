@@ -36,6 +36,7 @@ class VersionSelectDialog : public QDialog {
     virtual ~VersionSelectDialog() = default;
 
     int exec() override;
+    void usePxlPresentation();
 
     BaseVersion::Ptr selectedVersion() const;
 

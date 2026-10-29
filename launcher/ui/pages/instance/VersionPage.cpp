@@ -58,6 +58,7 @@
 #include "tasks/SequentialTask.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
 #include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/MessagePanel.h"
 #include "ui_VersionPage.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
@@ -75,6 +76,15 @@
 
 #include "meta/Index.h"
 #include "meta/VersionList.h"
+
+namespace {
+void componentNotice(QWidget* page, bool pxl, const QString& title, const QString& message,
+                     QMessageBox::Icon severity = QMessageBox::Critical)
+{
+    if (pxl) Pxl::showNotice(page->window(), title, message);
+    else QMessageBox(severity, title, message, QMessageBox::Ok, page).exec();
+}
+}
 
 class IconProxy : public QIdentityProxyModel {
     Q_OBJECT
@@ -271,14 +281,14 @@ bool VersionPage::reloadPackProfile()
     try {
         auto result = m_profile->reload(Net::Mode::Online);
         if (!result) {
-            QMessageBox::critical(this, tr("Error"), result.error);
+            componentNotice(this, m_componentView, tr("Error"), result.error);
         }
         return result;
     } catch (const Exception& e) {
-        QMessageBox::critical(this, tr("Error"), e.cause());
+        componentNotice(this, m_componentView, tr("Error"), e.cause());
         return false;
     } catch (...) {
-        QMessageBox::critical(this, tr("Error"), tr("Couldn't load the instance profile."));
+        componentNotice(this, m_componentView, tr("Error"), tr("Couldn't load the instance profile."));
         return false;
     }
 }
@@ -297,20 +307,21 @@ void VersionPage::on_actionRemove_triggered()
     int index = Pxl::componentSourceRow(ui->packageView->currentIndex());
     auto component = m_profile->getComponent(index);
     if (component->isCustom()) {
-        auto response = CustomMessageBox::selectable(this, tr("Confirm Removal"),
-                                                     tr("You are about to remove \"%1\".\n"
+        const auto warning = tr("You are about to remove \"%1\".\n"
                                                         "This is permanent and will completely remove the custom component.\n\n"
                                                         "Are you sure?")
-                                                         .arg(component->getName()),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
+                                                         .arg(component->getName());
+        const bool confirmed = m_componentView
+            ? Pxl::messagePanel(window(), tr("Confirm Removal"), warning, tr("Remove component"), true)
+            : CustomMessageBox::selectable(this, tr("Confirm Removal"), warning,
+                                          QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)->exec() == QMessageBox::Yes;
 
-        if (response != QMessageBox::Yes)
+        if (!confirmed || m_profile->getComponent(index) != component)
             return;
     }
     // FIXME: use actual model, not reloading.
     if (!m_profile->remove(index)) {
-        QMessageBox::critical(this, tr("Error"), tr("Couldn't remove file"));
+        componentNotice(this, m_componentView, tr("Error"), tr("Couldn't remove file"));
     }
     updateButtons();
     reloadPackProfile();
@@ -344,8 +355,8 @@ void VersionPage::on_actionImport_Components_triggered()
 
     if (!list.isEmpty()) {
         if (!m_profile->installComponents(list)) {
-            QMessageBox::warning(this, tr("Failed to import components"),
-                                 tr("Some components could not be imported. Check logs for details"));
+            componentNotice(this, m_componentView, tr("Failed to import components"),
+                            tr("Some components could not be imported. Check logs for details"), QMessageBox::Warning);
         }
     }
 
@@ -368,7 +379,7 @@ void VersionPage::on_actionMove_up_triggered()
     try {
         m_profile->move(currentRow(), PackProfile::MoveUp);
     } catch (const Exception& e) {
-        QMessageBox::critical(this, tr("Error"), e.cause());
+        componentNotice(this, m_componentView, tr("Error"), e.cause());
     }
     updateButtons();
 }
@@ -378,7 +389,7 @@ void VersionPage::on_actionMove_down_triggered()
     try {
         m_profile->move(currentRow(), PackProfile::MoveDown);
     } catch (const Exception& e) {
-        QMessageBox::critical(this, tr("Error"), e.cause());
+        componentNotice(this, m_componentView, tr("Error"), e.cause());
     }
     updateButtons();
 }
@@ -422,6 +433,7 @@ void VersionPage::on_actionChange_version_triggered()
     if (!currentVersion.isEmpty()) {
         vselect.setCurrentVersion(currentVersion);
     }
+    if (m_componentView) vselect.usePxlPresentation();
     if (!vselect.exec() || !vselect.selectedVersion())
         return;
 
@@ -443,6 +455,12 @@ void VersionPage::on_actionChange_version_triggered()
 void VersionPage::on_actionDownload_All_triggered()
 {
     if (!APPLICATION->accounts()->anyAccountIsValid()) {
+        if (m_componentView) {
+            Pxl::showNotice(window(), tr("Error"),
+                tr("Cannot download Minecraft or update instances unless you have at least "
+                   "one account added.\nPlease add a Microsoft account."));
+            return;
+        }
         CustomMessageBox::selectable(this, tr("Error"),
                                      tr("Cannot download Minecraft or update instances unless you have at least "
                                         "one account added.\nPlease add a Microsoft account."),
@@ -527,6 +545,10 @@ void VersionPage::preselect(int row)
 
 void VersionPage::onGameUpdateError(QString error)
 {
+    if (m_componentView) {
+        QTimer::singleShot(0, this, [this, error] { Pxl::showNotice(window(), tr("Error updating instance"), error); });
+        return;
+    }
     CustomMessageBox::selectable(this, tr("Error updating instance"), error, QMessageBox::Warning)->show();
 }
 
@@ -587,15 +609,16 @@ void VersionPage::on_actionRevert_triggered()
     }
     auto component = m_profile->getComponent(version);
 
-    auto response = CustomMessageBox::selectable(this, tr("Confirm Reversion"),
-                                                 tr("You are about to revert \"%1\".\n"
+    const auto warning = tr("You are about to revert \"%1\".\n"
                                                     "This is permanent and will completely revert your customizations.\n\n"
                                                     "Are you sure?")
-                                                     .arg(component->getName()),
-                                                 QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                        ->exec();
+                                                     .arg(component->getName());
+    const bool confirmed = m_componentView
+        ? Pxl::messagePanel(window(), tr("Confirm Reversion"), warning, tr("Revert customizations"), true)
+        : CustomMessageBox::selectable(this, tr("Confirm Reversion"), warning,
+                                      QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)->exec() == QMessageBox::Yes;
 
-    if (response != QMessageBox::Yes)
+    if (!confirmed || m_profile->getComponent(version) != component)
         return;
 
     if (!m_profile->revertToBase(version)) {

@@ -15,6 +15,7 @@ inline std::optional<QString> nameEntryPanel(QWidget* surface, const QString& ti
     QDialog panel(surface);
     panel.setObjectName("pxlNameEntry");
     panel.setProperty("pxlFlow", true);
+    panel.setProperty("pxlAnimateLifecycle", true);
     panel.setProperty("pxlPreferredSize", QSize(520, 250));
     auto* layout = new QVBoxLayout(&panel);
     layout->setContentsMargins(24, 24, 24, 24);

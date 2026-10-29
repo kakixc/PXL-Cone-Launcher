@@ -36,6 +36,7 @@
 #include "VersionSelectDialog.h"
 
 #include <QDebug>
+#include <QLabel>
 #include <QtWidgets/QButtonGroup>
 #include <QtWidgets/QDialogButtonBox>
 #include <QtWidgets/QHBoxLayout>
@@ -43,6 +44,7 @@
 #include <QtWidgets/QVBoxLayout>
 
 #include "ui/widgets/VersionSelectWidget.h"
+#include "ui/pxl/DialogOverlay.h"
 
 #include "BaseVersion.h"
 #include "BaseVersionList.h"
@@ -123,6 +125,11 @@ void VersionSelectDialog::setResizeOn(int column)
 
 int VersionSelectDialog::exec()
 {
+    if (property("pxlFlow").toBool()) {
+        m_versionWidget->initialize(m_vlist, true);
+        m_buttonBox->button(QDialogButtonBox::Ok)->setEnabled(selectedVersion() != nullptr);
+        return parentWidget() ? Pxl::DialogOverlay::run(this, parentWidget()->window()) : QDialog::exec();
+    }
     QDialog::open();
     m_versionWidget->initialize(m_vlist, true);
     m_versionWidget->selectSearch();
@@ -130,6 +137,39 @@ int VersionSelectDialog::exec()
         m_versionWidget->setResizeOn(resizeOnColumn);
     }
     return QDialog::exec();
+}
+
+void VersionSelectDialog::usePxlPresentation()
+{
+    if (property("pxlFlow").toBool()) return;
+    setProperty("pxlFlow", true);
+    setProperty("pxlAnimateLifecycle", true);
+    setProperty("pxlPreferredSize", QSize(600, 220));
+    m_verticalLayout->setContentsMargins(24, 24, 24, 24);
+    m_verticalLayout->setSpacing(18);
+    auto* title = new QLabel(windowTitle(), this);
+    title->setProperty("pxlFlowTitle", true);
+    title->setTextFormat(Qt::PlainText);
+    title->setWordWrap(true);
+    m_verticalLayout->insertWidget(0, title);
+    m_versionWidget->useCompactPresentation();
+    m_verticalLayout->removeWidget(m_versionWidget);
+    m_horizontalLayout->removeWidget(m_refreshButton);
+    auto* pickerRow = new QHBoxLayout();
+    pickerRow->setSpacing(10);
+    pickerRow->addWidget(m_versionWidget, 1);
+    pickerRow->addWidget(m_refreshButton, 0, Qt::AlignTop);
+    m_refreshButton->setText(tr("Refresh"));
+    m_refreshButton->setMinimumHeight(40);
+    m_verticalLayout->insertLayout(1, pickerRow);
+    m_horizontalLayout->insertStretch(0);
+    m_verticalLayout->insertStretch(m_verticalLayout->count() - 1);
+    auto* apply = m_buttonBox->button(QDialogButtonBox::Ok);
+    apply->setText(tr("Apply version"));
+    apply->setProperty("pxlPrimary", true);
+    apply->setEnabled(false);
+    connect(m_versionWidget, &VersionSelectWidget::selectedVersionChanged, apply,
+            [apply](const BaseVersion::Ptr& version) { apply->setEnabled(version != nullptr); });
 }
 
 void VersionSelectDialog::selectRecommended()

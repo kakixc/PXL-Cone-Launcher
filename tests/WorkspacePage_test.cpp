@@ -36,6 +36,7 @@
 #include <ui/pxl/ContentBrowser.h>
 #include <ui/dialogs/ResourceDownloadDialog.h>
 #include <ui/dialogs/ReviewMessageBox.h>
+#include <ui/dialogs/VersionSelectDialog.h>
 #include <QTreeWidget>
 #include <BaseVersionList.h>
 #include <QStandardItemModel>
@@ -74,9 +75,19 @@ private:
     QString m_id;
 };
 
+class FixtureVersionLoad final : public Task {
+public:
+    explicit FixtureVersionLoad(QString error = {}) : m_error(std::move(error)) {}
+protected:
+    void executeTask() override { if (m_error.isEmpty()) emitSucceeded(); else emitFailed(m_error); }
+private:
+    QString m_error;
+};
+
 class ResettableVersionList final : public BaseVersionList {
 public:
-    Task::Ptr getLoadTask(bool = false) override { return nullptr; }
+    Task::Ptr getLoadTask(bool = false) override { return Task::Ptr(new FixtureVersionLoad(loadError)); }
+    QString loadError;
     bool isLoaded() override { return true; }
     const BaseVersion::Ptr at(int index) const override { return m_versions.value(index); }
     int count() const override { return m_versions.size(); }
@@ -714,6 +725,64 @@ class WorkspacePageTest : public QObject {
         QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No matching worlds"));
         search->clear(); source.removeRows(0, source.rowCount()); QTest::qWait(20);
         QCOMPARE(view.findChild<QLabel*>("worldEmptyTitle")->text(), QString("No worlds yet"));
+    }
+
+    void componentVersionDialogUsesCompactSelectionAndRejectsAnEmptyList()
+    {
+        QWidget surface;
+        surface.resize(1000, 650);
+        surface.show();
+        ResettableVersionList versions;
+        versions.replace({"1.20.1", "1.21.1"});
+        VersionSelectDialog dialog(&versions, "Change Minecraft version", &surface);
+        dialog.setCurrentVersion("1.20.1");
+        dialog.usePxlPresentation();
+        QTimer::singleShot(20, &surface, [&] {
+            QVERIFY(!dialog.isWindow());
+            auto* choices = dialog.findChild<QComboBox*>("compactVersionChoice");
+            auto* buttons = dialog.findChild<QDialogButtonBox*>();
+            QVERIFY(choices && buttons);
+            QVERIFY(dialog.findChild<QProgressBar*>("sneakyProgressBar")->isHidden());
+            QCOMPARE(choices->maxVisibleItems(), 8);
+            QVERIFY(buttons->button(QDialogButtonBox::Ok)->isEnabled());
+            QCOMPARE(dialog.selectedVersion()->descriptor(), QString("1.20.1"));
+            choices->setCurrentIndex(1);
+            QVERIFY(QMetaObject::invokeMethod(choices, "activated", Qt::DirectConnection, Q_ARG(int, 1)));
+            QCOMPARE(dialog.selectedVersion()->descriptor(), QString("1.21.1"));
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty())
+                QVERIFY(surface.grab().save(QDir(screenshots).filePath("component-version-choice.png")));
+            buttons->button(QDialogButtonBox::Ok)->click();
+        });
+        QCOMPARE(dialog.exec(), int(QDialog::Accepted));
+        QCOMPARE(dialog.selectedVersion()->descriptor(), QString("1.21.1"));
+        versions.replace({});
+        VersionSelectDialog empty(&versions, "Change Minecraft version", &surface);
+        empty.usePxlPresentation();
+        QTimer::singleShot(20, &surface, [&] {
+            QVERIFY(!empty.findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->isEnabled());
+            empty.reject();
+        });
+        QCOMPARE(empty.exec(), int(QDialog::Rejected));
+        QVERIFY(!empty.selectedVersion());
+        versions.loadError = "Offline fixture";
+        VersionSelectDialog failed(&versions, "Change Minecraft version", &surface);
+        failed.usePxlPresentation();
+        int messages = 0;
+        QTimer closer;
+        connect(&closer, &QTimer::timeout, &surface, [&] {
+            if (auto* message = surface.findChild<QDialog*>("pxlMessagePanel")) {
+                ++messages;
+                QVERIFY(!message->isWindow());
+                QVERIFY(message->findChild<QTextEdit*>()->toPlainText().contains("Offline fixture"));
+                message->reject();
+                failed.reject();
+            }
+        });
+        QTimer::singleShot(1000, &failed, &QDialog::reject);
+        closer.start(20);
+        QCOMPARE(failed.exec(), int(QDialog::Rejected));
+        QCOMPARE(messages, 1);
     }
 
     void worldActionsUsePxlNamesAndCancelOrRefreshCannotDeleteAnotherWorld()
