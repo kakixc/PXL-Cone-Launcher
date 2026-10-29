@@ -149,15 +149,20 @@ jobs:
 
       - name: Configure project
         run: |
-          cmake --preset "$CMAKE_PRESET"
+          cmake --preset "$CMAKE_PRESET" -DBUILD_TESTING=ON
 
       - name: Run build
         run: |
           cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
 
-      #- name: Run tests
-      #  run: |
-      #    ctest --preset "$CMAKE_PRESET" --build-config "$BUILD_TYPE"
+      - name: Run PXL regression tests before packaging
+        if: ${{ runner.os == 'Linux' || runner.os == 'Windows' }}
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --test-dir build --build-config "$BUILD_TYPE" \
+            -R '^(WorkspacePage|WorkspaceTransfer|LauncherUpdates)$' \
+            --output-on-failure --no-tests=error --timeout 180
 
       ##
       # PACKAGE
