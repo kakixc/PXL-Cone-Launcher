@@ -72,6 +72,22 @@
 #include "ui/dialogs/ProgressDialog.h"
 
 namespace {
+QMessageBox::StandardButton confirmModAction(QWidget* page, const QString& title, const QString& message,
+                                             const QString& action, const QString& alternative = {})
+{
+    if (page->property("pxlInstalledContent").toBool()) {
+        bool alternativeChosen = false;
+        if (Pxl::messagePanel(page->window(), title, message, action, true, alternative, &alternativeChosen))
+            return QMessageBox::Yes;
+        return alternativeChosen ? QMessageBox::No : QMessageBox::Cancel;
+    }
+    const auto buttons = alternative.isEmpty() ? QMessageBox::Yes | QMessageBox::No
+                                               : QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel;
+    const auto defaultButton = alternative.isEmpty() ? QMessageBox::No : QMessageBox::Cancel;
+    return static_cast<QMessageBox::StandardButton>(
+        CustomMessageBox::selectable(page, title, message, QMessageBox::Warning, buttons, defaultButton)->exec());
+}
+
 void showModNotice(QWidget* page, const QString& title, const QString& message, QMessageBox::Icon severity)
 {
     if (page->property("pxlInstalledContent").toBool()) {
@@ -145,11 +161,10 @@ void ModFolderPage::updateFrame(const QModelIndex& current, [[maybe_unused]] con
 void ModFolderPage::removeItems(const QItemSelection& selection)
 {
     if (m_instance != nullptr && m_instance->isRunning()) {
-        auto response = CustomMessageBox::selectable(this, tr("Confirm Delete"),
+        auto response = confirmModAction(this, tr("Confirm Delete"),
                                                      tr("If you remove mods while the game is running it may crash your game.\n"
                                                         "Are you sure you want to do this?"),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
+                                                     tr("Remove mods"));
 
         if (response != QMessageBox::Yes) {
             return;
@@ -159,13 +174,11 @@ void ModFolderPage::removeItems(const QItemSelection& selection)
     auto indexes = selection.indexes();
     auto affected = m_model->getAffectedMods(indexes, EnableAction::DISABLE);
     if (!affected.isEmpty()) {
-        auto response = CustomMessageBox::selectable(this, tr("Confirm Disable"),
+        auto response = confirmModAction(this, tr("Confirm Disable"),
                                                      tr("The mods you are trying to delete are required by %1 mods.\n"
                                                         "Do you want to disable them?")
                                                          .arg(affected.length()),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
-                                                     QMessageBox::Cancel)
-                            ->exec();
+                                                     tr("Disable affected mods"), tr("Keep affected mods enabled"));
 
         if (response == QMessageBox::Cancel) {
             return;
@@ -261,12 +274,11 @@ void ModFolderPage::updateMods(bool includeDeps)
     }
     if (m_instance != nullptr && m_instance->isRunning()) {
         auto response =
-            CustomMessageBox::selectable(this, tr("Confirm Update"),
+            confirmModAction(this, tr("Confirm Update"),
                                          tr("Updating mods while the game is running may cause mod duplication and game crashes.\n"
                                             "The old files may not be deleted as they are in use.\n"
                                             "Are you sure you want to do this?"),
-                                         QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                ->exec();
+                                         tr("Update mods"));
 
         if (response != QMessageBox::Yes) {
             return;
@@ -347,12 +359,11 @@ void ModFolderPage::deleteModMetadata()
         return;
     }
     if (selectionCount > 1) {
-        auto response = CustomMessageBox::selectable(this, tr("Confirm Removal"),
+        auto response = confirmModAction(this, tr("Confirm Removal"),
                                                      tr("You are about to remove the metadata for %1 mods.\n"
                                                         "Are you sure?")
                                                          .arg(selectionCount),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
+                                                     tr("Remove metadata"));
 
         if (response != QMessageBox::Yes) {
             return;

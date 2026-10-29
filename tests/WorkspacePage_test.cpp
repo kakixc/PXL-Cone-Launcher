@@ -811,6 +811,35 @@ class WorkspacePageTest : public QObject {
         QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
     }
 
+    void messagePanelPreservesThreeDistinctConfirmationOutcomes()
+    {
+        QWidget surface;
+        surface.resize(1000, 650);
+        surface.show();
+        for (int choice = 0; choice < 3; ++choice) {
+            bool secondaryChosen = true;
+            QTimer::singleShot(20, &surface, [&] {
+                auto* dialog = surface.findChild<QDialog*>("pxlMessagePanel");
+                QVERIFY(dialog);
+                QVERIFY(!dialog->isWindow());
+                QCOMPARE(dialog->findChild<QTextEdit*>()->toPlainText(), QString("Original dependency warning"));
+                const auto buttons = dialog->findChildren<QPushButton*>();
+                QCOMPARE(buttons.size(), 3);
+                for (auto* button : buttons) QVERIFY(dialog->rect().contains(button->geometry()));
+                const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+                if (choice == 0 && !screenshots.isEmpty())
+                    QVERIFY(surface.grab().save(QDir(screenshots).filePath("mod-dependency-confirmation.png")));
+                if (choice == 0) dialog->reject();
+                else if (choice == 1) dialog->findChild<QPushButton*>("pxlMessageSecondary")->click();
+                else dialog->accept();
+            });
+            const bool accepted = Pxl::messagePanel(&surface, "Dependency warning", "Original dependency warning",
+                                                   "Disable affected mods", true, "Keep affected mods enabled", &secondaryChosen);
+            QCOMPARE(accepted, choice == 2);
+            QCOMPARE(secondaryChosen, choice == 1);
+        }
+    }
+
     void offlineProfileEditingPreservesOnlineAccountsAndUsesValidationDialog()
     {
         auto account=MinecraftAccount::createOffline("Before");

@@ -3156,3 +3156,23 @@ msgstr "Все моды обновлены."
 msgctxt "ModFolderPage"
 msgid "All selected mods are up-to-date! :)"
 msgstr "Все выбранные моды обновлены."
+
+msgctxt "ModFolderPage"
+msgid "Remove mods"
+msgstr "Удалить моды"
+
+msgctxt "ModFolderPage"
+msgid "Disable affected mods"
+msgstr "Отключить зависимые моды"
+
+msgctxt "ModFolderPage"
+msgid "Keep affected mods enabled"
+msgstr "Оставить зависимые моды включёнными"
+
+msgctxt "ModFolderPage"
+msgid "Update mods"
+msgstr "Обновить моды"
+
+msgctxt "ModFolderPage"
+msgid "Remove metadata"
+msgstr "Удалить метаданные"
