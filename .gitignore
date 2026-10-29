@@ -1,4 +1,5 @@
 Thumbs.db
+__pycache__/
 *.kdev4
 .user
 .directory

@@ -1,0 +1,46 @@
+name: PXL Cone website
+
+# Publication is explicitly manual while the first alpha is being prepared.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pxl-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test download selection
+        run: node --test website/tests/downloads.test.mjs
+      - name: Test website artifact boundaries
+        run: python -m unittest discover -s website/tests -p '*_test.py'
+      - name: Build public website
+        run: python scripts/build-site.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build-pxl-site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
