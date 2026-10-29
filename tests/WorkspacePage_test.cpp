@@ -59,6 +59,7 @@
 #include <ui/pxl/LogSurface.h>
 #include <QIdentityProxyModel>
 #include <ui/pages/modplatform/ResourcePage.h>
+#include <modplatform/modrinth/ModrinthAPI.h>
 
 class CatalogTestVersion final : public BaseVersion {
 public:
@@ -104,9 +105,20 @@ public:
     QList<BasePage*> getPages() override { return {}; }
 };
 
+class FailingCatalogAPI final : public ModrinthAPI {
+public:
+    int errorCode = 503;
+    Task::Ptr searchProjects(SearchArgs&&, Callback<QList<ModPlatform::IndexedPack::Ptr>>&& callbacks) const override
+    {
+        if (errorCode) callbacks.on_fail("fixture network failure", errorCode);
+        else { QList<ModPlatform::IndexedPack::Ptr> empty; callbacks.on_succeed(empty); }
+        return nullptr;
+    }
+};
+
 class PreviewResourceModel final : public ResourceDownload::ResourceModel {
 public:
-    PreviewResourceModel() : ResourceModel(nullptr) {}
+    explicit PreviewResourceModel(ResourceAPI* api = nullptr) : ResourceModel(api) {}
     QString metaEntryBase() const override { return {}; }
     ResourceAPI::SearchArgs createSearchArguments() override { return {}; }
     ResourceAPI::VersionSearchArgs createVersionsArguments(const QModelIndex&) override { return {}; }
@@ -115,6 +127,12 @@ public:
     void loadEntry(const QModelIndex&) override {}
     QVariant getInstalledPackVersion(ModPlatform::IndexedPack::Ptr) const override { return installedId; }
     QVariant installedId;
+    void failSearch()
+    {
+        m_api = std::make_unique<FailingCatalogAPI>();
+        setSearchTerm("fixture");
+        refresh();
+    }
 };
 
 // The real page/container layout with deterministic data and no network requests.
@@ -180,8 +198,12 @@ public:
     void removeResourceFromPage(const QString&) override {}
     int selections = 0;
     int sortChanges = 0;
+    bool failProjectLookup = false;
 protected:
-    void triggerSearch() override {}
+    void triggerSearch() override
+    {
+        if (failProjectLookup) static_cast<PreviewResourceModel*>(m_model)->failSearch();
+    }
     QMap<QString, QString> urlHandlers() const override { return {}; }
 };
 
@@ -1207,6 +1229,93 @@ class WorkspacePageTest : public QObject {
             if (auto* preview = surface.findChild<QDialog*>("pxlProjectPreview")) preview->reject();
         });
         page->previewFirst();
+    }
+
+    void catalogSearchErrorsUsePresentationHandlerAndClearOnRetry()
+    {
+        auto* api = new FailingCatalogAPI;
+        PreviewResourceModel model(api);
+        QStringList errors;
+        model.setErrorHandler([&](const QString& message) { errors.append(message); });
+        model.setSearchTerm("fixture");
+        model.search();
+        QCOMPARE(errors.size(), 1);
+        QVERIFY(model.lastSearchError().contains("Could not load content"));
+        api->errorCode = 0;
+        model.search();
+        QVERIFY(model.lastSearchError().isEmpty());
+        QCOMPARE(errors.size(), 1);
+        api->errorCode = 404;
+        model.search();
+        QVERIFY(model.lastSearchError().isEmpty());
+        QCOMPARE(errors.size(), 1);
+        api->errorCode = 409;
+        model.search();
+        QCOMPARE(errors.size(), 2);
+        QVERIFY(model.lastSearchError().contains("API version too old"));
+    }
+
+    void catalogSearchErrorOpensPxlMessageInsideWorkspace()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg")),
+                                   temporary.filePath("pack"));
+        QWidget surface;
+        surface.resize(1000, 650);
+        surface.show();
+        LayoutCatalogDialog dialog(&surface, instance);
+        dialog.useEmbeddedPresentation();
+        auto* page = dynamic_cast<LayoutCatalogPage*>(dialog.selectedPage());
+        QVERIFY(page);
+        auto* model = page->findChild<ResourceDownload::ResourceModel*>();
+        QVERIFY(model);
+        bool displayed = false;
+        QTimer closer;
+        connect(&closer, &QTimer::timeout, &surface, [&] {
+            if (auto* message = surface.findChild<QDialog*>("pxlMessagePanel")) {
+                displayed = true;
+                QVERIFY(!message->isWindow());
+                message->reject();
+            }
+        });
+        closer.start(20);
+        static_cast<PreviewResourceModel*>(model)->failSearch();
+        QTRY_VERIFY(displayed);
+    }
+
+    void failedVersionLookupReportsNetworkErrorOnceAndClosesFlow()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg")),
+                                   temporary.filePath("pack"));
+        QWidget surface;
+        surface.resize(1000, 650);
+        surface.show();
+        LayoutCatalogDialog dialog(&surface, instance);
+        dialog.useEmbeddedPresentation();
+        dialog.setProperty("pxlVersionChange", true);
+        auto* page = dynamic_cast<LayoutCatalogPage*>(dialog.selectedPage());
+        QVERIFY(page);
+        page->failProjectLookup = true;
+        QSignalSpy finished(&dialog, &QDialog::finished);
+        int messages = 0;
+        QTimer closer;
+        connect(&closer, &QTimer::timeout, &surface, [&] {
+            if (auto* message = surface.findChild<QDialog*>("pxlMessagePanel")) {
+                ++messages;
+                QVERIFY(message->findChild<QTextEdit*>()->toPlainText().contains("Could not load content"));
+                message->reject();
+            }
+        });
+        closer.start(20);
+        page->openProject("fixture-project");
+        QTRY_COMPARE(finished.count(), 1);
+        QCOMPARE(finished.first().first().toInt(), int(QDialog::Rejected));
+        QCOMPARE(messages, 1);
+        QCOMPARE(page->selections, 0);
+        QVERIFY(!surface.findChild<QDialog*>("pxlProjectPreview"));
     }
 
     void installedVersionChangeUsesPreviewAndCancelLeavesSelectionUntouched()

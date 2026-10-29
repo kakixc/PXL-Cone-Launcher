@@ -142,6 +142,7 @@ void ResourceModel::search()
     if (hasActiveSearchJob()) {
         return;
     }
+    m_lastSearchError.clear();
 
     if (m_search_state != SearchState::ResetRequested && m_search_term.startsWith("#")) {
         auto projectId = m_search_term.mid(1);
@@ -229,9 +230,9 @@ void ResourceModel::loadEntry(const QModelIndex& entry)
             };
         }
         if (!callbacks.on_fail) {
-            callbacks.on_fail = [](const QString& reason, int) {
-                QMessageBox::critical(nullptr, tr("Error"),
-                                      tr("A network error occurred. Could not load project versions: %1").arg(reason));
+            callbacks.on_fail = [this](const QString& reason, int) {
+                if (!s_running_models.constFind(this).value()) return;
+                reportError(tr("A network error occurred. Could not load project versions: %1").arg(reason));
             };
         }
 
@@ -254,7 +255,7 @@ void ResourceModel::loadEntry(const QModelIndex& entry)
             if (!s_running_models.constFind(this).value()) {
                 return;
             }
-            QMessageBox::critical(nullptr, tr("Error"), tr("A network error occurred. Could not load project info: %1").arg(reason));
+            reportError(tr("A network error occurred. Could not load project info: %1").arg(reason));
         };
         callbacks.on_abort = [this] {
             if (!s_running_models.constFind(this).value()) {
@@ -436,18 +437,17 @@ void ResourceModel::searchRequestFailed([[maybe_unused]] QString reason, int net
 {
     switch (networkErrorCode) {
         default:
-            // Network error
-            QMessageBox::critical(nullptr, tr("Error"), tr("A network error occurred. Could not load mods."));
+            m_lastSearchError = tr("Could not load content. Check your connection and try again.");
             break;
         case 404:
             // 404 Not Found, some APIs return this when nothing is found, no need to bother the user
             break;
         case 409:
             // 409 Gone, notify user to update
-            QMessageBox::critical(nullptr, tr("Error"),
-                                  QString("%1").arg(tr("API version too old!\nPlease update %1!").arg(BuildConfig.LAUNCHER_DISPLAYNAME)));
+            m_lastSearchError = tr("API version too old!\nPlease update %1!").arg(BuildConfig.LAUNCHER_DISPLAYNAME);
             break;
     }
+    if (!m_lastSearchError.isEmpty()) reportError(m_lastSearchError);
 
     if (m_search_state == SearchState::ResetRequested) {
         clearData();
@@ -457,6 +457,12 @@ void ResourceModel::searchRequestFailed([[maybe_unused]] QString reason, int net
     } else {
         m_search_state = SearchState::Finished;
     }
+}
+
+void ResourceModel::reportError(const QString& message)
+{
+    if (m_errorHandler) m_errorHandler(message);
+    else QMessageBox::critical(nullptr, tr("Error"), message);
 }
 
 void ResourceModel::searchRequestAborted()

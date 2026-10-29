@@ -115,6 +115,16 @@ void ResourcePage::useCardPresentation()
 {
     if (m_cardPresentation) return;
     m_cardPresentation = true;
+    const QPointer<ResourcePage> pageGuard(this);
+    m_model->setErrorHandler([pageGuard](const QString& message) {
+        if (!pageGuard) return;
+        // Project lookup reports its own failure when the version-change flow closes.
+        if (pageGuard->m_parentDialog->property("pxlVersionChange").toBool()
+            && pageGuard->m_model->lastSearchError() == message) return;
+        QTimer::singleShot(0, pageGuard, [pageGuard, message] {
+            if (pageGuard) Pxl::showNotice(pageGuard->window(), pageGuard->tr("Error"), message);
+        });
+    });
     auto* delegate = new Pxl::CatalogCardDelegate(this,
         [this](const QModelIndex& index) { onResourceToggle(index); },
         [this](const QModelIndex& index) { showProjectDetails(index); });
@@ -736,7 +746,8 @@ void ResourcePage::openProject(const QVariant& projectID)
                 if (confirmed) dialog->accept();
                 else dialog->QDialog::reject();
             } else {
-                Pxl::showNotice(window(), tr("Error"), tr("The resource was not found"));
+                const auto error = m_model->lastSearchError();
+                Pxl::showNotice(window(), tr("Error"), error.isEmpty() ? tr("The resource was not found") : error);
                 if (dialog) dialog->QDialog::reject();
             }
         };

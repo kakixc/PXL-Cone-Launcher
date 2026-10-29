@@ -3100,3 +3100,7 @@ msgstr "Сменить версию"
 msgctxt "ModFolderPage"
 msgid "No content provider is available for this instance."
 msgstr "Для этой сборки нет доступного источника дополнений."
+
+msgctxt "ResourceDownload::ResourceModel"
+msgid "Could not load content. Check your connection and try again."
+msgstr "Не удалось загрузить дополнения. Проверьте подключение к интернету и повторите попытку."

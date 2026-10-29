@@ -5,6 +5,7 @@
 #pragma once
 
 #include <optional>
+#include <functional>
 
 #include <QAbstractListModel>
 
@@ -50,6 +51,8 @@ class ResourceModel : public QAbstractListModel {
     bool hasActiveSearchJob() const { return m_current_search_job && m_current_search_job->isRunning(); }
     bool hasActiveInfoJob() const { return m_current_info_job.isRunning(); }
     Task::Ptr activeSearchJob() { return hasActiveSearchJob() ? m_current_search_job : nullptr; }
+    void setErrorHandler(std::function<void(const QString&)> handler) { m_errorHandler = std::move(handler); }
+    QString lastSearchError() const { return m_lastSearchError; }
 
     auto getSortingMethods() const { return m_api->getSortingMethods(); }
 
@@ -136,6 +139,9 @@ class ResourceModel : public QAbstractListModel {
     static QHash<ResourceModel*, bool> s_running_models;
 
    private:
+    void reportError(const QString& message);
+    std::function<void(const QString&)> m_errorHandler;
+    QString m_lastSearchError;
     /* Default search request callbacks */
     void searchRequestSucceeded(QList<ModPlatform::IndexedPack::Ptr>&);
     void searchRequestForOneSucceeded(ModPlatform::IndexedPack::Ptr);
