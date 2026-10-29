@@ -13,6 +13,8 @@
 
 ## What works in the current development version
 
+- Skippable first-run setup with English/Russian selection, existing account sign-in and automatic Java controls, plus four animated feature introductions. Reopen it from Settings → About → Explore PXL Cone. System-disabled animations are respected.
+
 - Home and Library with three saved layouts: cover tiles, compact PXL hybrid cards and a detailed list. Search, groups, sorting, playtime and custom static instance covers stay in the main window.
 - Instance creation from Minecraft/loader versions, existing modpack catalogs and supported import routes, using the upstream metadata and installation tasks.
 - Play/Stop actions and a task panel showing active operations and their recent results.
@@ -43,7 +45,7 @@ See [the archive format and current limits](docs/PXL_ARCHIVE_FORMAT.md). Existin
 
 ## Roadmap — not implemented features
 
-Preparation for the first public release includes a short, skippable setup and feature introduction, real screenshots in both READMEs, and a PXL-style website on GitHub Pages from this repository. These are not implemented yet.
+Preparation for the first public release still includes approved screenshots in both READMEs and a PXL-style website on GitHub Pages from this repository. These are not included yet.
 
 Other development directions have no fixed release date:
 
