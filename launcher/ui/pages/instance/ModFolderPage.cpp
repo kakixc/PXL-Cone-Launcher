@@ -71,6 +71,19 @@
 #include "tasks/Task.h"
 #include "ui/dialogs/ProgressDialog.h"
 
+namespace {
+void showModNotice(QWidget* page, const QString& title, const QString& message, QMessageBox::Icon severity)
+{
+    if (page->property("pxlInstalledContent").toBool()) {
+        // Let the task/progress dialog finish before showing its result. The
+        // page context cancels this callback if the user closes the workspace.
+        QTimer::singleShot(0, page, [page, title, message] { Pxl::showNotice(page->window(), title, message); });
+    } else {
+        CustomMessageBox::selectable(page, title, message, severity)->show();
+    }
+}
+}
+
 ModFolderPage::ModFolderPage(BaseInstance* inst, ModFolderModel* model, QWidget* parent)
     : ExternalResourcesPage(inst, model, parent), m_model(model)
 {
@@ -194,18 +207,18 @@ void ModFolderPage::downloadDialogFinished(int result)
 {
     if (result != 0) {
         auto* tasks = new ConcurrentTask(tr("Download Mods"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
+        connect(tasks, &Task::failed, this, [this, tasks](const QString& reason) {
+            showModNotice(this, tr("Error"), reason, QMessageBox::Critical);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
+        connect(tasks, &Task::aborted, this, [this, tasks]() {
+            showModNotice(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
+        connect(tasks, &Task::succeeded, this, [this, tasks]() {
             QStringList warnings = tasks->warnings();
             if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
+                showModNotice(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning);
             }
 
             tasks->deleteLater();
@@ -243,7 +256,7 @@ void ModFolderPage::updateMods(bool includeDeps)
         }
     }
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Mod updates are unavailable when metadata is disabled!"));
+        showModNotice(this, tr("Error"), tr("Mod updates are unavailable when metadata is disabled!"), QMessageBox::Critical);
         return;
     }
     if (m_instance != nullptr && m_instance->isRunning()) {
@@ -274,7 +287,7 @@ void ModFolderPage::updateMods(bool includeDeps)
     updateDialog.checkCandidates();
 
     if (updateDialog.aborted()) {
-        CustomMessageBox::selectable(this, tr("Aborted"), tr("The mod updater was aborted!"), QMessageBox::Warning)->show();
+        showModNotice(this, tr("Aborted"), tr("The mod updater was aborted!"), QMessageBox::Warning);
         return;
     }
     if (updateDialog.noUpdates()) {
@@ -286,7 +299,7 @@ void ModFolderPage::updateMods(bool includeDeps)
                 message = tr("All selected mods are up-to-date! :)");
             }
         }
-        CustomMessageBox::selectable(this, tr("Update checker"), message)->exec();
+        showModNotice(this, tr("Update checker"), message, QMessageBox::Information);
         return;
     }
 
@@ -298,18 +311,18 @@ void ModFolderPage::updateMods(bool includeDeps)
     const int result = pxlPresentation ? Pxl::DialogOverlay::run(&updateDialog, window()) : updateDialog.exec();
     if (result == QDialog::Accepted) {
         auto* tasks = new ConcurrentTask("Download Mods", APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
+        connect(tasks, &Task::failed, this, [this, tasks](const QString& reason) {
+            showModNotice(this, tr("Error"), reason, QMessageBox::Critical);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
+        connect(tasks, &Task::aborted, this, [this, tasks]() {
+            showModNotice(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
+        connect(tasks, &Task::succeeded, this, [this, tasks]() {
             QStringList warnings = tasks->warnings();
             if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
+                showModNotice(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning);
             }
             tasks->deleteLater();
         });
@@ -363,7 +376,7 @@ void ModFolderPage::changeModVersion()
         }
     }
     if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Mod updates are unavailable when metadata is disabled!"));
+        showModNotice(this, tr("Error"), tr("Mod updates are unavailable when metadata is disabled!"), QMessageBox::Critical);
         return;
     }
     auto selection = m_filterModel->mapSelectionToSource(ui->treeView->selectionModel()->selection()).indexes();

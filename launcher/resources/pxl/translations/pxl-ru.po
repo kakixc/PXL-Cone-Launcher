@@ -3104,3 +3104,55 @@ msgstr "Для этой сборки нет доступного источни�
 msgctxt "ResourceDownload::ResourceModel"
 msgid "Could not load content. Check your connection and try again."
 msgstr "Не удалось загрузить дополнения. Проверьте подключение к интернету и повторите попытку."
+
+msgctxt "ResourceDownload::ResourceModel"
+msgid "API version too old!\nPlease update %1!"
+msgstr "Источник дополнений больше не поддерживает эту версию API.\nОбновите %1."
+
+msgctxt "ResourceDownload::ResourceModel"
+msgid "A network error occurred. Could not load project versions: %1"
+msgstr "Не удалось загрузить версии дополнения. Ошибка сети: %1"
+
+msgctxt "ResourceDownload::ResourceModel"
+msgid "A network error occurred. Could not load project info: %1"
+msgstr "Не удалось загрузить описание дополнения. Ошибка сети: %1"
+
+msgctxt "ModFolderPage"
+msgid "Error"
+msgstr "Ошибка"
+
+msgctxt "ModFolderPage"
+msgid "Aborted"
+msgstr "Операция отменена"
+
+msgctxt "ModFolderPage"
+msgid "Warnings"
+msgstr "Предупреждения"
+
+msgctxt "ModFolderPage"
+msgid "Download stopped by user."
+msgstr "Загрузка остановлена пользователем."
+
+msgctxt "ModFolderPage"
+msgid "Mod updates are unavailable when metadata is disabled!"
+msgstr "Обновление и смена версии модов недоступны, пока отключены метаданные дополнений."
+
+msgctxt "ModFolderPage"
+msgid "The mod updater was aborted!"
+msgstr "Проверка обновлений модов отменена."
+
+msgctxt "ModFolderPage"
+msgid "Update checker"
+msgstr "Обновления модов"
+
+msgctxt "ModFolderPage"
+msgid "'%1' is up-to-date! :)"
+msgstr "Для «%1» установлена актуальная версия."
+
+msgctxt "ModFolderPage"
+msgid "All mods are up-to-date! :)"
+msgstr "Все моды обновлены."
+
+msgctxt "ModFolderPage"
+msgid "All selected mods are up-to-date! :)"
+msgstr "Все выбранные моды обновлены."
