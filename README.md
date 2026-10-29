@@ -11,6 +11,26 @@
 > [!IMPORTANT]
 > PXL Cone is in active development. The interface and transfer features are available in development code and previews; they are still being refined. This is not a stable release announcement.
 
+## A look inside PXL Cone
+
+### Your instances, ready to play
+
+Keep your Minecraft setups together, choose a cover and jump back into your last instance.
+
+![PXL Cone Home with a quick-launch banner and instance library](docs/images/screenshots/home-library.png)
+
+### Find something new for your game
+
+Browse mods, resource packs and shaders for your selected instance, then review your choices before installing.
+
+![Resource-pack search in the PXL Cone content browser](docs/images/screenshots/content-browser.png)
+
+### Send a pack to a friend
+
+Choose an instance and export it as a `.pxlconep` archive. Include worlds and screenshots when you want to share them, or use `.pxlt` to move your own setup to another computer.
+
+![PXL Cone export panel for sharing a pack or transferring instances](docs/images/screenshots/share-pack.png)
+
 ## What works in the current development version
 
 - Skippable first-run setup with English/Russian selection, existing account sign-in and automatic Java controls, plus four animated feature introductions. Reopen it from Settings → About → Explore PXL Cone. System-disabled animations are respected.
@@ -45,7 +65,7 @@ See [the archive format and current limits](docs/PXL_ARCHIVE_FORMAT.md). Existin
 
 ## Roadmap — not implemented features
 
-Preparation for the first public release still includes approved screenshots in both READMEs and a PXL-style website on GitHub Pages from this repository. These are not included yet.
+Preparation for the first public release still includes a PXL-style website on GitHub Pages from this repository. It is not included yet.
 
 Other development directions have no fixed release date:
 
