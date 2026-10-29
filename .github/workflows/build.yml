@@ -200,8 +200,6 @@ jobs:
       - name: Package (Windows)
         if: ${{ runner.os == 'Windows' }}
         uses: ./.github/actions/package/windows
-        env:
-          CI_HAS_ACCESS_TO_AZURE: ${{ vars.CI_HAS_ACCESS_TO_AZURE || '' }}
         with:
           version: ${{ steps.short-version.outputs.version }}
           build-type: ${{ steps.setup-dependencies.outputs.build-type }}
@@ -211,3 +209,7 @@ jobs:
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          signing-enabled: ${{ vars.PXL_WINDOWS_SIGNING_ENABLED || 'false' }}
+          signing-endpoint: ${{ vars.PXL_WINDOWS_SIGNING_ENDPOINT }}
+          signing-account: ${{ vars.PXL_WINDOWS_SIGNING_ACCOUNT }}
+          signing-profile: ${{ vars.PXL_WINDOWS_SIGNING_PROFILE }}

@@ -17,18 +17,57 @@ inputs:
     required: false
   azure-client-id:
     description: Client ID for the Azure Signer Application
-    required: true
+    required: false
   azure-tenant-id:
     description: Tenant ID for the Azure Signer Application
-    required: true
+    required: false
   azure-subscription-id:
     description: Subscription ID for the Azure Signer Application
-    required: true
+    required: false
+  signing-enabled:
+    description: Explicitly enable signing with the repository owner's Azure configuration
+    required: false
+    default: 'false'
+  signing-endpoint:
+    description: Owner's Azure Artifact Signing endpoint
+    required: false
+  signing-account:
+    description: Owner's Artifact Signing account name
+    required: false
+  signing-profile:
+    description: Owner's certificate profile name
+    required: false
 
 runs:
   using: composite
 
   steps:
+    - name: Validate signing configuration
+      id: signing
+      shell: pwsh
+      env:
+        PXL_SIGNING_ENABLED: ${{ inputs.signing-enabled }}
+        PXL_SIGNING_ENDPOINT: ${{ inputs.signing-endpoint }}
+        PXL_SIGNING_ACCOUNT: ${{ inputs.signing-account }}
+        PXL_SIGNING_PROFILE: ${{ inputs.signing-profile }}
+        PXL_AZURE_CLIENT: ${{ inputs.azure-client-id }}
+        PXL_AZURE_TENANT: ${{ inputs.azure-tenant-id }}
+        PXL_AZURE_SUBSCRIPTION: ${{ inputs.azure-subscription-id }}
+      run: |
+        if ($env:PXL_SIGNING_ENABLED -ne 'true') {
+          'enabled=false' >> $env:GITHUB_OUTPUT
+          ':warning: Windows packages are unsigned. Owner code signing is not enabled.' >> $env:GITHUB_STEP_SUMMARY
+          exit 0
+        }
+        $required = @('PXL_SIGNING_ENDPOINT', 'PXL_SIGNING_ACCOUNT', 'PXL_SIGNING_PROFILE',
+                      'PXL_AZURE_CLIENT', 'PXL_AZURE_TENANT', 'PXL_AZURE_SUBSCRIPTION')
+        foreach ($name in $required) {
+          if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+            throw "Signing was enabled but $name is missing. Configure the owner's signing service or disable signing."
+          }
+        }
+        'enabled=true' >> $env:GITHUB_OUTPUT
+
     - name: Package (MinGW)
       if: ${{ inputs.msystem != '' }}
       shell: msys2 {0}
@@ -53,14 +92,8 @@ runs:
 
         Get-ChildItem ${{ env.INSTALL_DIR }} -Recurse | ForEach FullName | Resolve-Path -Relative | %{ $_.TrimStart('.\') } | %{ $_.TrimStart('${{ env.INSTALL_DIR }}') } | %{ $_.TrimStart('\') } | Out-File -FilePath ${{ env.INSTALL_DIR }}/manifest.txt
 
-    - name: Emit warning for unsigned builds
-      if: ${{ env.CI_HAS_ACCESS_TO_AZURE == '' || inputs.azure-client-id == '' }}
-      shell: pwsh
-      run: |
-        ":warning: Skipped code signing for Windows, as certificate was not present." >> $env:GITHUB_STEP_SUMMARY
-
     - name: Login to Azure
-      if: ${{ env.CI_HAS_ACCESS_TO_AZURE != '' && inputs.azure-client-id != '' }}
+      if: ${{ steps.signing.outputs.enabled == 'true' }}
       uses: azure/login@v3
       with:
         client-id: ${{ inputs.azure-client-id }}
@@ -68,12 +101,12 @@ runs:
         subscription-id: ${{ inputs.azure-subscription-id }}
 
     - name: Sign executables
-      if: ${{ env.CI_HAS_ACCESS_TO_AZURE != '' && inputs.azure-client-id != '' }}
+      if: ${{ steps.signing.outputs.enabled == 'true' }}
       uses: azure/artifact-signing-action@v2
       with:
-        endpoint: https://eus.codesigning.azure.net/
-        trusted-signing-account-name: PineconeMC
-        certificate-profile-name: PineconeMC
+        endpoint: ${{ inputs.signing-endpoint }}
+        trusted-signing-account-name: ${{ inputs.signing-account }}
+        certificate-profile-name: ${{ inputs.signing-profile }}
         files-folder: ${{ github.workspace }}\install\
         files-folder-filter: dll,exe
         files-folder-recurse: true
@@ -141,12 +174,12 @@ runs:
         makensis -NOCD "${{ github.workspace }}/${{ env.BUILD_DIR }}/program_info/win_install.nsi"
 
     - name: Sign installer
-      if: ${{ env.CI_HAS_ACCESS_TO_AZURE != '' && inputs.azure-client-id != '' }}
+      if: ${{ steps.signing.outputs.enabled == 'true' }}
       uses: azure/artifact-signing-action@v2
       with:
-        endpoint: https://eus.codesigning.azure.net/
-        trusted-signing-account-name: PineconeMC
-        certificate-profile-name: PineconeMC
+        endpoint: ${{ inputs.signing-endpoint }}
+        trusted-signing-account-name: ${{ inputs.signing-account }}
+        certificate-profile-name: ${{ inputs.signing-profile }}
 
         files: |
           ${{ github.workspace }}\PXL-Cone-Setup.exe
