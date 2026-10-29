@@ -3212,3 +3212,15 @@ msgstr "Удалить компонент"
 msgctxt "VersionPage"
 msgid "Revert customizations"
 msgstr "Отменить изменения"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "No data packs installed"
+msgstr "Датапаки пока не установлены"
+
+msgctxt "Pxl::InstalledContentView"
+msgid "Find data packs for this world or add files from your computer."
+msgstr "Найдите датапаки для этого мира или добавьте файлы с компьютера."
+
+msgctxt "WorldListPage"
+msgid "Data packs for %1"
+msgstr "Датапаки мира «%1»"

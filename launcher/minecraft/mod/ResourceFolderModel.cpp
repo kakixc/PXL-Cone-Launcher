@@ -28,6 +28,13 @@
 #include "tasks/Task.h"
 #include "ui/dialogs/CustomMessageBox.h"
 
+namespace {
+SettingsObject* resourceGlobalSettings(BaseInstance* instance)
+{
+    return instance ? instance->globalSettings() : APPLICATION->settings();
+}
+}
+
 ResourceFolderModel::ResourceFolderModel(const QDir& dir, BaseInstance* instance, bool isIndexed, bool createDir, QObject* parent)
     : QAbstractListModel(parent), m_dir(dir), m_instance(instance), m_watcher(this), m_isIndexed(isIndexed)
 {
@@ -468,7 +475,7 @@ Qt::ItemFlags ResourceFolderModel::flags(const QModelIndex& index) const
 {
     Qt::ItemFlags defaultFlags = QAbstractListModel::flags(index);
     auto flags = defaultFlags | Qt::ItemIsDropEnabled;
-    if (index.isValid()) {
+    if (validateIndex(index) && at(index.row()).type() != ResourceType::FOLDER && at(index.row()).type() != ResourceType::UNKNOWN) {
         flags |= Qt::ItemIsUserCheckable;
     }
     return flags;
@@ -527,7 +534,7 @@ bool ResourceFolderModel::validateIndex(const QModelIndex& index) const
 // and they only delegate to the superclass for compatible columns
 QBrush ResourceFolderModel::rowBackground(int row) const
 {
-    if (APPLICATION->settings()->get("ShowModIncompat").toBool() && m_resources[row]->hasIssues()) {
+    if (resourceGlobalSettings(m_instance)->get("ShowModIncompat").toBool() && m_resources[row]->hasIssues()) {
         return { QColor(255, 0, 0, 40) };
     }
     return {};
@@ -564,7 +571,7 @@ QVariant ResourceFolderModel::data(const QModelIndex& index, int role) const
             QString tooltip = m_resources[row]->internalId();
 
             if (column == NameColumn) {
-                if (APPLICATION->settings()->get("ShowModIncompat").toBool()) {
+                if (resourceGlobalSettings(m_instance)->get("ShowModIncompat").toBool()) {
                     for (const QString& issue : at(row).issues()) {
                         tooltip += "\n" + issue;
                     }
@@ -587,7 +594,7 @@ QVariant ResourceFolderModel::data(const QModelIndex& index, int role) const
         }
         case Qt::DecorationRole: {
             if (column == NameColumn) {
-                if (APPLICATION->settings()->get("ShowModIncompat").toBool() && at(row).hasIssues()) {
+                if (resourceGlobalSettings(m_instance)->get("ShowModIncompat").toBool() && at(row).hasIssues()) {
                     return QIcon::fromTheme("status-bad");
                 }
                 if (at(row).isSymLinkUnder(instDirPath()) || at(row).isMoreThanOneHardLink()) {
@@ -681,7 +688,7 @@ void ResourceFolderModel::saveColumns(QTreeView* tree)
     // neither passthrough nor override settings works for this usecase as I need to only set the global when the gate is false
     auto* settings = m_instance->settings();
     if (!settings->get(overrideSettingName).toBool()) {
-        settings = APPLICATION->settings();
+        settings = resourceGlobalSettings(m_instance);
     }
     auto visibility = Json::toMap(settings->get(visibilitySettingName).toString());
     for (auto i = 0; i < m_columnNames.size(); ++i) {
@@ -722,13 +729,13 @@ void ResourceFolderModel::loadColumns(QTreeView* tree)
     // neither passthrough nor override settings works for this usecase as I need to only set the global when the gate is false
     auto* settings = m_instance->settings();
     if (!settings->getOrRegisterSetting(overrideSettingName, false)->get().toBool()) {
-        settings = APPLICATION->settings();
+        settings = resourceGlobalSettings(m_instance);
     }
     auto visibility = settings->getOrRegisterSetting(visibilitySettingName, defaultValue);
     setVisible(visibility->get());
 
     // allways connect the signal in case the setting is toggled on and off
-    auto gSetting = APPLICATION->settings()->getOrRegisterSetting(visibilitySettingName, defaultValue);
+    auto gSetting = resourceGlobalSettings(m_instance)->getOrRegisterSetting(visibilitySettingName, defaultValue);
     connect(gSetting.get(), &Setting::SettingChanged, tree, [this, setVisible, overrideSettingName](const Setting&, const QVariant& value) {
         if (!m_instance->settings()->get(overrideSettingName).toBool()) {
             setVisible(value);

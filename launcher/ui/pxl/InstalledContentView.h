@@ -53,9 +53,11 @@ public:
         p->drawText(QRect(left,area.top()+37,available,20),Qt::AlignVCenter,QFontMetrics(font).elidedText(detail.join(QStringLiteral(" · ")),Qt::ElideMiddle,available));
         const bool enabled=index.siblingAtColumn(0).data(Qt::CheckStateRole).toInt()==Qt::Checked;
         const auto toggle=installedToggle(option.rect);
-        p->setPen(Qt::NoPen); p->setBrush(enabled ? QColor("#d29463") : QColor("#535d69")); p->drawRoundedRect(toggle,11,11);
-        p->setBrush(enabled ? QColor("#251c15") : QColor("#d5dce5"));
-        p->drawEllipse(QRect(enabled ? toggle.right()-18 : toggle.left()+3,toggle.top()+3,16,16));
+        if (index.siblingAtColumn(0).flags().testFlag(Qt::ItemIsUserCheckable)) {
+            p->setPen(Qt::NoPen); p->setBrush(enabled ? QColor("#d29463") : QColor("#535d69")); p->drawRoundedRect(toggle,11,11);
+            p->setBrush(enabled ? QColor("#251c15") : QColor("#d5dce5"));
+            p->drawEllipse(QRect(enabled ? toggle.right()-18 : toggle.left()+3,toggle.top()+3,16,16));
+        }
         QIcon(":/pxl/icons/dots-three-vertical.svg").paint(p,installedMore(option.rect).adjusted(6,6,-6,-6));
         p->restore();
     }
@@ -75,7 +77,7 @@ protected:
         m_pressed=QPersistentModelIndex(); m_target=0;
         if (event->button()==Qt::LeftButton && index.isValid()) {
             const auto point=event->position().toPoint();
-            if (installedToggle(visualRect(index)).contains(point)) m_target=1;
+            if (installedToggle(visualRect(index)).contains(point) && index.siblingAtColumn(0).flags().testFlag(Qt::ItemIsUserCheckable)) m_target=1;
             else if (installedMore(visualRect(index)).contains(point)) m_target=2;
             if (m_target) { m_pressed=index; event->accept(); return; }
         }
@@ -163,7 +165,7 @@ public:
         auto* empty=new QWidget(m_stack); auto* emptyLayout=new QVBoxLayout(empty); emptyLayout->setSpacing(14); emptyLayout->addStretch();
         auto* icon=new QLabel(empty); icon->setAlignment(Qt::AlignCenter); icon->setPixmap(QIcon(":/pxl/icons/squares-four.svg").pixmap(48,48)); emptyLayout->addWidget(icon);
         auto* title=new QLabel(empty); title->setObjectName("installedEmptyTitle"); title->setAlignment(Qt::AlignCenter); title->setStyleSheet("font-size: 20px; font-weight: 600;"); emptyLayout->addWidget(title);
-        auto* hint=new QLabel(installedText("Find additions for this instance or add files from your computer."),empty); hint->setWordWrap(true); hint->setAlignment(Qt::AlignCenter); hint->setProperty("pxlFlowHint",true); emptyLayout->addWidget(hint);
+        auto* hint=new QLabel(category=="datapacks" ? installedText("Find data packs for this world or add files from your computer.") : installedText("Find additions for this instance or add files from your computer."),empty); hint->setWordWrap(true); hint->setAlignment(Qt::AlignCenter); hint->setProperty("pxlFlowHint",true); emptyLayout->addWidget(hint);
         auto* emptyActions=new QHBoxLayout; emptyActions->addStretch();
         auto* find=new QPushButton(installedText("Browse content"),empty); find->setProperty("pxlPrimary",true); emptyActions->addWidget(find);
         emptyActions->addStretch(); emptyLayout->addLayout(emptyActions); emptyLayout->addStretch(); m_stack->addWidget(empty);
@@ -172,7 +174,7 @@ public:
             const bool installed=model->sourceModel()->rowCount()>0;
             const bool visible=model->rowCount()>0;
             m_stack->setCurrentIndex(visible ? 0 : 1);
-            const auto label=category=="mods" ? installedText("No mods installed") : category=="shaderpacks" ? installedText("No shaders installed") : installedText("No resource packs installed");
+            const auto label=category=="mods" ? installedText("No mods installed") : category=="shaderpacks" ? installedText("No shaders installed") : category=="datapacks" ? installedText("No data packs installed") : installedText("No resource packs installed");
             title->setText(installed ? installedText("No matching content") : label);
             hint->setVisible(!installed); find->setVisible(!installed);
         };

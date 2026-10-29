@@ -64,6 +64,7 @@ void DataPackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] cons
 
 void DataPackPage::downloadDataPacks()
 {
+    if (routePxlDownload()) return;
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }

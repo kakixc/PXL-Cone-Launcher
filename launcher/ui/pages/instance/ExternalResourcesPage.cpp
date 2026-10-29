@@ -148,7 +148,7 @@ void ExternalResourcesPage::openedImpl()
     m_model->startWatching();
 
     auto const setting_name = QString("WideBarVisibility_%1").arg(id());
-    m_wide_bar_setting = APPLICATION->settings()->getOrRegisterSetting(setting_name);
+    m_wide_bar_setting = m_instance->globalSettings()->getOrRegisterSetting(setting_name);
 
     if (m_pxlBrowse) ui->actionsToolbar->hide();
     else ui->actionsToolbar->setVisibilityState(QByteArray::fromBase64(m_wide_bar_setting->get().toString().toUtf8()));

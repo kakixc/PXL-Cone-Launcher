@@ -59,7 +59,9 @@
 #include <ui/pxl/ComponentView.h>
 #include <ui/pxl/WorldsView.h>
 #include <ui/pages/instance/WorldListPage.h>
+#include <ui/pages/instance/DataPackPage.h>
 #include <minecraft/WorldList.h>
+#include <archive/ArchiveWriter.h>
 #include <ui/pxl/LogSurface.h>
 #include <QIdentityProxyModel>
 #include <ui/pages/modplatform/ResourcePage.h>
@@ -783,6 +785,107 @@ class WorkspacePageTest : public QObject {
         closer.start(20);
         QCOMPARE(failed.exec(), int(QDialog::Rejected));
         QCOMPARE(messages, 1);
+    }
+
+    void worldDataPacksUsePxlAndKeepTheSelectedWorldFolder()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        global->registerSetting("ModMetadataDisabled", true);
+        global->registerSetting("ShowModIncompat", false);
+        for (const auto* key : {"JavaPath", "IgnoreJavaCompatibility", "JvmArgs", "UseOptimizedJvmArgs", "GarbageCollectorPreset",
+                "JavaSignature", "JavaArchitecture", "JavaRealArchitecture", "JavaVersion", "JavaVendor", "LaunchMaximized",
+                "MinecraftWinWidth", "MinecraftWinHeight", "MinMemAlloc", "MaxMemAlloc", "PermGen", "LowMemWarning",
+                "UseNativeOpenAL", "CustomOpenALPath", "UseNativeGLFW", "CustomGLFWPath", "EnableFeralGamemode", "EnableMangoHud",
+                "UseDiscreteGpu", "UseZink", "CloseAfterLaunch", "QuitAfterGameStop", "OnlineFixes", "ElyPatchPreference", "Env"})
+            global->registerSetting(key, QVariant());
+        MinecraftInstance instance(global.get(), std::make_unique<INISettingsObject>(temporary.filePath("instance.cfg")),
+                                   temporary.filePath("pack"));
+        const QString saves = temporary.filePath("saves");
+        QVERIFY(QDir().mkpath(saves + "/Fixture"));
+        QByteArray compressed;
+        QVERIFY(GZip::zip(QByteArray::fromHex("0a00000a0004446174610800094c6576656c4e616d650007466978747572650000"), compressed));
+        QFile level(saves + "/Fixture/level.dat");
+        QVERIFY(level.open(QIODevice::WriteOnly));
+        QCOMPARE(level.write(compressed), compressed.size());
+        level.close();
+        WorldList worlds(saves, &instance);
+        QVERIFY(worlds.update());
+        WorldListPage page(&instance, &worlds);
+        page.usePxlPresentation();
+        page.resize(1000, 700);
+        page.show();
+        auto* selection = page.findChild<QTreeView*>("worldTreeView");
+        selection->setCurrentIndex(selection->model()->index(0, 0));
+        QTimer::singleShot(250, &page, [&] {
+            auto* dialog = page.findChild<QDialog*>("pxlWorldDataPacks");
+            QVERIFY(dialog && !dialog->isWindow());
+            auto* installed = dialog->findChild<DataPackPage*>();
+            QVERIFY(installed && installed->property("pxlInstalledContent").toBool());
+            QVERIFY(!installed->isWindow());
+            QVERIFY(installed->isVisible());
+            QVERIFY(installed->findChild<QLabel*>("installedEmptyTitle")->isVisible());
+            QCOMPARE(installed->findChild<QLabel*>("installedEmptyTitle")->text(), QString("No data packs installed"));
+            auto* browser = dialog->findChild<ContentBrowser*>();
+            QVERIFY(browser);
+            QCOMPARE(browser->findChild<QLabel*>("contentInstanceContext")->text(), QString("Fixture"));
+            for (auto* button : browser->findChildren<QPushButton*>()) {
+                const auto category = button->property("contentCategory").toString();
+                if (!category.isEmpty()) QCOMPARE(button->isHidden(), category != "datapacks");
+            }
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(page.grab().save(QDir(screenshots).filePath("world-data-packs.png")));
+            dialog->reject();
+        });
+        QVERIFY(QMetaObject::invokeMethod(&page, "on_actionData_Packs_triggered", Qt::DirectConnection));
+        QVERIFY(QFileInfo::exists(saves + "/Fixture/datapacks"));
+
+        auto model = std::make_shared<DataPackFolderModel>(saves + "/Fixture/datapacks", &instance, false, true);
+        DataPackPage installed(&instance, model.get());
+        int browseRequests = 0;
+        installed.usePxlPresentation([&] { ++browseRequests; });
+        installed.downloadDataPacks();
+        QCOMPARE(browseRequests, 1);
+        const auto source = temporary.filePath("Local pack");
+        QVERIFY(QDir().mkpath(source));
+        QFile meta(source + "/pack.mcmeta");
+        QVERIFY(meta.open(QIODevice::WriteOnly));
+        QVERIFY(meta.write("{\"pack\":{\"pack_format\":15,\"description\":\"Fixture data pack\"}}") > 0);
+        meta.close();
+        QVERIFY(model->installResource(source));
+        QTRY_COMPARE(model->rowCount(), 1);
+        QVERIFY(QFileInfo::exists(saves + "/Fixture/datapacks/Local pack/pack.mcmeta"));
+        QVERIFY(!QFileInfo::exists(temporary.filePath("pack/minecraft/datapacks/Local pack")));
+        auto* view = installed.findChild<QListView*>("installedContentList");
+        QTRY_COMPARE(view->model()->rowCount(), 1);
+        QVERIFY(!view->model()->index(0, 0).flags().testFlag(Qt::ItemIsUserCheckable));
+        const auto archive = temporary.filePath("Zipped pack.zip");
+        {
+            MMCZip::ArchiveWriter writer(archive);
+            QVERIFY(writer.open());
+            QVERIFY(writer.addFile("pack.mcmeta", QByteArray("{\"pack\":{\"pack_format\":15,\"description\":\"Fixture data pack\"}}")));
+            QVERIFY(writer.close());
+        }
+        QVERIFY(model->installResource(archive));
+        QTRY_COMPARE(view->model()->rowCount(), 2);
+        const auto zipIndex = view->model()->index(1, 0);
+        QVERIFY(zipIndex.flags().testFlag(Qt::ItemIsUserCheckable));
+        QCOMPARE(zipIndex.data(Qt::CheckStateRole).toInt(), int(Qt::Checked));
+        QVERIFY(view->model()->setData(zipIndex, Qt::Unchecked, Qt::CheckStateRole));
+        QVERIFY(QFileInfo::exists(saves + "/Fixture/datapacks/Zipped pack.zip.disabled"));
+        QTimer::singleShot(250, &page, [&] {
+            auto* dialog = page.findChild<QDialog*>("pxlWorldDataPacks");
+            QVERIFY(dialog && !dialog->isWindow());
+            auto* list = dialog->findChild<QListView*>("installedContentList");
+            QVERIFY(list && list->isVisible());
+            QTRY_COMPARE(list->model()->rowCount(), 2);
+            QCOMPARE(list->model()->index(1, 0).data(Qt::CheckStateRole).toInt(), int(Qt::Unchecked));
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(page.grab().save(QDir(screenshots).filePath("world-data-packs-installed.png")));
+            dialog->reject();
+        });
+        QVERIFY(QMetaObject::invokeMethod(&page, "on_actionData_Packs_triggered", Qt::DirectConnection));
+        QThreadPool::globalInstance()->waitForDone();
     }
 
     void worldActionsUsePxlNamesAndCancelOrRefreshCannotDeleteAnotherWorld()

@@ -66,10 +66,21 @@ bool ContentBrowser::hasModLoader() const
     return loaders.has_value() && bool(*loaders);
 }
 
+void ContentBrowser::setWorldDataPacks(std::shared_ptr<DataPackFolderModel> model, const QString& worldName)
+{
+    m_worldDataPacks = std::move(model);
+    m_worldName = worldName;
+    findChild<QLabel*>("contentInstanceContext")->setTextFormat(Qt::PlainText);
+    if (m_worldDataPacks) findChild<QLabel*>("contentInstanceContext")->setText(m_worldName);
+    for (auto* button : m_categories)
+        button->setVisible(!m_worldDataPacks || button->property("contentCategory").toString() == "datapacks");
+}
+
 bool ContentBrowser::browse(const QString& category)
 {
     auto* profile = m_instance->getPackProfile();
-    findChild<QLabel*>("contentInstanceContext")->setText("Minecraft " + profile->getComponentVersion("net.minecraft"));
+    findChild<QLabel*>("contentInstanceContext")->setText(m_worldDataPacks ? m_worldName :
+        "Minecraft " + profile->getComponentVersion("net.minecraft"));
     const QString key = profile->getComponentVersion("net.minecraft") + ':' +
         QString::number(int(profile->getSupportedModLoaders().value_or(ModPlatform::ModLoaderTypes{})));
     if (key != m_profileKey) {
@@ -84,7 +95,7 @@ bool ContentBrowser::browse(const QString& category)
         m_shaderRequirementAcknowledged = false;
         m_profileKey = key;
     }
-    showCategory(category.isEmpty() ? (hasModLoader() ? "mods" : "resourcepacks") : category);
+    showCategory(m_worldDataPacks ? "datapacks" : category.isEmpty() ? (hasModLoader() ? "mods" : "resourcepacks") : category);
     return true;
 }
 
@@ -137,7 +148,7 @@ void ContentBrowser::showCategory(const QString& category)
                 m_shaderRequirementAcknowledged = true;
                 showCategory("shaderpacks");
             });
-    } else if (category == "datapacks") {
+    } else if (category == "datapacks" && !m_worldDataPacks) {
         m_notice = prerequisite(tr("Choose a world for data packs"),
             tr("Data packs are installed for a world. Open Worlds and select the world you want to manage."),
             tr("Open worlds"), [this] { emit worldsRequested(); });
@@ -157,6 +168,8 @@ void ContentBrowser::showCategory(const QString& category)
         dialog = new TexturePackDownloadDialog(this, m_instance->texturePackList(), m_instance);
     else if (category == "resourcepacks") dialog = new ResourcePackDownloadDialog(this, m_instance->resourcePackList(), m_instance);
     else if (category == "shaderpacks") dialog = new ShaderPackDownloadDialog(this, m_instance->shaderPackList(), m_instance);
+    else if (category == "datapacks" && m_worldDataPacks)
+        dialog = new DataPackDownloadDialog(this, m_worldDataPacks.get(), m_instance);
     if (!dialog) return;
     if (!dialog->hasProviders()) {
         dialog->deleteLater();
@@ -167,7 +180,7 @@ void ContentBrowser::showCategory(const QString& category)
         return;
     }
     dialog->useEmbeddedPresentation(true);
-    dialog->setProperty("pxlReviewInstanceName", m_instance->name());
+    dialog->setProperty("pxlReviewInstanceName", m_worldDataPacks ? m_instance->name() + " · " + m_worldName : m_instance->name());
     dialog->setProperty("pxlReviewInstanceIcon", APPLICATION->icons()->getIcon(m_instance->iconKey()));
     dialog->setProperty("pxlReviewInstanceCover", Pxl::instanceCoverPath(m_instance->instanceRoot()));
     m_catalogs.insert(category, dialog);
@@ -192,7 +205,11 @@ void ContentBrowser::installSelection(const QString& category, ResourceDownload:
         return;
     }
     const QPointer<ResourceFolderModel> model = dialog->getBaseModel();
-    connect(tasks, &Task::finished, tasks, [model] { if (model && !model->isBeingDestroyed()) model->update(); });
+    // A world's folder model is owned by this view rather than the instance.
+    // Keep it alive while background downloads still target that world.
+    connect(tasks, &Task::finished, tasks, [model, worldModel = m_worldDataPacks] {
+        if (model && !model->isBeingDestroyed()) model->update();
+    });
     connect(m_instance, &BaseInstance::statusChanged, tasks, [tasks](auto, auto status) {
         if (status == BaseInstance::Status::Gone && tasks->isRunning()) tasks->abort();
     });

@@ -199,6 +199,7 @@ class BaseInstance : public QObject {
      * \return A pointer to this instance's settings object.
      */
     virtual SettingsObject* settings();
+    SettingsObject* globalSettings() const { return m_global_settings; }
 
     /*!
      * \brief Loads settings specific to an instance type if they're not already loaded.
@@ -290,8 +291,6 @@ class BaseInstance : public QObject {
 
    protected:
     void changeStatus(Status newStatus);
-
-    SettingsObject* globalSettings() const { return m_global_settings; }
 
     bool isSpecificSettingsLoaded() const { return m_specific_settings_loaded; }
     void setSpecificSettingsLoaded(bool loaded) { m_specific_settings_loaded = loaded; }

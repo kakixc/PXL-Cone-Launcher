@@ -5,10 +5,12 @@
 #include <QPointer>
 #include <QWidget>
 #include <functional>
+#include <memory>
 
 class MinecraftInstance;
 class QPushButton;
 class QStackedWidget;
+class DataPackFolderModel;
 namespace ResourceDownload { class ResourceDownloadDialog; }
 
 // A single in-instance destination; provider queries and install review remain upstream-owned.
@@ -18,6 +20,7 @@ public:
     explicit ContentBrowser(MinecraftInstance* instance, QWidget* parent = nullptr);
     bool browse(const QString& category = {});
     bool prepareToLeave();
+    void setWorldDataPacks(std::shared_ptr<DataPackFolderModel> model, const QString& worldName);
 
 signals:
     void installedContentRequested();
@@ -39,4 +42,6 @@ private:
     QString m_category;
     QString m_profileKey;
     bool m_shaderRequirementAcknowledged = false;
+    std::shared_ptr<DataPackFolderModel> m_worldDataPacks;
+    QString m_worldName;
 };

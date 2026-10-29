@@ -39,6 +39,8 @@
 #include "ui/pxl/WorldsView.h"
 #include "ui/pxl/MessagePanel.h"
 #include "ui/pxl/NameEntryPanel.h"
+#include "ui/pxl/ContentBrowser.h"
+#include "ui/pxl/DialogOverlay.h"
 #include "minecraft/WorldList.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui_WorldListPage.h"
@@ -48,12 +50,14 @@
 #include <QDialogButtonBox>
 #include <QEvent>
 #include <QInputDialog>
+#include <QLabel>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPersistentModelIndex>
 #include <QPushButton>
 #include <QSortFilterProxyModel>
+#include <QStackedWidget>
 #include <QTreeView>
 #include <Qt>
 
@@ -65,6 +69,18 @@
 
 #include "Application.h"
 #include "DataPackPage.h"
+
+namespace {
+class WorldDataPackDialog final : public QDialog {
+public:
+    using QDialog::QDialog;
+    std::function<bool()> canClose;
+    void reject() override
+    {
+        if (!canClose || canClose()) QDialog::reject();
+    }
+};
+}
 
 class WorldListProxyModel : public QSortFilterProxyModel {
     Q_OBJECT
@@ -236,17 +252,60 @@ void WorldListPage::on_actionView_Folder_triggered()
 
 void WorldListPage::on_actionData_Packs_triggered()
 {
-    QModelIndex index = getSelectedWorld();
+    QPersistentModelIndex index = getSelectedWorld();
 
     if (!index.isValid()) {
         return;
     }
 
-    if (!worldSafetyNagQuestion(tr("Manage Data Packs")))
+    if (!worldSafetyNagQuestion(tr("Manage Data Packs")) || !index.isValid())
         return;
 
     const QString fullPath = m_worlds->data(index, WorldList::FolderRole).toString();
     const QString folder = FS::PathCombine(fullPath, "datapacks");
+
+    if (m_pxlPresentation) {
+        WorldDataPackDialog dialog(this);
+        dialog.setObjectName("pxlWorldDataPacks");
+        dialog.setProperty("pxlFlow", true);
+        dialog.setProperty("pxlPreferredSize", QSize(880, 620));
+        auto* layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(24, 24, 24, 24);
+        layout->setSpacing(16);
+        auto* heading = new QHBoxLayout;
+        auto* title = new QLabel(tr("Data packs for %1").arg(m_worlds->data(index, WorldList::NameRole).toString()), &dialog);
+        title->setTextFormat(Qt::PlainText);
+        title->setWordWrap(true);
+        title->setProperty("pxlFlowTitle", true);
+        heading->addWidget(title, 1);
+        auto* close = new QPushButton(tr("Close"), &dialog);
+        heading->addWidget(close);
+        connect(close, &QPushButton::clicked, &dialog, &QDialog::reject);
+        layout->addLayout(heading);
+        auto* stack = new QStackedWidget(&dialog);
+        layout->addWidget(stack, 1);
+        auto model = std::make_shared<DataPackFolderModel>(folder, m_inst,
+            !m_inst->globalSettings()->get("ModMetadataDisabled").toBool(), true);
+        auto* installed = new DataPackPage(m_inst, model.get(), stack);
+        // QMainWindow sets Qt::Window even with a parent; this page belongs
+        // inside the overlay stack, not in a separate native window.
+        installed->setWindowFlags(Qt::Widget);
+        auto* browser = new ContentBrowser(m_inst, stack);
+        browser->setWorldDataPacks(model, m_worlds->data(index, WorldList::NameRole).toString());
+        stack->addWidget(installed);
+        stack->addWidget(browser);
+        installed->usePxlPresentation([stack, browser] {
+            if (browser->browse("datapacks")) stack->setCurrentWidget(browser);
+        });
+        connect(browser, &ContentBrowser::installedContentRequested, &dialog, [stack, installed, browser] {
+            if (browser->prepareToLeave()) stack->setCurrentWidget(installed);
+        });
+        dialog.canClose = [browser] { return browser->prepareToLeave(); };
+        installed->openedImpl();
+        Pxl::DialogOverlay::run(&dialog, window());
+        installed->closedImpl();
+        return;
+    }
 
     auto dialog = new QDialog(this);
     dialog->setWindowTitle(tr("Data packs for %1").arg(m_worlds->data(index, WorldList::NameRole).toString()));
