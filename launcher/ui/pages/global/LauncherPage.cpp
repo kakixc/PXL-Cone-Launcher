@@ -148,6 +148,8 @@ LauncherPage::LauncherPage(QWidget* parent) : QWidget(parent), ui(new Ui::Launch
         auto* field = Pxl::settingsRow(parentWidget, QString(originalLabel->text()).remove('&').remove(':'), controls);
         static_cast<QVBoxLayout*>(parentWidget->layout())->addWidget(field);
     };
+    ui->labelInstDir->setText(tr("Instance folder"));
+    ui->instDirTextBox->setToolTip(tr("New instances are created here. Existing folders are not moved automatically."));
     folderRow(storage, ui->labelInstDir, ui->instDirTextBox, ui->instDirBrowseBtn);
     folderRow(storage, ui->labelDownloadsDir, ui->downloadsDirTextBox, ui->downloadsDirBrowseBtn);
     auto* moreFolders = new QPushButton(tr("Other folders"), storage);

@@ -21,6 +21,8 @@
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QLabel>
+#include <QButtonGroup>
 #include "Application.h"
 #include "BuildConfig.h"
 #include "DesktopServices.h"
@@ -95,7 +97,7 @@ InstallLoaderDialog::InstallLoaderDialog(PackProfile* profile, const QString& ui
     container->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     layout->addWidget(container);
 
-    auto buttonLayout = new QHBoxLayout(this);
+    auto buttonLayout = new QHBoxLayout;
     // small margins look ugly on macOS on modal windows
     #ifndef Q_OS_MACOS
     buttonLayout->setContentsMargins(0, 0, 6, 6);
@@ -145,6 +147,39 @@ QList<BasePage*> InstallLoaderDialog::getPages()
              // LiteLoader
              new InstallLoaderPage("com.mumfrey.liteloader", "liteloader", tr("LiteLoader"), {}, profile)
     };
+}
+
+void InstallLoaderDialog::usePxlPresentation()
+{
+    if (property("pxlFlow").toBool()) return;
+    setProperty("pxlFlow", true);
+    setProperty("pxlPreferredSize", QSize(620, 360));
+    auto* layout = qobject_cast<QVBoxLayout*>(this->layout());
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(18);
+    auto* title = new QLabel(tr("Install Loader"), this);
+    title->setStyleSheet("font-size:22px; font-weight:700; background:transparent;");
+    layout->insertWidget(0, title);
+    auto* choices = new QWidget(this);
+    auto* row = new QHBoxLayout(choices);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(8);
+    auto* group = new QButtonGroup(choices);
+    for (auto* page : container->getPages()) {
+        pageCast(page)->useCompactPresentation();
+        auto* button = new QPushButton(page->displayName(), choices);
+        button->setCheckable(true);
+        button->setProperty("pxlMode", true);
+        button->setChecked(page == container->selectedPage());
+        group->addButton(button);
+        row->addWidget(button);
+        connect(button, &QPushButton::clicked, this, [this, page] { container->selectPage(page->id()); });
+    }
+    layout->insertWidget(1, choices);
+    container->hidePageList();
+    container->setMinimumSize(0, 0);
+    buttons->button(QDialogButtonBox::Ok)->setText(tr("Install Loader"));
+    buttons->button(QDialogButtonBox::Ok)->setProperty("pxlPrimary", true);
 }
 
 QString InstallLoaderDialog::dialogTitle()

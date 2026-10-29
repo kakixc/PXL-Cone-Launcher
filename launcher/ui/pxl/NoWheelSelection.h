@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QAbstractItemView>
 #include <QEvent>
+#include <QAbstractSpinBox>
 
 namespace Pxl {
 class NoWheelSelection final : public QObject {
@@ -13,6 +14,13 @@ protected:
     bool eventFilter(QObject* object, QEvent* event) override
     {
         if (event->type() == QEvent::Wheel) {
+            // Native spin boxes also receive wheel events through their editor.
+            auto* widget = qobject_cast<QWidget*>(object);
+            if (qobject_cast<QAbstractSpinBox*>(object) ||
+                (widget && qobject_cast<QAbstractSpinBox*>(widget->parentWidget()))) {
+                event->ignore();
+                return true;
+            }
             auto* combo = qobject_cast<QComboBox*>(object);
             if (combo && !combo->view()->isVisible()) {
                 event->ignore();

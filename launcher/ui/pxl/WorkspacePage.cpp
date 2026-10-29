@@ -10,6 +10,9 @@
 #include "LibraryControls.h"
 #include "InstanceLibraryDelegate.h"
 #include "ScreenshotGallery.h"
+#include "SettingsCards.h"
+#include <QProgressBar>
+#include <tasks/Task.h>
 
 #include <algorithm>
 
@@ -583,6 +586,13 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     featureActions->addStretch();
     recent->addLayout(featureActions);
     contentLayout->addWidget(m_recentSection);
+    m_pendingInstances = new QWidget(content);
+    m_pendingInstances->setObjectName("workspacePendingInstances");
+    auto* pendingLayout = new QVBoxLayout(m_pendingInstances);
+    pendingLayout->setContentsMargins(0, 0, 0, 0);
+    pendingLayout->setSpacing(12);
+    m_pendingInstances->hide();
+    contentLayout->addWidget(m_pendingInstances);
     // The recent proxy stays authoritative for choosing the featured instance.
     // Its hidden view keeps the same selection synchronisation as the Library.
     m_homeView = new QListView(this);
@@ -880,7 +890,7 @@ void WorkspacePage::updateLayout()
     m_search->setVisible(!m_showHome || total > 0);
     m_libraryFilters->setVisible(!m_showHome || total > 0);
     m_viewModeButton->setVisible(!m_showHome || total > 0);
-    m_emptyState->setVisible(count == 0 && (!m_showHome || total > 0 || m_featuredId.isEmpty()));
+    m_emptyState->setVisible(m_pendingInstances->layout()->count() == 0 && count == 0 && (!m_showHome || total > 0 || m_featuredId.isEmpty()));
     m_libraryEmpty->setText(total == 0 ? (m_featuredId.isEmpty() ? tr("Your library starts here") : tr("Add another instance"))
                                      : tr("No matching instances"));
     m_libraryView->setVisible(count > 0);
@@ -1314,6 +1324,47 @@ void WorkspacePage::bindUpdater(ExternalUpdater* updater)
     connect(checker,&ReleaseUpdateChecker::stateChanged,this,refreshUpdate);
     refreshUpdate();
     connect(checker,&QObject::destroyed,this,[this] { m_updateButton->hide(); });
+}
+
+void WorkspacePage::showPendingInstance(Task* task, const QString& name, const QIcon& icon)
+{
+    if (!task || task->isFinished()) return;
+    auto* card = Pxl::settingsCard(m_pendingInstances, name, tr("Downloading…"));
+    card->setObjectName("pendingInstanceCard");
+    card->setStyleSheet(card->styleSheet().replace("QFrame#pxlSettingsCard", "QFrame#pendingInstanceCard"));
+    auto* layout = static_cast<QVBoxLayout*>(card->layout());
+    auto* row = new QHBoxLayout;
+    auto* image = new QLabel(card);
+    image->setPixmap(icon.pixmap(48, 48));
+    image->setFixedSize(48, 48);
+    row->addWidget(image);
+    auto* status = new QLabel(task->getStatus(), card);
+    status->setTextFormat(Qt::PlainText);
+    status->setWordWrap(true);
+    row->addWidget(status, 1);
+    layout->addLayout(row);
+    auto* progress = new QProgressBar(card);
+    progress->setRange(0, 0);
+    progress->setFixedHeight(8);
+    progress->setTextVisible(false);
+    layout->addWidget(progress);
+    connect(task, &Task::status, status, &QLabel::setText);
+    connect(task, &Task::progress, progress, [progress](qint64 current, qint64 total) {
+        progress->setRange(0, total > 0 ? 1000 : 0);
+        if (total > 0) progress->setValue(int(1000.0 * current / total));
+    });
+    m_pendingInstances->layout()->addWidget(card);
+    m_pendingInstances->show();
+    const auto remove = [this, card] {
+        m_pendingInstances->layout()->removeWidget(card);
+        card->hide();
+        card->deleteLater();
+        m_pendingInstances->setVisible(m_pendingInstances->layout()->count() > 0);
+        updateLayout();
+    };
+    connect(task, &Task::finished, card, remove);
+    connect(task, &QObject::destroyed, card, remove);
+    updateLayout();
 }
 
 void WorkspacePage::showLauncherUpdates()

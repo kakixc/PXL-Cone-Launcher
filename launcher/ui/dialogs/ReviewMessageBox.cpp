@@ -116,15 +116,18 @@ void ReviewMessageBox::usePxlPresentation(const QString& instanceName, const QIc
     setProperty("pxlFlow", true);
     setProperty("pxlPreferredSize", QSize(700, qBound(380, 280 + ui->modTreeWidget->topLevelItemCount() * 80, 660)));
     ui->gridLayout->addWidget(new Pxl::ReviewInstanceCard(instanceName, instanceIcon, coverPath, this), 0, 0);
-    ui->explainLabel->setText(tr("Choose add-ons to install"));
+    const auto heading = property("pxlReviewHeading").toString();
+    ui->explainLabel->setText(heading.isEmpty() ? tr("Choose add-ons to install") : heading);
     ui->modTreeWidget->setItemDelegate(new Pxl::ResourceReviewDelegate(ui->modTreeWidget));
     ui->modTreeWidget->setAlternatingRowColors(false);
     ui->modTreeWidget->setMouseTracking(true);
     ui->modTreeWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->modTreeWidget->setFrameShape(QFrame::NoFrame);
     ui->modTreeWidget->setStyleSheet("QTreeWidget { background: transparent; border: none; } QTreeWidget::item { padding: 0; background: transparent; }");
-    for (int i = 0; i < ui->modTreeWidget->topLevelItemCount(); ++i)
+    for (int i = 0; i < ui->modTreeWidget->topLevelItemCount(); ++i) {
         ui->modTreeWidget->topLevelItem(i)->setFirstColumnSpanned(true);
+        ui->modTreeWidget->topLevelItem(i)->setExpanded(false);
+    }
 }
 
 auto ReviewMessageBox::deselectedResources() -> QStringList

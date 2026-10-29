@@ -57,6 +57,7 @@
 #include "meta/JsonFormat.h"
 #include "tasks/SequentialTask.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
+#include "ui/pxl/DialogOverlay.h"
 #include "ui_VersionPage.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
@@ -469,7 +470,8 @@ void VersionPage::on_actionDownload_All_triggered()
 void VersionPage::on_actionInstall_Loader_triggered()
 {
     InstallLoaderDialog dialog(m_inst->getPackProfile(), QString(), this);
-    dialog.exec();
+    dialog.usePxlPresentation();
+    Pxl::DialogOverlay::run(&dialog, window());
     m_container->refreshContainer();
 }
 

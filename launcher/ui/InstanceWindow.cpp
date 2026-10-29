@@ -325,7 +325,7 @@ void InstanceWindow::runningStateChanged(bool running)
     updateButtons();
     m_container->refreshContainer();
     if (running) {
-        selectPage("log");
+        selectPage("console");
     }
 }
 

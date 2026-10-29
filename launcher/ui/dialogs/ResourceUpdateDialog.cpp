@@ -24,6 +24,7 @@
 
 #include <QClipboard>
 #include <QPushButton>
+#include <QPixmapCache>
 #include <QShortcut>
 #include <QTextBrowser>
 #include <QTreeWidgetItem>
@@ -55,6 +56,7 @@ ResourceUpdateDialog::ResourceUpdateDialog(QWidget* parent,
     ReviewMessageBox::setGeometry(0, 0, 800, 600);
 
     ui->explainLabel->setText(tr("You're about to update the following resources:"));
+    setProperty("pxlReviewHeading", ui->explainLabel->text());
     ui->onlyCheckedLabel->setText(tr("Only resources with a check will be updated!"));
     ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Update selected"));
 }
@@ -460,6 +462,21 @@ void ResourceUpdateDialog::appendResource(const CheckUpdateTask::Update& info, Q
     }
     itemTop->setText(0, info.name);
     itemTop->setExpanded(true);
+    itemTop->setData(0, Qt::UserRole + 1, QStringLiteral("%1 → %2").arg(info.oldVersion, info.newVersion));
+    itemTop->setToolTip(0, QStringLiteral("%1 → %2").arg(info.oldVersion, info.newVersion));
+    QPixmap artwork;
+    if (info.download && info.download->getPack())
+        QPixmapCache::find(info.download->getPack()->logoUrl, &artwork);
+    if (artwork.isNull()) {
+        for (auto* resource : m_candidates) {
+            auto* mod = dynamic_cast<Mod*>(resource);
+            if (mod && mod->name() == info.name) {
+                artwork = mod->icon(QSize(48, 48));
+                if (!artwork.isNull()) break;
+            }
+        }
+    }
+    itemTop->setIcon(0, QIcon(artwork));
 
     auto* providerItem = new QTreeWidgetItem(itemTop);
     QString providerName = ModPlatform::ProviderCapabilities::readableName(info.provider);

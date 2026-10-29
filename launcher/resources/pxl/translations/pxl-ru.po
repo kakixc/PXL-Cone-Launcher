@@ -3077,3 +3077,18 @@ msgstr "Переименовать папку"
 msgctxt "JavaSettingsWidget"
 msgid "Warn when there is not enough memory available"
 msgstr "Предупреждать, если доступной памяти недостаточно"
+msgctxt "WorkspacePage"
+msgid "Downloading…"
+msgstr "Загружается…"
+
+msgctxt "LauncherPage"
+msgid "Instance folder"
+msgstr "Папка сборок"
+
+msgctxt "LauncherPage"
+msgid "New instances are created here. Existing folders are not moved automatically."
+msgstr "Здесь создаются новые сборки. Существующие папки автоматически не переносятся."
+
+msgctxt "InstallLoaderDialog"
+msgid "Install Loader"
+msgstr "Установить загрузчик"

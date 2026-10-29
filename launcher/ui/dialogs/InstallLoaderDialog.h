@@ -36,6 +36,7 @@ class InstallLoaderDialog final : public QDialog, protected BasePageProvider {
     QString dialogTitle() override;
 
     void validate(BasePage* page);
+    void usePxlPresentation();
     void done(int result) override;
 
    private:

@@ -1005,8 +1005,11 @@ void MainWindow::runModalTask(Task* task)
 void MainWindow::instanceFromInstanceTask(InstanceTask* rawTask)
 {
     const auto title = rawTask->name();
+    const auto icon = APPLICATION->icons()->getIcon(rawTask->iconKey());
     unique_qobject_ptr<Task> task(APPLICATION->instances()->wrapInstanceTask(rawTask));
     task->setProperty("pxlTaskTitle", tr("Create instance: %1").arg(title));
+    task->setProperty("pxlTaskIcon", icon);
+    if (m_workspacePage) m_workspacePage->showPendingInstance(task.get(), title, icon);
     runModalTask(task.get());
 }
 
@@ -1789,6 +1792,17 @@ void MainWindow::closeEvent(QCloseEvent* event)
     emit isClosing();
 }
 
+InstanceWindow* MainWindow::showWorkspaceInstance(const QString& id, const QString& page)
+{
+    openWorkspaceInstance(id);
+    if (!m_embeddedInstance || m_embeddedInstance->instanceId() != id) return nullptr;
+    showWorkspace();
+    if (isMinimized()) showNormal();
+    else if (!isVisible()) show();
+    if (!page.isEmpty()) m_embeddedInstance->selectPage(page);
+    return m_embeddedInstance;
+}
+
 void MainWindow::openWorkspaceInstance(const QString& id, bool browseMods)
 {
     auto* instance = APPLICATION->instances()->getInstanceById(id);
@@ -1805,6 +1819,9 @@ void MainWindow::openWorkspaceInstance(const QString& id, bool browseMods)
     if (!m_workspacePage->presentInstanceView(editor, instance->name(), [editor] { return !editor || editor->saveAll(); })) return;
     setSelectedInstanceById(id);
     if (browseMods) editor->browseContent();
+    QTimer::singleShot(0, this, [this] {
+        if (screen()) Pxl::fitWorkspaceWindow(this, screen()->availableGeometry());
+    });
 }
 
 void MainWindow::showWorkspace()

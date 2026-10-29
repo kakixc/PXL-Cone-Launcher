@@ -53,6 +53,9 @@
 #include <memory>
 
 #include "Application.h"
+#include "icons/IconList.h"
+#include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/InstanceCovers.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
@@ -262,6 +265,9 @@ void ModFolderPage::updateMods(bool includeDeps)
     if (useAll) {
         modsList = m_model->allResources();
     }
+    if (modsList.isEmpty()) {
+        return;
+    }
 
     ResourceUpdateDialog updateDialog(this, m_instance, m_model, modsList, includeDeps, profile->getModLoadersList());
     updateDialog.checkCandidates();
@@ -283,7 +289,13 @@ void ModFolderPage::updateMods(bool includeDeps)
         return;
     }
 
-    if (updateDialog.exec() != 0) {
+    const bool pxlPresentation = property("pxlInstalledContent").toBool();
+    if (pxlPresentation) {
+        updateDialog.usePxlPresentation(m_instance->name(), APPLICATION->icons()->getIcon(m_instance->iconKey()),
+                                        Pxl::instanceCoverPath(m_instance->instanceRoot()));
+    }
+    const int result = pxlPresentation ? Pxl::DialogOverlay::run(&updateDialog, window()) : updateDialog.exec();
+    if (result == QDialog::Accepted) {
         auto* tasks = new ConcurrentTask("Download Mods", APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
         connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
             CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
@@ -440,7 +452,8 @@ inline bool ModFolderPage::handleNoModLoader()
         // Should be safe
         auto* profile = static_cast<MinecraftInstance*>(this->m_instance)->getPackProfile();
         InstallLoaderDialog dialog(profile, QString(), this);
-        bool ret = dialog.exec() != 0;
+        dialog.usePxlPresentation();
+        bool ret = Pxl::DialogOverlay::run(&dialog, window()) == QDialog::Accepted;
         this->m_container->refreshContainer();
 
         // returning negation of dialog.exec which'll be true if the install loader dialog got canceled/closed

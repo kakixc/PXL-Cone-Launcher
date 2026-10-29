@@ -78,6 +78,7 @@ class MainWindow : public QMainWindow {
     void showWorkspace();
     void showWelcomeSetup();
     bool openWorkspaceSettings(const QString& page = {});
+    InstanceWindow* showWorkspaceInstance(const QString& id, const QString& page = {});
     ~MainWindow();
 
     bool eventFilter(QObject* obj, QEvent* ev) override;

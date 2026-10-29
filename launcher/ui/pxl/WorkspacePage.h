@@ -10,6 +10,8 @@
 #include <functional>
 
 class ExternalUpdater;
+class Task;
+class QIcon;
 class InstanceList;
 class BaseInstance;
 class SettingsObject;
@@ -54,6 +56,7 @@ class WorkspacePage final : public QWidget {
     bool presentInstanceView(QWidget* view, const QString& title, std::function<bool()> leaveGuard);
     bool leaveInstanceView();
     void updateActiveNavigation();
+    void showPendingInstance(Task* task, const QString& name, const QIcon& icon);
 
    signals:
     void selectInstance(QString id);
@@ -102,6 +105,7 @@ class WorkspacePage final : public QWidget {
     QPushButton* m_featuredPlay = nullptr;
     QWidget* m_recentSection = nullptr;
     QWidget* m_emptyState = nullptr;
+    QWidget* m_pendingInstances = nullptr;
     QWidget* m_libraryFilters = nullptr;
     QWidget* m_navigation = nullptr;
     QWidget* m_header = nullptr;

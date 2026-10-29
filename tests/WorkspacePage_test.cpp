@@ -50,6 +50,8 @@
 #include <ui/pxl/SettingsMode.h>
 #include <ui/pxl/ScrollableSettings.h>
 #include <ui/pxl/NoWheelSelection.h>
+#include <ui/pxl/WindowGeometry.h>
+#include <QDoubleSpinBox>
 #include <ui/pxl/ComponentView.h>
 #include <ui/pxl/WorldsView.h>
 #include <ui/pages/instance/WorldListPage.h>
@@ -355,6 +357,29 @@ class WorkspacePageTest : public QObject {
         qApp->removeTranslator(&russian);
     }
 
+    void resourceReviewPreservesUpdateHeadingArtworkAndExpandableDetails()
+    {
+        std::unique_ptr<ReviewMessageBox> dialog(ReviewMessageBox::create(nullptr, QString("Update")));
+        QPixmap artwork(48, 48);
+        artwork.fill(QColor("#69ba48"));
+        dialog->appendResource({.name="Sodium", .filename="sodium.jar", .provider="Modrinth", .icon=QIcon(artwork)});
+        auto* tree = dialog->findChild<QTreeWidget*>("modTreeWidget");
+        auto* item = tree->topLevelItem(0);
+        item->setExpanded(true);
+        const auto children = item->childCount();
+        dialog->setProperty("pxlReviewHeading", "Review available updates");
+        dialog->usePxlPresentation("Survival", QIcon(artwork), {});
+        QCOMPARE(dialog->findChild<QLabel*>("explainLabel")->text(), QString("Review available updates"));
+        QVERIFY(!item->icon(0).isNull());
+        QVERIFY(!item->isExpanded());
+        QCOMPARE(item->childCount(), children);
+        item->setExpanded(true);
+        QVERIFY(item->isExpanded());
+        item->setCheckState(0, Qt::Unchecked);
+        QCOMPARE(dialog->deselectedResources(), QStringList{"Sodium"});
+        QVERIFY(!dialog->findChild<QDialogButtonBox*>("buttonBox")->button(QDialogButtonBox::Ok)->isEnabled());
+    }
+
     void profileHoverIconsPaintInsideSmallButtons()
     {
         QWidget row;
@@ -448,6 +473,68 @@ class WorkspacePageTest : public QObject {
         QTest::qWait(30);
         QCOMPARE(page.size(), before);
         QCOMPARE(scroll->verticalScrollBar()->maximum(), 0);
+    }
+
+    void laptopWindowFitsAvailableAreaIncludingNativeFrame()
+    {
+        QWidget window;
+        window.resize(1450, 1000);
+        window.move(1300, 900);
+        window.show();
+        QTest::qWait(20);
+        for (const auto area : {QRect(0, 0, 1093, 570), QRect(-1024, 0, 1024, 640)}) {
+            Pxl::fitWorkspaceWindow(&window, area);
+            QVERIFY(area.contains(window.frameGeometry()));
+            QVERIFY(window.height() < area.height());
+            QVERIFY(window.width() < area.width());
+        }
+        QVERIFY(Pxl::preferredWorkspaceWindowSize(QSize(1093, 570)).height() < 570);
+    }
+
+    void numericFieldsIgnoreWheelThroughTheirEditors()
+    {
+        Pxl::installWheelSelectionGuard(qApp);
+        QDoubleSpinBox spin;
+        spin.setValue(12);
+        spin.show();
+        auto* editor = spin.findChild<QLineEdit*>();
+        QVERIFY(editor);
+        for (auto* target : {static_cast<QWidget*>(&spin), static_cast<QWidget*>(editor)}) {
+            QWheelEvent wheel(QPointF(10,10), QPointF(10,10), {}, QPoint(0,120), Qt::NoButton,
+                              Qt::NoModifier, Qt::NoScrollPhase, false);
+            qApp->sendEvent(target, &wheel);
+            QCOMPARE(spin.value(), 12.0);
+            QVERIFY(!wheel.isAccepted());
+        }
+        spin.stepUp();
+        QCOMPARE(spin.value(), 13.0);
+        editor->setFocus();
+        editor->selectAll();
+        QTest::keyClicks(editor, "24");
+        QTest::keyClick(editor, Qt::Key_Return);
+        QCOMPARE(spin.value(), 24.0);
+    }
+
+    void creatingInstanceCardTracksTaskWithoutPublishingAnInstance()
+    {
+        QTemporaryDir temporary;
+        auto global = settings(temporary);
+        InstanceList instances(global.get(), temporary.filePath("instances"));
+        WorkspacePage page(&instances);
+        page.resize(900, 580);
+        page.show();
+        ManualHistoryTask task;
+        page.showPendingInstance(&task, "New survival", QIcon(":/pxl/icons/squares-four.svg"));
+        auto* pending = page.findChild<QWidget*>("workspacePendingInstances");
+        QVERIFY(pending && pending->isVisible());
+        QCOMPARE(instances.rowCount(), 0);
+        QCOMPARE(pending->layout()->count(), 1);
+        QVERIFY(page.findChild<QWidget*>("pendingInstanceCard"));
+        task.start();
+        task.fail();
+        QVERIFY(pending->isHidden());
+        QCOMPARE(pending->layout()->count(), 0);
+        QCOMPARE(instances.rowCount(), 0);
     }
 
     void closedChoicesIgnoreWheelButKeepKeyboardAndPopupScrolling()

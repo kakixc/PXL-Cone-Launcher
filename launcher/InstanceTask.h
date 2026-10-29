@@ -42,6 +42,7 @@ class InstanceTask : public Task, public InstanceName {
     void setStagingPath(const QString& stagingPath) { m_stagingPath = stagingPath; }
 
     void setIcon(const QString& icon) { m_instIcon = icon; }
+    QString iconKey() const { return m_instIcon; }
 
     void setGroup(const QString& group) { m_instGroup = group; }
     QString group() const { return m_instGroup; }

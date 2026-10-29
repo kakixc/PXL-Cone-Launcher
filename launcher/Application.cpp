@@ -1735,6 +1735,11 @@ MainWindow* Application::showMainWindow(bool minimized)
             m_mainWindow->show();
         }
 
+        QTimer::singleShot(0, m_mainWindow, [this] {
+            if (m_mainWindow && m_mainWindow->screen())
+                Pxl::fitWorkspaceWindow(m_mainWindow, m_mainWindow->screen()->availableGeometry());
+        });
+
         m_mainWindow->checkInstancePathForProblems();
         if (!minimized && m_instanceIdToLaunch.isEmpty() && settings()->get("PXLWelcomeRevision").toInt() < 1) {
             QTimer::singleShot(0, m_mainWindow, [this] {
@@ -1766,6 +1771,15 @@ InstanceWindow* Application::showInstanceWindow(BaseInstance* instance, QString 
 {
     if (!instance)
         return nullptr;
+    if (m_mainWindow) {
+        auto* embedded = m_mainWindow->showWorkspaceInstance(instance->id(), page);
+        if (embedded) {
+            QMutexLocker locker(&m_instanceExtrasMutex);
+            if (auto* controller = m_instanceExtras[instance->id()].controller.get())
+                controller->setParentWidget(embedded);
+        }
+        return embedded;
+    }
     auto id = instance->id();
     QMutexLocker locker(&m_instanceExtrasMutex);
     auto& extras = m_instanceExtras[id];
