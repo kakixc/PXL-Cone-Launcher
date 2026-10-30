@@ -8,14 +8,14 @@ AllowSkipFiles off
 Unicode true
 
 Name "@Launcher_DisplayName@"
-InstallDir "$LOCALAPPDATA\Programs\@Launcher_CommonName@"
-InstallDirRegKey HKCU "Software\@Launcher_CommonName@" "InstallDir"
+InstallDir "$LOCALAPPDATA\Programs\@Launcher_InstallID@"
+InstallDirRegKey HKCU "Software\@Launcher_InstallID@" "InstallDir"
 RequestExecutionLevel user
 OutFile "../PXL-Cone-Setup.exe"
 
 !define MUI_ICON "../@Launcher_Branding_ICO@"
 
-!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\@Launcher_CommonName@"
+!define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\@Launcher_InstallID@"
 
 ;--------------------------------
 
@@ -388,7 +388,7 @@ Section "@Launcher_DisplayName@"
   File /nonfatal /r "tls"
 
   ; Write the installation path into the registry
-  WriteRegStr HKCU Software\@Launcher_CommonName@ "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU Software\@Launcher_InstallID@ "InstallDir" "$INSTDIR"
 
   ; Write the URL Handler into registry for curseforge
   WriteRegStr HKCU Software\Classes\curseforge "URL Protocol" ""
@@ -442,7 +442,7 @@ Section /o "Desktop Shortcut" DESKTOP_SHORTCUTS
 SectionEnd
 
 
-!define APPID "@Launcher_CommonName@.App"
+!define APPID "@Launcher_InstallID@.App"
 !define APPEXE "@Launcher_APP_BINARY_NAME@.exe"
 !define APPICON "$INSTDIR\${APPEXE},0"
 !define APPDESCRIPTION "@Launcher_DisplayName@"
@@ -468,8 +468,8 @@ Section "Uninstall"
 
   nsExec::Exec /TIMEOUT=2000 'TaskKill /IM @Launcher_APP_BINARY_NAME@.exe /F'
 
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\@Launcher_CommonName@"
-  DeleteRegKey HKCU SOFTWARE\@Launcher_CommonName@
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\@Launcher_InstallID@"
+  DeleteRegKey HKCU SOFTWARE\@Launcher_InstallID@
 
   Delete $INSTDIR\@Launcher_APP_BINARY_NAME@.exe
   Delete $INSTDIR\@Launcher_APP_BINARY_NAME@_filelink.exe

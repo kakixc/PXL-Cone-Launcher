@@ -22,6 +22,8 @@ class WindowsVersionTest(unittest.TestCase):
                 f'include("{ROOT.as_posix()}/cmake/PxlWindowsVersion.cmake")\n'
                 'pxl_windows_version("${TEST_VERSION}")\n'
                 'set(Launcher_DisplayName "PXL Cone Launcher")\n'
+                'set(Launcher_CommonName "ElyPrismLauncher")\n'
+                'set(Launcher_InstallID "PXLConeLauncher")\n'
                 f'configure_file("{ROOT.as_posix()}/program_info/{template}" '
                 f'"{output.as_posix()}" @ONLY)\n', encoding="utf-8")
             result = subprocess.run([CMAKE, f"-DTEST_VERSION={version}", "-P", str(script)],
@@ -72,6 +74,15 @@ class WindowsVersionTest(unittest.TestCase):
         self.assertIn('"VersionMajor" "0"', installer)
         self.assertIn('"VersionMinor" "1"', installer)
         self.assertNotIn("12.0.0", installer)
+
+    def test_installer_does_not_select_upstream_uninstall_key(self):
+        result, installer = self.configure("0.1.0-alpha.3", "win_install.nsi.in")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('InstallDir "$LOCALAPPDATA\\Programs\\PXLConeLauncher"', installer)
+        self.assertIn('!define UNINST_KEY "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PXLConeLauncher"', installer)
+        self.assertIn('InstallDirRegKey HKCU "Software\\PXLConeLauncher" "InstallDir"', installer)
+        self.assertIn('!define APPID "PXLConeLauncher.App"', installer)
+        self.assertNotIn("ElyPrismLauncher", installer)
 
 
 if __name__ == "__main__":
