@@ -894,6 +894,16 @@ class WorkspacePageTest : public QObject {
         installed.downloadDataPacks();
         QCOMPARE(browseRequests, 1);
         installed.updateDataPacks(); // Empty folder must not start metadata/network tasks.
+        bool metadataNoticeSeen = false;
+        QTimer::singleShot(40, &installed, [&] {
+            auto* notice = installed.findChild<QDialog*>("pxlMessagePanel");
+            QVERIFY(notice);
+            QVERIFY(!notice->isWindow());
+            metadataNoticeSeen = true;
+            notice->accept();
+        });
+        installed.changeDataPackVersion();
+        QTRY_VERIFY(metadataNoticeSeen);
         const auto source = temporary.filePath("Local pack");
         QVERIFY(QDir().mkpath(source));
         QFile meta(source + "/pack.mcmeta");

@@ -95,18 +95,18 @@ void DataPackPage::downloadDialogFinished(int result)
 {
     if (result != 0) {
         auto* tasks = new ConcurrentTask(tr("Download Data Packs"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
+        connect(tasks, &Task::failed, this, [this, tasks](const QString& reason) {
+            showDataPackNotice(this, tr("Error"), reason, QMessageBox::Critical);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
+        connect(tasks, &Task::aborted, this, [this, tasks]() {
+            showDataPackNotice(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
+        connect(tasks, &Task::succeeded, this, [this, tasks]() {
             QStringList warnings = tasks->warnings();
             if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
+                showDataPackNotice(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning);
             }
 
             tasks->deleteLater();
@@ -140,7 +140,9 @@ void DataPackPage::updateDataPacks()
     if (m_model->rowCount() == 0) return;
 
     if (m_instance->globalSettings()->get("ModMetadataDisabled").toBool()) {
-        showDataPackNotice(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"), QMessageBox::Critical);
+        const auto message = tr("Data pack updates are unavailable when metadata is disabled!");
+        if (property("pxlInstalledContent").toBool()) showDataPackNotice(this, tr("Error"), message, QMessageBox::Critical);
+        else QMessageBox::critical(this, tr("Error"), message);
         return;
     }
     if (m_instance != nullptr && m_instance->isRunning()) {
@@ -232,15 +234,14 @@ void DataPackPage::deleteDataPackMetadata()
         return;
     }
     if (selectionCount > 1) {
-        auto response = CustomMessageBox::selectable(this, tr("Confirm Removal"),
-                                                     tr("You are about to remove the metadata for %1 data packs.\n"
-                                                        "Are you sure?")
-                                                         .arg(selectionCount),
-                                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
-
-        if (response != QMessageBox::Yes) {
-            return;
+        const auto message = tr("You are about to remove the metadata for %1 data packs.\nAre you sure?").arg(selectionCount);
+        if (property("pxlInstalledContent").toBool()) {
+            if (!Pxl::messagePanel(window(), tr("Confirm Removal"), message, tr("Remove metadata"), true)) return;
+        } else {
+            auto response = CustomMessageBox::selectable(this, tr("Confirm Removal"), message,
+                                                         QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+                                ->exec();
+            if (response != QMessageBox::Yes) return;
         }
     }
 
@@ -249,12 +250,15 @@ void DataPackPage::deleteDataPackMetadata()
 
 void DataPackPage::changeDataPackVersion()
 {
+    if (m_downloadDialog) return;
     if (m_instance->typeName() != "Minecraft") {
         return;  // this is a null instance or a legacy instance
     }
 
-    if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"));
+    if (m_instance->globalSettings()->get("ModMetadataDisabled").toBool()) {
+        const auto message = tr("Data pack updates are unavailable when metadata is disabled!");
+        if (property("pxlInstalledContent").toBool()) showDataPackNotice(this, tr("Error"), message, QMessageBox::Critical);
+        else QMessageBox::critical(this, tr("Error"), message);
         return;
     }
 
@@ -267,6 +271,21 @@ void DataPackPage::changeDataPackVersion()
     Resource& resource = m_model->at(m_filterModel->mapToSource(rows[0]).row());
 
     if (resource.metadata() == nullptr) {
+        return;
+    }
+
+    if (property("pxlInstalledContent").toBool()) {
+        m_downloadDialog = new ResourceDownload::DataPackDownloadDialog(this, m_model, m_instance, true);
+        if (!m_downloadDialog->hasProviders()) {
+            m_downloadDialog->deleteLater();
+            showDataPackNotice(this, tr("Error"), tr("No content provider is available for this instance."), QMessageBox::Critical);
+            return;
+        }
+        connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
+        connect(m_downloadDialog, &QDialog::finished, this, &DataPackPage::downloadDialogFinished);
+        m_downloadDialog->useEmbeddedPresentation();
+        m_downloadDialog->setProperty("pxlVersionChange", true);
+        m_downloadDialog->setResourceMetadata(resource.metadata());
         return;
     }
 

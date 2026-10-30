@@ -3240,3 +3240,15 @@ msgstr "Применить скин"
 msgctxt "DataPackPage"
 msgid "Update data packs"
 msgstr "Обновить датапаки"
+
+msgctxt "DataPackPage"
+msgid "Remove metadata"
+msgstr "Удалить метаданные"
+
+msgctxt "DataPackPage"
+msgid "No content provider is available for this instance."
+msgstr "Для этой сборки нет доступного источника контента."
+
+msgctxt "DataPackPage"
+msgid "Data pack updates are unavailable when metadata is disabled!"
+msgstr "Обновление датапаков недоступно, пока отключены метаданные."
