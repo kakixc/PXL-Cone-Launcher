@@ -34,7 +34,6 @@ Choose an instance and export it as a `.pxlconep` archive. Include worlds and sc
 ## What works in the current development version
 
 - Skippable first-run setup with English/Russian selection, existing account sign-in and automatic Java controls, plus four animated feature introductions. Reopen it from Settings → About → Explore PXL Cone. System-disabled animations are respected.
-
 - Home and Library with three saved layouts: cover tiles, compact PXL hybrid cards and a detailed list. Search, groups, sorting, playtime and custom static instance covers stay in the main window.
 - Instance creation from Minecraft/loader versions, existing modpack catalogs and supported import routes, using the upstream metadata and installation tasks.
 - Play/Stop actions and a task panel showing active operations and their recent results.
@@ -42,6 +41,8 @@ Choose an instance and export it as a `.pxlconep` archive. Include worlds and sc
 - Cone appearance with Inter, English/Russian UI, top/side navigation, optional wallpaper and a custom-image choice.
 - Settings inside the launcher with search, explicit Apply/leave validation and a saved basic/advanced mode. Technical services, tools and proxy options remain available in advanced mode; some technical screens are still being redesigned.
 - PXL views for installed content, game components, worlds and live logs, sharing the existing models and operations. A compact account picker and screenshot gallery provide quick access to profiles and captured images.
+- Per-instance multiline descriptions in settings, card tooltips, a short list summary and the full instance page. Descriptions are stored with the instance and retained in copies and PXL archives.
+- A screenshot gallery with instance filtering, enlarged image viewing, clipboard copy, folder export and use as an instance cover.
 - Copy import from Prism/Pinecone instance folders and PXL archive import/export.
 - Background checks for PXL Cone releases, a header notification and Markdown release notes. Downloads open the release page; executable replacement is manual. See [release notification configuration](docs/RELEASE_UPDATES.md).
 
@@ -59,13 +60,15 @@ See [the archive format and current limits](docs/PXL_ARCHIVE_FORMAT.md). Existin
 
 - The in-instance content catalog is being redesigned. Some content/provider tools still use upstream layouts or dialogs.
 - OptiFine installation is currently documented as a manual workflow; automatic official-site download and standalone installation are not implemented.
+- Installed-mod updates and version selection reuse PineconeMC operations; provider, dependency and error flows in the redesigned UI still need end-to-end validation.
+- Hiding download progress leaves the task running. Actual pause/resume is not implemented yet.
 - Task history is kept for the current session: active tasks are retained and completed history is capped.
 - English and Russian are the exposed product languages. Upstream translation percentages do not measure coverage of the new PXL interface.
 - Settings migration, dialog consistency, keyboard behavior and accessibility are still receiving fixes.
 
 ## Roadmap — not implemented features
 
-Preparation for the first public release still includes a PXL-style website on GitHub Pages from this repository. It is not included yet.
+The player-facing website source is in [website/](website/), with English/Russian, automatic Windows/Linux download selection and direct links to published release files. A manual GitHub Pages workflow is included; the site has not been deployed. See [website preview and publishing](docs/WEBSITE.md).
 
 Other development directions have no fixed release date:
 
@@ -75,12 +78,13 @@ Other development directions have no fixed release date:
 - Linked local-server workflows and pack collaboration.
 - Optional AI-assisted pack drafts using a user-configured provider, with approval of the exact content before installation.
 - Per-version artwork and further banner customisation.
+- After the first public alpha: the Cone Play layout, user `.pxltheme` packages and a community theme catalog. The current Cone theme remains the default.
 
 ## Technology and platforms
 
 The launcher uses **C++ and Qt** and reuses the PineconeMC / Prism architecture. It does not use Electron or an embedded web frontend as its UI foundation.
 
-Windows and Linux are the primary development targets. Building on one platform does not establish compatibility on the other. Installer/package formats and a public release date are not promised here.
+The first public alpha targets **Windows Portable, Windows Setup and Linux AppImage**. These packages still need clean-system validation; source builds or a Windows preview do not establish readiness of all three formats. A release date has not been set.
 
 Build configuration lives in the root [CMakeLists.txt](CMakeLists.txt); platform workflows are in [.github/workflows](.github/workflows). Core dependencies and build options follow the upstream project, with PXL resources and UI components added alongside them.
 
