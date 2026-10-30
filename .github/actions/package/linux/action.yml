@@ -29,7 +29,9 @@ runs:
   steps:
     - name: Check package manifest generation
       shell: bash
-      run: python3 tests/PackageManifest_test.py
+      run: |
+        python3 tests/PackageManifest_test.py
+        python3 tests/AlphaAssets_test.py
 
     - name: Cleanup Qt installation on Linux
       shell: bash

@@ -32,6 +32,15 @@ test('the public alpha prerelease resolves directly to uploaded files', () => {
   assert.equal(result['windows-setup'].version, 'v0.1.0-alpha');
 });
 
+test('locally staged alpha filenames expose all three agreed downloads', () => {
+  const names = ['PXL-Cone-Windows-x64-Portable-0.1.0-alpha.1.zip',
+    'PXL-Cone-Windows-x64-Setup-0.1.0-alpha.1.exe', 'PXL-Cone-Linux-x86_64-0.1.0-alpha.1.AppImage'];
+  const result = selectDownloads([release(names.map(name => asset(name)))]);
+  assert.equal(result['windows-portable'].name, names[0]);
+  assert.equal(result['windows-setup'].name, names[1]);
+  assert.equal(result.linux.name, names[2]);
+});
+
 test('drafts, incomplete assets and off-repository URLs are never downloads', () => {
   const result = selectDownloads([
     release([asset('PXL-Cone-Setup.exe')], { draft: true }),

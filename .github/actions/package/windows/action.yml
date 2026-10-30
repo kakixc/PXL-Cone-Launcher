@@ -42,6 +42,10 @@ runs:
   using: composite
 
   steps:
+    - name: Check alpha asset staging
+      shell: pwsh
+      run: python tests/AlphaAssets_test.py
+
     - name: Validate signing configuration
       id: signing
       shell: pwsh
