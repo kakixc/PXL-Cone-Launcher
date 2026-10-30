@@ -1600,7 +1600,6 @@ if(WIN32 OR (UNIX AND APPLE))
             set(QT_LIBS_DIR \"${QT_LIBS_DIR}\")
             set(QT_LIBEXECS_DIR \"${QT_LIBEXECS_DIR}\")
             set(CMAKE_SYSTEM_LIBRARY_PATH \"${CMAKE_SYSTEM_LIBRARY_PATH}\")
-            set(CMAKE_INSTALL_PREFIX \"${CMAKE_INSTALL_PREFIX}\")
             "
             COMPONENT bundle)
 
@@ -1643,7 +1642,7 @@ if(WIN32 OR (UNIX AND APPLE))
     # Add qtlogging.ini as a config file
     install(
         FILES "qtlogging.ini"
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${RESOURCES_DEST_DIR}
+        DESTINATION ${RESOURCES_DEST_DIR}
         COMPONENT bundle
     )
 endif()

@@ -46,6 +46,10 @@ runs:
       shell: pwsh
       run: python tests/WindowsVersion_test.py
 
+    - name: Check relocated bundle installation
+      shell: pwsh
+      run: python tests/InstallPrefix_test.py
+
     - name: Check alpha asset staging
       shell: pwsh
       run: python tests/AlphaAssets_test.py
