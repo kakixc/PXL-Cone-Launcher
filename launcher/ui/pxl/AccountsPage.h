@@ -203,7 +203,7 @@ public:
         const QPointer<AccountList> accounts(m_accounts);
         connect(skin,&QPushButton::clicked,&panel,[&panel,account,accounts] {
             if (!accounts || !containsAccount(accounts,account) || account->isActive() || account->isInUse()) return;
-            if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(&panel,account); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(760,600)); DialogOverlay::run(&dialog,panel.window()); }
+            if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(&panel,account); dialog.usePxlPresentation(); DialogOverlay::run(&dialog,panel.window()); }
             else DesktopServices::openUrl(QUrl("https://ely.by/skins"));
         });
         connect(done,&QPushButton::clicked,&panel,&QDialog::accept);
@@ -300,7 +300,7 @@ private:
         addAction(accountText("Edit profile"),"pencil",ready && !account->isInUse(),[this,account] { editAccount(account); });
         addAction(accountText("Refresh session"),"arrows-clockwise",ready && account->accountType()!=AccountType::Offline,[this,account] { m_accounts->requestRefresh(account->internalId()); });
         addAction(accountText("Manage skin"),"user-circle",ready && !account->isInUse() && account->accountType()!=AccountType::Offline,[this,account] {
-            if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(this,account); dialog.setProperty("pxlFlow",true); dialog.setProperty("pxlPreferredSize",QSize(760,600)); DialogOverlay::run(&dialog,window()); }
+            if (account->accountType()==AccountType::MSA) { SkinManageDialog dialog(this,account); dialog.usePxlPresentation(); DialogOverlay::run(&dialog,window()); }
             else DesktopServices::openUrl(QUrl("https://ely.by/skins"));
         });
         addAction(accountText("Clear active profile"),"user-circle",ready && m_accounts->defaultAccount()==account,[this] { m_accounts->setDefaultAccount(nullptr); });

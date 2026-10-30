@@ -127,6 +127,71 @@ SkinManageDialog::~SkinManageDialog()
     }
 }
 
+void SkinManageDialog::usePxlPresentation()
+{
+    if (property("pxlSkinPresentation").toBool()) return;
+    setProperty("pxlSkinPresentation", true);
+    setProperty("pxlFlow", true);
+    setProperty("pxlPreferredSize", QSize(880, 620));
+    auto* preview = m_ui->skinLayout->takeAt(0);
+    auto* previewWidget = preview ? preview->widget() : nullptr;
+    delete preview;
+    delete layout();
+
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(24, 24, 24, 24);
+    root->setSpacing(16);
+    auto* title = new QLabel(tr("Choose your skin"), this);
+    title->setProperty("pxlFlowTitle", true);
+    root->addWidget(title);
+    auto* profile = new QLabel(m_acct->profileName(), this);
+    profile->setTextFormat(Qt::PlainText);
+    profile->setProperty("pxlFlowHint", true);
+    root->addWidget(profile);
+
+    auto* body = new QHBoxLayout;
+    body->setSpacing(20);
+    auto* previewColumn = new QVBoxLayout;
+    previewColumn->setSpacing(12);
+    if (previewWidget) {
+        previewWidget->setMinimumSize(140, 180);
+        previewColumn->addWidget(previewWidget, 1);
+    }
+    previewColumn->addWidget(m_ui->modelBox);
+    previewColumn->addWidget(m_ui->capeBox);
+    body->addLayout(previewColumn, 1);
+
+    auto* library = new QVBoxLayout;
+    library->setSpacing(12);
+    auto* tools = new QHBoxLayout;
+    tools->setSpacing(8);
+    tools->addWidget(m_ui->fileBtn);
+    tools->addWidget(m_ui->openDirBtn);
+    tools->addStretch();
+    library->addLayout(tools);
+    m_ui->listView->setIconSize(QSize(72, 72));
+    m_ui->listView->setSpacing(10);
+    library->addWidget(m_ui->listView, 1);
+    m_ui->urlLine->setPlaceholderText(tr("Skin URL or player name"));
+    library->addWidget(m_ui->urlLine);
+    auto* imports = new QHBoxLayout;
+    imports->setSpacing(8);
+    imports->addWidget(m_ui->urlBtn);
+    imports->addWidget(m_ui->userBtn);
+    imports->addStretch();
+    library->addLayout(imports);
+    body->addLayout(library, 2);
+    root->addLayout(body, 1);
+    auto* footer = new QHBoxLayout;
+    footer->setSpacing(8);
+    footer->addWidget(m_ui->resetBtn);
+    footer->addStretch();
+    m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Apply skin"));
+    m_ui->buttonBox->button(QDialogButtonBox::Ok)->setProperty("pxlPrimary", true);
+    footer->addWidget(m_ui->buttonBox);
+    root->addLayout(footer);
+}
+
 void SkinManageDialog::activated(QModelIndex index)
 {
     m_selectedSkinKey = index.data(Qt::UserRole).toString();

@@ -77,6 +77,14 @@ private:
     QString m_id;
 };
 
+class LoginDialogProbe final : public MSALoginDialog {
+public:
+    LoginDialogProbe() { m_accountType = AccountType::Offline; } // No provider/client credentials in the UI fixture.
+    using MSALoginDialog::prepareLoginTasks;
+    MinecraftAccountPtr browserAccount() const { return m_account; }
+    MinecraftAccountPtr deviceAccount() const { return m_deviceAccount; }
+};
+
 class FixtureVersionLoad final : public Task {
 public:
     explicit FixtureVersionLoad(QString error = {}) : m_error(std::move(error)) {}
@@ -322,6 +330,45 @@ class WorkspacePageTest : public QObject {
     }
 
    private slots:
+    void alternativeLoginReturnsAnIdleAccount_data()
+    {
+        QTest::addColumn<bool>("device");
+        QTest::newRow("browser") << false;
+        QTest::newRow("device-code") << true;
+    }
+
+    void alternativeLoginReturnsAnIdleAccount()
+    {
+        QFETCH(bool, device);
+        LoginDialogProbe dialog;
+        dialog.prepareLoginTasks();
+        const auto browser = dialog.browserAccount();
+        const auto qr = dialog.deviceAccount();
+        QVERIFY(browser != qr);
+        QVERIFY(browser->accountData() != qr->accountData());
+        const auto winner = device ? qr : browser;
+        const auto loser = device ? browser : qr;
+        const auto task = winner->currentTask();
+        const auto other = loser->currentTask();
+        // Exercise result routing without starting a network authentication.
+        QVERIFY(QMetaObject::invokeMethod(task.get(), "succeeded", Qt::DirectConnection));
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(dialog.browserAccount(), winner);
+        QVERIFY(!winner->isActive());
+        QVERIFY(!other->isRunning());
+    }
+
+    void cancelLoginStopsBothAlternatives()
+    {
+        LoginDialogProbe dialog;
+        dialog.prepareLoginTasks();
+        const auto browser = dialog.browserAccount();
+        const auto qr = dialog.deviceAccount();
+        dialog.reject();
+        QVERIFY(!browser->currentTask()->isRunning());
+        QVERIFY(!qr->currentTask()->isRunning());
+        QCOMPARE(dialog.result(), int(QDialog::Rejected));
+    }
     void initTestCase()
     {
         ConeTheme cone;
@@ -846,6 +893,7 @@ class WorkspacePageTest : public QObject {
         installed.usePxlPresentation([&] { ++browseRequests; });
         installed.downloadDataPacks();
         QCOMPARE(browseRequests, 1);
+        installed.updateDataPacks(); // Empty folder must not start metadata/network tasks.
         const auto source = temporary.filePath("Local pack");
         QVERIFY(QDir().mkpath(source));
         QFile meta(source + "/pack.mcmeta");

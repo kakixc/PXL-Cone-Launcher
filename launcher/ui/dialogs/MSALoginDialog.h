@@ -40,6 +40,10 @@ class MSALoginDialog : public QDialog {
     QString m_linkUrl = "https://www.microsoft.com/link";
     Ui::MSALoginDialog* ui;
     MinecraftAccountPtr m_account;
+    MinecraftAccountPtr m_browserAccount;
+    MinecraftAccountPtr m_deviceAccount;
+    void prepareLoginTasks();
+    void stopLoginTasks();
 
    protected slots:
     void onTaskFailed(QString reason);
@@ -53,4 +57,5 @@ class MSALoginDialog : public QDialog {
     shared_qobject_ptr<AuthFlow> m_authflow_task;
 
     QUrl m_url;
+    bool m_settled = false;
 };

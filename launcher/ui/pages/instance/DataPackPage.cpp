@@ -24,6 +24,21 @@
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "ui/dialogs/ResourceUpdateDialog.h"
+#include "icons/IconList.h"
+#include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/InstanceCovers.h"
+#include "ui/pxl/MessagePanel.h"
+
+namespace {
+void showDataPackNotice(QWidget* page, const QString& title, const QString& message, QMessageBox::Icon severity)
+{
+    if (page->property("pxlInstalledContent").toBool()) {
+        QTimer::singleShot(0, page, [page, title, message] { Pxl::showNotice(page->window(), title, message); });
+    } else {
+        CustomMessageBox::selectable(page, title, message, severity)->show();
+    }
+}
+}
 
 DataPackPage::DataPackPage(BaseInstance* instance, DataPackFolderModel* model, QWidget* parent)
     : ExternalResourcesPage(instance, model, parent), m_model(model)
@@ -122,16 +137,21 @@ void DataPackPage::updateDataPacks()
         return;  // this is a null instance or a legacy instance
     }
 
-    if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"));
+    if (m_model->rowCount() == 0) return;
+
+    if (m_instance->globalSettings()->get("ModMetadataDisabled").toBool()) {
+        showDataPackNotice(this, tr("Error"), tr("Data pack updates are unavailable when metadata is disabled!"), QMessageBox::Critical);
         return;
     }
     if (m_instance != nullptr && m_instance->isRunning()) {
+        const auto message = tr("Updating data packs while the game is running may cause pack duplication and game crashes.\n"
+                                "The old files may not be deleted as they are in use.\n"
+                                "Are you sure you want to do this?");
         auto response =
-            CustomMessageBox::selectable(this, tr("Confirm Update"),
-                                         tr("Updating data packs while the game is running may cause pack duplication and game crashes.\n"
-                                            "The old files may not be deleted as they are in use.\n"
-                                            "Are you sure you want to do this?"),
+            property("pxlInstalledContent").toBool()
+                ? (Pxl::messagePanel(window(), tr("Confirm Update"), message, tr("Update data packs"), true)
+                       ? QMessageBox::Yes : QMessageBox::No)
+                : CustomMessageBox::selectable(this, tr("Confirm Update"), message,
                                          QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
                 ->exec();
 
@@ -146,12 +166,13 @@ void DataPackPage::updateDataPacks()
     if (useAll) {
         modsList = m_model->allResources();
     }
+    if (modsList.isEmpty()) return;
 
     ResourceUpdateDialog updateDialog(this, m_instance, m_model, modsList, false, { ModPlatform::ModLoaderType::DataPack });
     updateDialog.checkCandidates();
 
     if (updateDialog.aborted()) {
-        CustomMessageBox::selectable(this, tr("Aborted"), tr("The data pack updater was aborted!"), QMessageBox::Warning)->show();
+        showDataPackNotice(this, tr("Aborted"), tr("The data pack updater was aborted!"), QMessageBox::Warning);
         return;
     }
     if (updateDialog.noUpdates()) {
@@ -163,24 +184,30 @@ void DataPackPage::updateDataPacks()
                 message = tr("All selected data packs are up-to-date! :)");
             }
         }
-        CustomMessageBox::selectable(this, tr("Update checker"), message)->exec();
+        showDataPackNotice(this, tr("Update checker"), message, QMessageBox::Information);
         return;
     }
 
-    if (updateDialog.exec() != 0) {
+    const bool pxlPresentation = property("pxlInstalledContent").toBool();
+    if (pxlPresentation) {
+        updateDialog.usePxlPresentation(m_instance->name(), APPLICATION->icons()->getIcon(m_instance->iconKey()),
+                                       Pxl::instanceCoverPath(m_instance->instanceRoot()));
+    }
+    const int result = pxlPresentation ? Pxl::DialogOverlay::run(&updateDialog, window()) : updateDialog.exec();
+    if (result == QDialog::Accepted) {
         auto* tasks = new ConcurrentTask("Download Data Packs", APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
+        connect(tasks, &Task::failed, this, [this, tasks](const QString& reason) {
+            showDataPackNotice(this, tr("Error"), reason, QMessageBox::Critical);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
+        connect(tasks, &Task::aborted, this, [this, tasks]() {
+            showDataPackNotice(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information);
             tasks->deleteLater();
         });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
+        connect(tasks, &Task::succeeded, this, [this, tasks]() {
             QStringList warnings = tasks->warnings();
             if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
+                showDataPackNotice(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning);
             }
             tasks->deleteLater();
         });

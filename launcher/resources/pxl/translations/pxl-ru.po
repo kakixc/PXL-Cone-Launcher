@@ -3224,3 +3224,19 @@ msgstr "Найдите датапаки для этого мира или доб
 msgctxt "WorldListPage"
 msgid "Data packs for %1"
 msgstr "Датапаки мира «%1»"
+
+msgctxt "SkinManageDialog"
+msgid "Choose your skin"
+msgstr "Выберите скин"
+
+msgctxt "SkinManageDialog"
+msgid "Skin URL or player name"
+msgstr "Ссылка на скин или имя игрока"
+
+msgctxt "SkinManageDialog"
+msgid "Apply skin"
+msgstr "Применить скин"
+
+msgctxt "DataPackPage"
+msgid "Update data packs"
+msgstr "Обновить датапаки"

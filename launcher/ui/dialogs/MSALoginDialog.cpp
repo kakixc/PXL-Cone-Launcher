@@ -63,7 +63,7 @@ MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MS
     // make font monospace
     QFont font;
     font.setPixelSize(ui->code->fontInfo().pixelSize());
-    font.setFamily(APPLICATION->settings()->get("ConsoleFont").toString());
+    if (auto* app = APPLICATION_DYN) font.setFamily(app->settings()->get("ConsoleFont").toString());
     font.setStyleHint(QFont::Monospace);
     font.setFixedPitch(true);
     ui->code->setFont(font);
@@ -82,27 +82,9 @@ MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MS
 
 int MSALoginDialog::exec()
 {
-    // Setup the login task and start it
-    m_account = MinecraftAccount::createBlank(m_accountType);
-    m_authflow_task = m_account->login(false);
-    connect(m_authflow_task.get(), &Task::failed, this, &MSALoginDialog::onTaskFailed);
-    connect(m_authflow_task.get(), &Task::succeeded, this, &QDialog::accept);
-    connect(m_authflow_task.get(), &Task::aborted, this, &MSALoginDialog::reject);
-    connect(m_authflow_task.get(), &Task::status, this, &MSALoginDialog::onAuthFlowStatus);
-    connect(m_authflow_task.get(), &AuthFlow::authorizeWithBrowser, this, &MSALoginDialog::authorizeWithBrowser);
-    connect(m_authflow_task.get(), &AuthFlow::authorizeWithBrowserWithExtra, this, &MSALoginDialog::authorizeWithBrowserWithExtra);
-    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_authflow_task.get(), &Task::abort);
-
-    m_devicecode_task.reset(new AuthFlow(m_account->accountData(), AuthFlow::Action::DeviceCode));
-    connect(m_devicecode_task.get(), &Task::failed, this, &MSALoginDialog::onTaskFailed);
-    connect(m_devicecode_task.get(), &Task::succeeded, this, &QDialog::accept);
-    connect(m_devicecode_task.get(), &Task::aborted, this, &MSALoginDialog::reject);
-    connect(m_devicecode_task.get(), &Task::status, this, &MSALoginDialog::onDeviceFlowStatus);
-    connect(m_devicecode_task.get(), &AuthFlow::authorizeWithBrowser, this, &MSALoginDialog::authorizeWithBrowser);
-    connect(m_devicecode_task.get(), &AuthFlow::authorizeWithBrowserWithExtra, this, &MSALoginDialog::authorizeWithBrowserWithExtra);
-    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_devicecode_task.get(), &Task::abort);
-    QMetaObject::invokeMethod(m_authflow_task.get(), &Task::start, Qt::QueuedConnection);
-    QMetaObject::invokeMethod(m_devicecode_task.get(), &Task::start, Qt::QueuedConnection);
+    prepareLoginTasks();
+    QMetaObject::invokeMethod(this, [this] { if (!m_settled) m_authflow_task->start(); }, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(this, [this] { if (!m_settled) m_devicecode_task->start(); }, Qt::QueuedConnection);
 
     if (parentWidget() && parentWidget()->property("pxlEmbeddedAuth").toBool()) {
         setProperty("pxlFlow",true);
@@ -112,13 +94,67 @@ int MSALoginDialog::exec()
     return QDialog::exec();
 }
 
+void MSALoginDialog::prepareLoginTasks()
+{
+    // Setup the login task and start it
+    m_browserAccount = MinecraftAccount::createBlank(m_accountType);
+    m_account = m_browserAccount;
+    m_deviceAccount = MinecraftAccount::createBlank(m_accountType);
+    m_authflow_task = m_account->login(false);
+    connect(m_authflow_task.get(), &Task::failed, this, &MSALoginDialog::onTaskFailed);
+    connect(m_authflow_task.get(), &Task::succeeded, this, [this] {
+        if (m_settled) return;
+        stopLoginTasks();
+        accept();
+    });
+    connect(m_authflow_task.get(), &Task::aborted, this, &MSALoginDialog::reject);
+    connect(m_authflow_task.get(), &Task::status, this, &MSALoginDialog::onAuthFlowStatus);
+    connect(m_authflow_task.get(), &AuthFlow::authorizeWithBrowser, this, &MSALoginDialog::authorizeWithBrowser);
+    connect(m_authflow_task.get(), &AuthFlow::authorizeWithBrowserWithExtra, this, &MSALoginDialog::authorizeWithBrowserWithExtra);
+    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_authflow_task.get(), &Task::abort);
+
+    // Each alternative owns its own tokens and tracked task. QR success must
+    // not leave the browser task attached to the account returned to the caller.
+    m_devicecode_task = m_deviceAccount->login(true);
+    connect(m_devicecode_task.get(), &Task::failed, this, &MSALoginDialog::onTaskFailed);
+    connect(m_devicecode_task.get(), &Task::succeeded, this, [this] {
+        if (m_settled) return;
+        stopLoginTasks();
+        m_account = m_deviceAccount;
+        accept();
+    });
+    connect(m_devicecode_task.get(), &Task::aborted, this, &MSALoginDialog::reject);
+    connect(m_devicecode_task.get(), &Task::status, this, &MSALoginDialog::onDeviceFlowStatus);
+    connect(m_devicecode_task.get(), &AuthFlow::authorizeWithBrowser, this, &MSALoginDialog::authorizeWithBrowser);
+    connect(m_devicecode_task.get(), &AuthFlow::authorizeWithBrowserWithExtra, this, &MSALoginDialog::authorizeWithBrowserWithExtra);
+    connect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_devicecode_task.get(), &Task::abort);
+    connect(this, &QDialog::finished, this, [this] { stopLoginTasks(); });
+}
+
+void MSALoginDialog::stopLoginTasks()
+{
+    m_settled = true;
+    for (const auto& task : {m_authflow_task, m_devicecode_task}) {
+        if (!task) continue;
+        disconnect(task.get(), nullptr, this, nullptr);
+        if (task->isRunning()) task->abort();
+    }
+}
+
 MSALoginDialog::~MSALoginDialog()
 {
+    stopLoginTasks();
     delete ui;
 }
 
 void MSALoginDialog::onTaskFailed(QString reason)
 {
+    if (m_settled) return;
+    if (!m_authflow_task->isFinished() || !m_devicecode_task->isFinished()) {
+        if (sender() == m_authflow_task.get()) ui->status2->setText(reason.toHtmlEscaped());
+        else ui->status->setText(reason.toHtmlEscaped());
+        return;
+    }
     // Set message
     m_authflow_task->disconnect();
     m_devicecode_task->disconnect();
