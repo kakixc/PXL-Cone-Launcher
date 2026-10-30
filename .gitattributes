@@ -2,3 +2,4 @@
 **/testdata/** -text -diff
 
 program_info/genicons.sh text eol=lf
+scripts/configure-pxl-build.sh text eol=lf

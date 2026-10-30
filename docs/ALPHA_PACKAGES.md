@@ -4,6 +4,8 @@ The first public alpha targets Windows x64 Portable, Windows x64 Setup and Linux
 
 Build each package with the same explicit PXL comparison version described in [release notifications](RELEASE_UPDATES.md). The example `0.1.0-alpha.1` below is a placeholder, not an announced release. Renaming a development preview does not change its embedded version.
 
+The manual **Build** workflow accepts an optional `release-version` input, for example `0.1.0-alpha.1`, together with `build-type: Release`. This embeds the PXL comparison version and uses it in CI artifact labels. A nonempty version is rejected for Debug builds or if it does not use `x.y.z-alpha.N`. Leave it empty for an ordinary development build. The reusable workflow exposes the same input. Running Build produces CI artifacts; it does not publish a GitHub release.
+
 After building and testing the packages, stage their files locally:
 
 ```text
