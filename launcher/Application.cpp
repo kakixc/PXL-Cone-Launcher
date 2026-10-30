@@ -333,9 +333,16 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     parser.addPositionalArgument("URL", "Import the resource(s) at the given URL(s) (same as -I / --import)", "[URL...]");
 
     parser.addHelpOption();
-    parser.addVersionOption();
+    parser.addOption({ { "v", "version" }, "Displays version information." });
 
     parser.process(arguments());
+
+    if (parser.isSet("version")) {
+        QTextStream(stdout) << BuildConfig.LAUNCHER_DISPLAYNAME << " " << productVersion << "\n"
+                            << BuildConfig.GIT_COMMIT << Qt::endl;
+        m_status = Application::Succeeded;
+        return;
+    }
 
     m_instanceIdToLaunch = parser.value("launch");
     m_serverToJoin = parser.value("server");
