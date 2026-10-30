@@ -50,6 +50,10 @@ runs:
       shell: pwsh
       run: python tests/InstallPrefix_test.py
 
+    - name: Test portable package guards
+      shell: pwsh
+      run: ./tests/WindowsPortable_test.ps1
+
     - name: Check alpha asset staging
       shell: pwsh
       run: python tests/AlphaAssets_test.py
@@ -168,6 +172,12 @@ runs:
     - name: Write portable package manifest
       shell: pwsh
       run: ./scripts/write-package-manifest.ps1 -PackageRoot install-portable
+
+    - name: Check portable package contents
+      shell: pwsh
+      env:
+        PXL_REQUIRE_MSVC_RUNTIME: ${{ inputs.msystem == '' }}
+      run: ./scripts/check-windows-portable.ps1 -PackageRoot install-portable -RequireMsvcRuntime:($env:PXL_REQUIRE_MSVC_RUNTIME -eq 'true')
 
     - name: Package (installer)
       shell: pwsh

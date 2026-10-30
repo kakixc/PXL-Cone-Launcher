@@ -1545,6 +1545,17 @@ endif()
 #### The bundle mess! ####
 # Bundle utilities are used to complete packages for different platforms - they add all the libraries that would otherwise be missing on the target system.
 # NOTE: it seems that this absolutely has to be here, and nowhere else.
+if(MSVC)
+    # Setup installs the central VC redistributable. Portable has no installer,
+    # so deploy the compiler's redistributable release DLLs beside the EXE.
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    include(InstallRequiredSystemLibraries)
+    unset(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP)
+    install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+        DESTINATION ${BINARY_DEST_DIR}
+        COMPONENT portable EXCLUDE_FROM_ALL)
+endif()
+
 if(WIN32 OR (UNIX AND APPLE))
     if(WIN32)
         set(QT_DEPLOY_TOOL_OPTIONS "--no-opengl-sw --no-quick-import --no-system-d3d-compiler --no-system-dxc-compiler --skip-plugin-types generic,networkinformation")
@@ -1650,6 +1661,7 @@ endif()
 find_program(CLANG_FORMAT clang-format OPTIONAL)
 install(FILES resources/fonts/Monocraft-LICENSE.txt DESTINATION "${RESOURCES_DEST_DIR}/licenses")
 install(FILES resources/fonts/Manrope-OFL.txt resources/fonts/Inter-OFL.txt resources/pxl/icons/LICENSE.txt DESTINATION "${RESOURCES_DEST_DIR}/licenses")
+install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" "${CMAKE_SOURCE_DIR}/COPYING.md" DESTINATION "${RESOURCES_DEST_DIR}")
 if(CLANG_FORMAT)
     message(STATUS "Creating clang-format target")
     add_custom_target(
