@@ -107,13 +107,13 @@ OutFile "../PXL-Cone-Setup.exe"
 ;--------------------------------
 
 ; Version info
-VIProductVersion "@Launcher_VERSION_NAME4@"
-VIFileVersion "@Launcher_VERSION_NAME4@"
+VIProductVersion "@PXL_WINDOWS_VERSION_DOT@"
+VIFileVersion "@PXL_WINDOWS_VERSION_DOT@"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "@Launcher_DisplayName@"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "@Launcher_DisplayName@ Installer"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "@Launcher_Copyright@"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "@Launcher_VERSION_NAME4@"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "@Launcher_VERSION_NAME4@"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "@PXL_WINDOWS_VERSION_DISPLAY@"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "@PXL_WINDOWS_VERSION_DISPLAY@"
 
 ;--------------------------------
 ; Conditional comp with file exist
@@ -413,10 +413,10 @@ Section "@Launcher_DisplayName@"
     WriteRegStr HKCU "${UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S _?=$INSTDIR'
     WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
     WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "@Launcher_DisplayName@ Contributors"
-    WriteRegStr HKCU "${UNINST_KEY}" "Version" "@Launcher_VERSION_NAME4@"
-    WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "@Launcher_VERSION_NAME@"
-    WriteRegStr HKCU "${UNINST_KEY}" "VersionMajor" "@Launcher_VERSION_MAJOR@"
-    WriteRegStr HKCU "${UNINST_KEY}" "VersionMinor" "@Launcher_VERSION_MINOR@"
+    WriteRegStr HKCU "${UNINST_KEY}" "Version" "@PXL_WINDOWS_VERSION_DOT@"
+    WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "@PXL_WINDOWS_VERSION_DISPLAY@"
+    WriteRegStr HKCU "${UNINST_KEY}" "VersionMajor" "@PXL_WINDOWS_VERSION_MAJOR@"
+    WriteRegStr HKCU "${UNINST_KEY}" "VersionMinor" "@PXL_WINDOWS_VERSION_MINOR@"
     ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD HKCU "${UNINST_KEY}" "EstimatedSize" "$0"
