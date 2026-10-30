@@ -7,7 +7,8 @@ IDI_ICON1               ICON    DISCARDABLE     "pxlcone.ico"
 1 RT_MANIFEST "pxlcone.manifest"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     @Launcher_VERSION_NAME4_COMMA@
+FILEVERSION     @PXL_WINDOWS_VERSION_COMMA@
+PRODUCTVERSION  @PXL_WINDOWS_VERSION_COMMA@
 FILEOS          VOS_NT_WINDOWS32
 FILETYPE        VFT_APP
 BEGIN
@@ -17,9 +18,9 @@ BEGIN
                 BEGIN
                         VALUE "CompanyName", "@Launcher_Authors@"
                         VALUE "FileDescription", "@Launcher_DisplayName@"
-                        VALUE "FileVersion", "@Launcher_VERSION_NAME4@"
+                        VALUE "FileVersion", "@PXL_WINDOWS_VERSION_DISPLAY@"
                         VALUE "ProductName", "@Launcher_DisplayName@"
-                        VALUE "ProductVersion", "@Launcher_VERSION_NAME4@"
+                        VALUE "ProductVersion", "@PXL_WINDOWS_VERSION_DISPLAY@"
                 END
         END
         BLOCK "VarFileInfo"

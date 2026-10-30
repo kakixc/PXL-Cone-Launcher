@@ -46,6 +46,8 @@ set(Launcher_Portable_File "program_info/portable.txt" PARENT_SCOPE)
 
 configure_file(pxlcone.desktop.in ${Launcher_AppID}.desktop)
 configure_file(pxlcone.metainfo.xml.in ${Launcher_AppID}.metainfo.xml)
+include(PxlWindowsVersion)
+pxl_windows_version("${Launcher_RELEASE_VERSION}")
 configure_file(pxlcone.rc.in pxlcone.rc @ONLY)
 configure_file(pxlcone.qrc.in pxlcone.qrc @ONLY)
 configure_file(pxlcone.manifest.in pxlcone.manifest @ONLY)

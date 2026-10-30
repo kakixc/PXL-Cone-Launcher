@@ -1,0 +1,18 @@
+# Windows resources use the PXL release version without changing upstream
+# application/configuration identities or the assembly manifest version.
+function(pxl_windows_version version)
+    if(NOT version MATCHES "^v?([0-9]+)[.]([0-9]+)[.]([0-9]+)(-[A-Za-z0-9][A-Za-z0-9.-]*)?([+][A-Za-z0-9.-]+)?$")
+        message(FATAL_ERROR "Invalid PXL Windows resource version: ${version}")
+    endif()
+    set(major "${CMAKE_MATCH_1}")
+    set(minor "${CMAKE_MATCH_2}")
+    set(patch "${CMAKE_MATCH_3}")
+    foreach(part IN ITEMS major minor patch)
+        if(${part} GREATER 65535)
+            message(FATAL_ERROR "PXL Windows version components must not exceed 65535")
+        endif()
+    endforeach()
+    string(REGEX REPLACE "^v" "" display "${version}")
+    set(PXL_WINDOWS_VERSION_COMMA "${major},${minor},${patch},0" PARENT_SCOPE)
+    set(PXL_WINDOWS_VERSION_DISPLAY "${display}" PARENT_SCOPE)
+endfunction()
