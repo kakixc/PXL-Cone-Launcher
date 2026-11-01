@@ -26,13 +26,15 @@ The site selects the newest published release containing supported PXL files. It
 
 Use these release-file conventions for the initial x64 packages:
 
-- Windows installer: `PXL-Cone-Setup-<version>-x64.exe` (the existing `PXL-Cone-Setup.exe` also matches).
-- Windows Portable: `PXL-Cone-Windows-Portable-<version>-x64.zip`.
-- Linux: `PXL-Cone-Linux-<version>-x86_64.AppImage`.
+- Windows installer: `PXL-Cone-Windows-x64-Setup-<version>.exe`.
+- Windows Portable: `PXL-Cone-Windows-x64-Portable-<version>.zip`.
+- Linux: `PXL-Cone-Linux-x86_64-<version>.AppImage`.
 
 Windows visitors default to Setup, Linux visitors to AppImage. Android, iOS, macOS, ChromeOS and unknown systems get a manual desktop-platform choice; the site does not pretend to provide a native build for those systems. Browser identification can be imperfect, so platform buttons always remain visible. Setup/Portable/AppImage installation must be tested independently before publishing release files.
 
 ## GitHub Pages
+
+The public site is deployed at https://kakixc.github.io/PXL-Cone-Launcher/. The first alpha deployment passed its download-selection and artifact-boundary tests on GitHub Actions.
 
 Configure the repository Pages source as **GitHub Actions**, then manually run **PXL Cone website** when publication is approved. The workflow publishes only `build-pxl-site`, never the repository root. Adding this workflow does not itself publish a site. A real Pages deployment and real release-file downloads require separate verification.
 

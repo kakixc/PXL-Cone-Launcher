@@ -9,7 +9,9 @@
 <p align="center"><b>A native Minecraft launcher based on PineconeMC / Prism Launcher.</b></p>
 
 > [!IMPORTANT]
-> PXL Cone is in active development. The interface and transfer features are available in development code and previews; they are still being refined. This is not a stable release announcement.
+> **The first public alpha, 0.1.0-alpha.1, is available.** PXL Cone is still in active development; this is a testing release, not a stable version.
+
+[Download for Windows or Linux](https://kakixc.github.io/PXL-Cone-Launcher/) · [Release files and changes](https://github.com/kakixc/PXL-Cone-Launcher/releases/tag/v0.1.0-alpha.1)
 
 ## A look inside PXL Cone
 
@@ -66,9 +68,9 @@ See [the archive format and current limits](docs/PXL_ARCHIVE_FORMAT.md). Existin
 - English and Russian are the exposed product languages. Upstream translation percentages do not measure coverage of the new PXL interface.
 - Settings migration, dialog consistency, keyboard behavior and accessibility are still receiving fixes.
 
-## Roadmap — not implemented features
+The [PXL Cone website](https://kakixc.github.io/PXL-Cone-Launcher/) includes English/Russian, automatic Windows/Linux download selection and direct links to published release files. Its source is in [website/](website/). See [website preview and publishing](docs/WEBSITE.md).
 
-The player-facing website source is in [website/](website/), with English/Russian, automatic Windows/Linux download selection and direct links to published release files. A manual GitHub Pages workflow is included; the site has not been deployed. See [website preview and publishing](docs/WEBSITE.md).
+## Roadmap — not implemented features
 
 Other development directions have no fixed release date:
 
@@ -84,7 +86,7 @@ Other development directions have no fixed release date:
 
 The launcher uses **C++ and Qt** and reuses the PineconeMC / Prism architecture. It does not use Electron or an embedded web frontend as its UI foundation.
 
-The first public alpha targets **Windows Portable, Windows Setup and Linux AppImage**. A release date has not been set.
+The first public alpha provides **Windows Portable, Windows Setup and Linux AppImage**. [Download 0.1.0-alpha.1](https://github.com/kakixc/PXL-Cone-Launcher/releases/tag/v0.1.0-alpha.1) and read its known limitations before testing.
 
 > [!WARNING]
 > **Linux AppImage is experimental and has not been manually tested on a desktop Linux system.** Startup, game launch and desktop integration are not confirmed.
