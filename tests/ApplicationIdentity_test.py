@@ -66,6 +66,22 @@ class ApplicationIdentityTest(unittest.TestCase):
         self.assertIn(f'ln -s share/icons/hicolor/256x256/apps/{APP_ID}.png "$INSTALL_APPIMAGE_DIR"', action)
         self.assertNotIn("io.github.elyprismlauncher.ElyPrismLauncher", action)
 
+    def test_native_formats_have_pxl_icons_and_desktop_handler(self):
+        namespace = {"mime": "http://www.freedesktop.org/standards/shared-mime-info"}
+        metadata = ET.parse(self.build / "program_info" / f"{APP_ID}.xml").getroot()
+        desktop = configparser.ConfigParser(interpolation=None)
+        desktop.read(self.build / "program_info" / f"{APP_ID}.desktop", encoding="utf-8")
+        handlers = desktop["Desktop Entry"]["MimeType"].split(";")
+        for mime_type, extension in (("application/vnd.pxl-cone.pack+zip", "*.pxlconep"),
+                                     ("application/vnd.pxl-cone.transfer+zip", "*.pxlt")):
+            entry = metadata.find(f'mime:mime-type[@type="{mime_type}"]', namespace)
+            self.assertIsNotNone(entry)
+            self.assertEqual(entry.find("mime:glob", namespace).get("pattern"), extension)
+            self.assertEqual(entry.find("mime:icon", namespace).get("name"), APP_ID)
+            self.assertEqual(entry.find("mime:sub-class-of", namespace).get("type"), "application/zip")
+            self.assertIn(mime_type, handlers)
+        self.assertEqual(desktop["Desktop Entry"]["Exec"], "pxlcone %U")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -56,7 +56,7 @@ configure_file(pxlcone.qrc.in pxlcone.qrc @ONLY)
 configure_file(pxlcone.manifest.in pxlcone.manifest @ONLY)
 configure_file(pxlcone.ico pxlcone.ico COPYONLY)
 configure_file(${Launcher_SVGFileName} ${Launcher_SVGFileName} COPYONLY)
-configure_file(pxlcone.mime.xml ${Launcher_AppID}.xml COPYONLY)
+configure_file(pxlcone.mime.xml ${Launcher_AppID}.xml @ONLY)
 
 if(MSVC)
     set(Launcher_MSVC_Redist_NSIS_Section [=[

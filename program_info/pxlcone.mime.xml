@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/vnd.pxl-cone.pack+zip">
+        <comment>PXL Cone Pack</comment>
+        <comment xml:lang="ru">Сборка PXL Cone</comment>
+        <sub-class-of type="application/zip"/>
+        <icon name="@Launcher_AppID@"/>
+        <glob pattern="*.pxlconep"/>
+    </mime-type>
+    <mime-type type="application/vnd.pxl-cone.transfer+zip">
+        <comment>PXL Cone Transfer</comment>
+        <comment xml:lang="ru">Перенос окружения PXL Cone</comment>
+        <sub-class-of type="application/zip"/>
+        <icon name="@Launcher_AppID@"/>
+        <glob pattern="*.pxlt"/>
+    </mime-type>
     <mime-type type="application/x-modrinth-modpack+zip">
         <comment>Modrinth Modpack File</comment>
         <icon name="application-x-modrinth-modpack"/>
