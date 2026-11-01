@@ -196,4 +196,4 @@ QString FtbPage::getSerachTerm() const
 void FtbPage::setSearchTerm(QString term)
 {
     m_ui->searchEdit->setText(term);
-}
+}
