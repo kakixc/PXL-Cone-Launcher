@@ -26,6 +26,7 @@ PXL Cone brings its own interface to the PineconeMC / Prism foundation. Keep you
 - Actual download pause/resume is not implemented. Hiding progress does not cancel the task.
 - OptiFine installation remains a manual workflow.
 - Some advanced tools still use upstream dialogs. English and Russian coverage is still being refined.
+- The Inno Setup alpha installer does not register archive or browser-link associations. Use Import inside the launcher to open packs.
 - Task history lasts for the current launcher session.
 - Automatic executable replacement, animated banners, AI pack creation and community themes are not features of this alpha.
 
@@ -45,6 +46,7 @@ Keep a backup of important worlds before updating Minecraft, loaders or mods. In
 - Проверены не все сочетания версий игры, загрузчиков, источников контента и аккаунтов.
 - Настоящей паузы/продолжения загрузок пока нет. Скрытие прогресса не отменяет задачу.
 - OptiFine устанавливается вручную; некоторые продвинутые инструменты пока используют прежние диалоги. Перевод ещё дорабатывается.
+- Установщик альфы Inno Setup пока не регистрирует ассоциации архивов и браузерных ссылок. Для открытия сборок используйте «Импорт» в лаунчере.
 - История задач хранится в пределах сеанса. Автоматическая замена EXE, анимированные баннеры, AI-сборки и темы сообщества в эту альфу не входят.
 
 Сохраняйте резервные копии важных миров перед обновлением игры, загрузчика или модов. В сообщении об ошибке через Issues репозитория укажите ОС, версию лаунчера и шаги воспроизведения. Перед отправкой логов удалите токены и другие личные данные.
