@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QProcess>
 #include "pxl/WorkspaceTransfer.h"
 #include "archive/ArchiveWriter.h"
 #include "archive/ArchiveReader.h"
@@ -207,6 +208,83 @@ class WorkspaceTransferTest : public QObject {
         Pxl::Workspace restored;
         QVERIFY(!Pxl::prepareArchiveInstance(archive, 0, destination, restored).isEmpty());
         QVERIFY(!QFileInfo::exists(destination + "/instance.cfg"));
+    }
+    void rejectLinkedStaging_data()
+    {
+        QTest::addColumn<bool>("archiveImport");
+        QTest::newRow("archive") << true;
+        QTest::newRow("launcher-copy") << false;
+    }
+    void rejectInvalidStaging_data()
+    {
+        QTest::addColumn<QString>("kind");
+        QTest::newRow("missing") << QString("missing");
+        QTest::newRow("file") << QString("file");
+        QTest::newRow("nonempty") << QString("nonempty");
+    }
+    void rejectInvalidStaging()
+    {
+        QFETCH(QString, kind);
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const auto source = fixture(temp.path() + "/source");
+        const auto staging = temp.path() + "/staging";
+        if (kind == "file")
+            put(staging, "keep");
+        else if (kind == "nonempty")
+            put(staging + "/.keep", "keep");
+        const auto archive = temp.path() + "/pack.pxlconep";
+        QCOMPARE(Pxl::exportArchive(archive, { source }, { "pxlconep", "offline", false, false }), QString());
+        Pxl::Workspace restored;
+        QVERIFY(!Pxl::prepareArchiveInstance(archive, 0, staging, restored).isEmpty());
+        QVERIFY(!Pxl::copyLauncherInstance(source, staging).isEmpty());
+        QVERIFY(!QFileInfo::exists(staging + "/instance.cfg"));
+        if (kind != "missing") {
+            QFile sentinel(kind == "file" ? staging : staging + "/.keep");
+            QVERIFY(sentinel.open(QIODevice::ReadOnly));
+            QCOMPARE(sentinel.readAll(), QByteArray("keep"));
+        } else {
+            QVERIFY(!QFileInfo::exists(staging));
+        }
+    }
+    void rejectLinkedStaging()
+    {
+        QFETCH(bool, archiveImport);
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const auto source = fixture(temp.path() + "/source");
+        const auto target = temp.path() + "/outside";
+        const auto staging = temp.path() + "/staging";
+        QVERIFY(QDir().mkpath(target));
+#ifdef Q_OS_WIN
+        if (QProcess::execute("cmd.exe", { "/c", "mklink", "/J", QDir::toNativeSeparators(staging),
+                                          QDir::toNativeSeparators(target) }) != 0)
+            QSKIP("Cannot create a directory junction on this filesystem.");
+        QVERIFY(QFileInfo(staging).isJunction());
+#else
+        if (!QFile::link(target, staging))
+            QSKIP("Cannot create a directory symlink on this filesystem.");
+        QVERIFY(QFileInfo(staging).isSymLink());
+#endif
+        QString error;
+        if (archiveImport) {
+            const auto archive = temp.path() + "/pack.pxlconep";
+            QCOMPARE(Pxl::exportArchive(archive, { source }, { "pxlconep", "offline", false, false }), QString());
+            Pxl::Workspace restored;
+            error = Pxl::prepareArchiveInstance(archive, 0, staging, restored);
+        } else {
+            error = Pxl::copyLauncherInstance(source, staging);
+        }
+        const bool targetUntouched = QDir(target).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden).isEmpty();
+        // Remove the link itself before QTemporaryDir cleans up the fixture.
+#ifdef Q_OS_WIN
+        const bool linkRemoved = QDir().rmdir(staging);
+#else
+        const bool linkRemoved = QFile::remove(staging);
+#endif
+        QVERIFY(linkRemoved);
+        QVERIFY(!error.isEmpty());
+        QVERIFY(targetUntouched);
     }
     void sourceCopyAndCancellation()
     {

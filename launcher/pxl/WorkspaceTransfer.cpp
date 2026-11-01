@@ -106,6 +106,14 @@ void writeBytes(const QString& path, const QByteArray& bytes)
     QSaveFile file(path);
     require(file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit(), QObject::tr("Cannot write %1").arg(path));
 }
+void requireRealEmptyStaging(const QString& path)
+{
+    const QFileInfo info(path);
+    require(info.isDir() && !info.isSymLink() && !info.isJunction(),
+            QObject::tr("Import staging must be an existing directory, not a link."));
+    require(QDir(path).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System).isEmpty(),
+            QObject::tr("Import staging directory must be empty."));
+}
 void writeMetadata(const Workspace& workspace, const QString& staging)
 {
     INIFile settings;
@@ -538,8 +546,7 @@ QString prepareArchiveInstance(const QString& archive, int index, const QString&
         const auto error = inspectArchive(archive, manifest, cancel);
         require(error.isEmpty(), error);
         require(index >= 0 && index < manifest.instances.size(), QObject::tr("Invalid selected instance."));
-        require(QDir(staging).exists() && QDir(staging).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden).isEmpty(),
-                QObject::tr("Import staging directory must be empty."));
+        requireRealEmptyStaging(staging);
         prepared = manifest.instances[index];
         prepared.root = staging;
         QHash<QString, ContentFile> payload;
@@ -626,12 +633,12 @@ QString scanLauncher(const QString& directory, QVector<Workspace>& instances, st
 QString copyLauncherInstance(const Workspace& source, const QString& staging, std::atomic_bool* cancel, Progress progress)
 {
     try {
+        requireRealEmptyStaging(staging);
         const auto src = QDir(source.root).canonicalPath();
         const auto dst = QDir(staging).canonicalPath();
         require(!src.isEmpty() && !dst.isEmpty() && src.compare(dst, Qt::CaseInsensitive) != 0 &&
                 !dst.startsWith(src + '/', Qt::CaseInsensitive) && !src.startsWith(dst + '/', Qt::CaseInsensitive),
                 QObject::tr("Source and destination must not overlap."));
-        require(QDir(staging).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden).isEmpty(), QObject::tr("Staging directory must be empty."));
         Workspace workspace = source;
         QHash<QString, QString> sources;
         collectWorkspace(workspace, { "pxlt", "offline", true, true }, sources, cancel);
