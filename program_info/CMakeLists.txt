@@ -9,10 +9,11 @@ if(UNIX)
 endif()
 
 set(Launcher_CommonName "ElyPrismLauncher")
-set(Launcher_RuntimeName "PXLConeLauncher" PARENT_SCOPE)
+set(Launcher_RuntimeName "PXLConeLauncher")
+set(Launcher_RuntimeName "${Launcher_RuntimeName}" PARENT_SCOPE)
 set(Launcher_InstallID "PXLConeLauncher")
 set(Launcher_DisplayName "PXL Cone Launcher")
-set(Launcher_AppID "io.github.elyprismlauncher.ElyPrismLauncher")
+set(Launcher_AppID "io.github.kakixc.PXLConeLauncher")
 set(Launcher_Domain "pineconemc.ru")
 set(Launcher_Git "https://github.com/kakixc/PXL-Cone-Launcher")
 

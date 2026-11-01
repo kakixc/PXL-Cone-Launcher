@@ -161,6 +161,10 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: python3 tests/BuildConfiguration_test.py
 
+      - name: Check PXL desktop and package identity
+        if: ${{ runner.os == 'Linux' || runner.os == 'Windows' }}
+        run: python tests/ApplicationIdentity_test.py
+
       - name: Configure project
         run: |
           bash scripts/configure-pxl-build.sh

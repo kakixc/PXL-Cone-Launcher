@@ -14,7 +14,7 @@
     <p>Advanced Minecraft, Java and instance controls remain available alongside the everyday interface.</p>
   </description>
   <releases>
-    <release version="@Launcher_VERSION_NAME@" date="@Launcher_BUILD_TIMESTAMP@"></release>
+    <release version="@Launcher_RELEASE_VERSION@" date="@Launcher_BUILD_TIMESTAMP@"></release>
   </releases>
   <url type="homepage">https://github.com/kakixc/PXL-Cone-Launcher</url>
   <url type="bugtracker">https://github.com/kakixc/PXL-Cone-Launcher/issues</url>
