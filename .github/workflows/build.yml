@@ -175,7 +175,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           ctest --test-dir build --build-config "$BUILD_TYPE" \
-            -R '^(WorkspacePage|WorkspaceTransfer|LauncherUpdates)$' \
+            -R '^(DataLocation|WorkspacePage|WorkspaceTransfer|LauncherUpdates)$' \
             --output-on-failure --no-tests=error --timeout 180
 
       ##

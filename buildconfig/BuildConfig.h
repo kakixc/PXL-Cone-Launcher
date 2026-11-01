@@ -46,6 +46,7 @@ class Config {
    public:
     Config();
     QString LAUNCHER_NAME;
+    QString LAUNCHER_RUNTIME_NAME;
     QString LAUNCHER_APP_BINARY_NAME;
     QString LAUNCHER_DISPLAYNAME;
     QString LAUNCHER_COPYRIGHT;

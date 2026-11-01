@@ -22,6 +22,7 @@
 
 #include "PrismUpdater.h"
 #include "BuildConfig.h"
+#include "pxl/DataLocation.h"
 #include "ui/dialogs/ProgressDialog.h"
 
 #include <cstdlib>
@@ -76,9 +77,9 @@ void appDebugOutput(QtMsgType type, const QMessageLogContext& context, const QSt
 
 PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, argv)
 {
-    setOrganizationName(BuildConfig.LAUNCHER_NAME);
+    setOrganizationName(BuildConfig.LAUNCHER_RUNTIME_NAME);
     setOrganizationDomain(BuildConfig.LAUNCHER_DOMAIN);
-    setApplicationName(BuildConfig.LAUNCHER_NAME + "Updater");
+    setApplicationName(BuildConfig.LAUNCHER_RUNTIME_NAME + "Updater");
     setApplicationVersion(BuildConfig.printableVersionString() + "\n" + BuildConfig.GIT_COMMIT);
 
     // Command line parsing
@@ -142,7 +143,7 @@ PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, ar
         }
 #endif
     } else if (auto dataDirEnv =
-                   QProcessEnvironment::systemEnvironment().value(QString("%1_DATA_DIR").arg(BuildConfig.LAUNCHER_NAME.toUpper()));
+                   Pxl::dataDirectoryOverride(QProcessEnvironment::systemEnvironment(), BuildConfig.LAUNCHER_NAME);
                !dataDirEnv.isEmpty()) {
         adjustedBy = "System environment";
         m_dataPath = dataDirEnv;

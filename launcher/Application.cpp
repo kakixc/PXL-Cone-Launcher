@@ -45,6 +45,7 @@
 #include <QScreen>
 #include "ui/pxl/WindowGeometry.h"
 #include "BuildConfig.h"
+#include "pxl/DataLocation.h"
 
 #include "DataMigrationTask.h"
 #include "java/JavaInstallList.h"
@@ -300,9 +301,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         isANSIColorConsole = true;
     }
 
-    setOrganizationName(BuildConfig.LAUNCHER_NAME);
+    setOrganizationName(BuildConfig.LAUNCHER_RUNTIME_NAME);
     setOrganizationDomain(BuildConfig.LAUNCHER_DOMAIN);
-    setApplicationName(BuildConfig.LAUNCHER_NAME);
+    setApplicationName(BuildConfig.LAUNCHER_RUNTIME_NAME);
     const auto productVersion = BuildConfig.RELEASE_VERSION == "0.0.0-dev"
         ? QStringLiteral("Development preview") : BuildConfig.RELEASE_VERSION;
     setApplicationDisplayName(QString("%1 — %2").arg(BuildConfig.LAUNCHER_DISPLAYNAME, productVersion));
@@ -392,43 +393,21 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 #endif
     }
 
-    QString adjustedBy;
-    QString dataPath;
-    // change folder
-    QString dataDirEnv;
-    QString dirParam = parser.value("dir");
-    if (!dirParam.isEmpty()) {
-        // the dir param. it makes multimc data path point to whatever the user specified
-        // on command line
-        adjustedBy = "Command line";
-        dataPath = dirParam;
-    } else if (dataDirEnv = QProcessEnvironment::systemEnvironment().value(QString("%1_DATA_DIR").arg(BuildConfig.LAUNCHER_NAME.toUpper()));
-               !dataDirEnv.isEmpty()) {
-        adjustedBy = "System environment";
-        dataPath = dataDirEnv;
-    } else {
-        QDir foo;
-        if (DesktopServices::isSnap()) {
-            foo = QDir(qEnvironmentVariable("SNAP_USER_COMMON"));
-        } else {
-            foo = QDir(FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), ".."));
-        }
-
-        dataPath = foo.absolutePath();
-        adjustedBy = "Persistent data path";
-
+    const auto persistentPath = DesktopServices::isSnap()
+        ? QDir(qEnvironmentVariable("SNAP_USER_COMMON")).absolutePath()
+        : QDir(FS::PathCombine(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), "..")).absolutePath();
 #ifndef Q_OS_MACOS
-        if (auto portableUserData = FS::PathCombine(m_rootPath, "UserData"); QDir(portableUserData).exists()) {
-            dataPath = portableUserData;
-            adjustedBy = "Portable user data path";
-            m_portable = true;
-        } else if (QFile::exists(FS::PathCombine(m_rootPath, "portable.txt"))) {
-            dataPath = m_rootPath;
-            adjustedBy = "Portable data path";
-            m_portable = true;
-        }
+    constexpr bool allowPortable = true;
+#else
+    constexpr bool allowPortable = false;
 #endif
-    }
+    const auto dirParam = parser.value("dir");
+    const auto dataDirEnv = Pxl::dataDirectoryOverride(QProcessEnvironment::systemEnvironment(), BuildConfig.LAUNCHER_NAME);
+    const auto location = Pxl::selectDataLocation(dirParam, dataDirEnv,
+        m_rootPath, persistentPath, allowPortable);
+    QString dataPath = location.path;
+    const auto adjustedBy = location.reason;
+    m_portable = location.portable;
 
     if (!FS::ensureFolderPathExists(dataPath)) {
         showFatalErrorMessage(

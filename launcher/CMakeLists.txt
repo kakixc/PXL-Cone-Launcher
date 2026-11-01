@@ -35,6 +35,7 @@ set(CORE_SOURCES
     archive/ExtractZipTask.cpp
     archive/ExtractZipTask.h
     pxl/WorkspaceTransfer.h
+    pxl/DataLocation.h
     pxl/WorkspaceTransfer.cpp
     pxl/WorkspaceTasks.h
     pxl/WorkspaceTasks.cpp
