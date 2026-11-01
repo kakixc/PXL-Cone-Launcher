@@ -1,4 +1,5 @@
 #include "JavaWizardWidget.h"
+#include "ui/pxl/DialogOverlay.h"
 
 #include <QCheckBox>
 #include <QFileDialog>
@@ -358,8 +359,8 @@ void JavaWizardWidget::on_javaBrowseBtn_clicked()
 
 void JavaWizardWidget::javaDownloadBtn_clicked()
 {
-    auto jdialog = new Java::InstallDialog({}, nullptr, this);
-    jdialog->exec();
+    Java::InstallDialog dialog({}, nullptr, this);
+    Pxl::DialogOverlay::run(&dialog, window());
 }
 
 void JavaWizardWidget::on_javaStatusBtn_clicked()

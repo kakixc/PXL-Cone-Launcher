@@ -36,6 +36,7 @@
  */
 
 #include "JavaSettingsWidget.h"
+#include "ui/pxl/DialogOverlay.h"
 #include "ui/pxl/NumberField.h"
 #include "ui/pxl/SettingsMode.h"
 
@@ -93,8 +94,8 @@ JavaSettingsWidget::JavaSettingsWidget(BaseInstance* instance, QWidget* parent)
                 [this, settings] { m_ui->javaPathTextBox->setText(settings->get("JavaPath").toString()); });
 
         connect(m_ui->javaDownloadBtn, &QPushButton::clicked, this, [this] {
-            auto javaDialog = new Java::InstallDialog({}, m_instance, this);
-            javaDialog->exec();
+            Java::InstallDialog dialog({}, m_instance, this);
+            Pxl::DialogOverlay::run(&dialog, window());
         });
         connect(m_ui->javaPathTextBox, &QLineEdit::textChanged, [this](QString newValue) {
             if (m_instance->settings()->get("JavaPath").toString() != newValue) {

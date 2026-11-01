@@ -23,6 +23,15 @@
 #include <QScrollBar>
 #include <QTimer>
 #include <QThreadPool>
+#include <QCryptographicHash>
+#include <QScopeGuard>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <meta/Index.h>
+#include <ui/java/InstallJavaDialog.h>
+#include <SysInfo.h>
 #include <GZip.h>
 #include <ui/pxl/NameEntryPanel.h>
 #include <QStringListModel>
@@ -314,6 +323,12 @@ class ManualHistoryTask final : public Task {
     void executeTask() override {}
 };
 
+class LocalJavaMajorList final : public Meta::VersionList {
+public:
+    using Meta::VersionList::VersionList;
+    bool isLoaded() override { return true; }
+};
+
 class WorkspacePageTest : public QObject {
     Q_OBJECT
 
@@ -330,6 +345,89 @@ class WorkspacePageTest : public QObject {
     }
 
    private slots:
+    void javaDownloadChoicesKeepProviderSelectionAndFitOverlay_data()
+    {
+        QTest::addColumn<bool>("russian");
+        QTest::newRow("english") << false;
+        QTest::newRow("russian") << true;
+    }
+
+    void javaDownloadChoicesKeepProviderSelectionAndFitOverlay()
+    {
+        QFETCH(bool, russian);
+        POTranslator translator(":/pxl/translations/pxl-ru.po");
+        if (russian) qApp->installTranslator(&translator);
+        const auto removeTranslator = qScopeGuard([&] { qApp->removeTranslator(&translator); });
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto original = QDir::currentPath();
+        const auto restore = qScopeGuard([original] { QDir::setCurrent(original); });
+        QVERIFY(QDir::setCurrent(temporary.path()));
+        QList<Meta::VersionList::Ptr> lists;
+        const QStringList providers{"net.minecraft.java", "net.adoptium.java", "com.azul.java", "com.ibm.java"};
+        for (int i = 0; i < providers.size(); ++i) {
+            const auto uid = providers[i];
+            const auto major = i == 0 ? QString("java21") : QString("java17");
+            QJsonObject runtime{{"name", "pxl-test-runtime"}, {"vendor", "Fixture"},
+                                {"runtimeOS", SysInfo::getSupportedJavaArchitecture()},
+                                {"downloadType", "archive"}, {"packageType", "jre"},
+                                {"version", QJsonObject{{"major", i == 0 ? 21 : 17}, {"minor", 0}, {"security", 1}}}};
+            QJsonObject json{{"formatVersion", 1}, {"uid", uid}, {"version", major}, {"name", "Java fixture"},
+                             {"releaseTime", "2026-01-01T00:00:00Z"}, {"runtimes", QJsonArray{runtime}}};
+            const auto data = QJsonDocument(json).toJson();
+            auto version = std::make_shared<Meta::Version>(uid, major);
+            const auto fileName = "meta/" + version->localFilename();
+            QVERIFY(QDir().mkpath(QFileInfo(fileName).absolutePath()));
+            QFile file(fileName);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QCOMPARE(file.write(data), qint64(data.size()));
+            file.close();
+            version->setSha256(QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()));
+            auto load = version->loadTask(Net::Mode::Offline);
+            load->start();
+            QVERIFY(load->wasSuccessful());
+            QVERIFY(version->isLoaded());
+            auto list = std::make_shared<LocalJavaMajorList>(uid);
+            list->setVersions({version});
+            lists.append(list);
+        }
+        Meta::Index metadata(lists);
+        auto global = settings(temporary);
+        InstanceList instances(global.get(), temporary.filePath("instances"));
+        WorkspacePage surface(&instances);
+        surface.setImageBackground(true);
+        surface.resize(1000, 650);
+        surface.show();
+        Java::InstallDialog dialog({}, nullptr, &surface, &metadata);
+        auto* provider = dialog.findChild<QComboBox*>("javaProviderChoice");
+        auto* buttons = dialog.findChild<QDialogButtonBox*>();
+        auto* recommended = dialog.findChild<QCheckBox*>();
+        QVERIFY(provider && buttons && recommended);
+        QCOMPARE(provider->count(), 4);
+        QCOMPARE(buttons->button(QDialogButtonBox::Ok)->text(), russian ? QString::fromUtf8("Скачать") : QString("Download"));
+        QVERIFY(buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        provider->setCurrentIndex(1);
+        QVERIFY(!buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        auto* hiddenPage = dialog.findChild<QWidget*>("javaInstallPage_net.minecraft.java");
+        QVERIFY(hiddenPage);
+        QVERIFY(QMetaObject::invokeMethod(hiddenPage, "selectionChanged", Qt::DirectConnection));
+        QVERIFY(!buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        recommended->setChecked(false);
+        QVERIFY(buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        recommended->setChecked(true);
+        QVERIFY(!buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        provider->setCurrentIndex(0);
+        QVERIFY(buttons->button(QDialogButtonBox::Ok)->isEnabled());
+        QTimer::singleShot(240, &dialog, [&] {
+            QVERIFY(surface.rect().contains(dialog.geometry()));
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(surface.grab().save(QDir(screenshots).filePath(
+                russian ? "java-download-overlay-ru.png" : "java-download-overlay-en.png")));
+            buttons->button(QDialogButtonBox::Cancel)->click();
+        });
+        QCOMPARE(Pxl::DialogOverlay::run(&dialog, &surface), int(QDialog::Rejected));
+    }
+
     void alternativeLoginReturnsAnIdleAccount_data()
     {
         QTest::addColumn<bool>("device");
@@ -610,15 +708,53 @@ class WorkspacePageTest : public QObject {
         page.show();
         ManualHistoryTask task;
         page.showPendingInstance(&task, "New survival", QIcon(":/pxl/icons/squares-four.svg"));
-        auto* pending = page.findChild<QWidget*>("workspacePendingInstances");
-        QVERIFY(pending && pending->isVisible());
+        auto* pending = page.findChild<QStandardItemModel*>("workspacePendingInstances");
+        auto* view = page.findChild<QListView*>("workspaceCards");
+        QVERIFY(pending && view && view->isVisible());
         QCOMPARE(instances.rowCount(), 0);
-        QCOMPARE(pending->layout()->count(), 1);
-        QVERIFY(page.findChild<QWidget*>("pendingInstanceCard"));
+        QCOMPARE(pending->rowCount(), 1);
+        QCOMPARE(view->model()->rowCount(), 1);
+        QSignalSpy launch(&page, &WorkspacePage::activateInstance);
+        QSignalSpy menu(&page, &WorkspacePage::contextMenuRequested);
+        QSignalSpy edit(&page, &WorkspacePage::openInstanceRequested);
         task.start();
+        task.setStatus("Downloading libraries");
+        task.setProgress(45, 100);
+        ManualHistoryTask second;
+        page.showPendingInstance(&second, "Another world", QIcon(":/pxl/icons/squares-four.svg"));
+        for (const auto* mode : {"covers", "hybrid", "list"}) {
+            page.setLibraryPresentation(mode);
+            QCoreApplication::processEvents();
+            QCOMPARE(view->model()->rowCount(), 2);
+            QModelIndex first;
+            for (int row = 0; row < 2; ++row)
+                if (view->model()->index(row, 0).data().toString() == "New survival") first = view->model()->index(row, 0);
+            QVERIFY(first.isValid());
+            QVERIFY(first.data(Pxl::PendingRole).toBool());
+            QCOMPARE(first.data(Pxl::PendingProgressRole).toInt(), 450);
+            QCOMPARE(first.data(Pxl::PendingStatusRole).toString(), QString("Downloading libraries"));
+            QVERIFY(first.data(InstanceList::InstanceIDRole).toString().isEmpty());
+            auto* delegate = static_cast<Pxl::InstanceLibraryDelegate*>(view->itemDelegate());
+            const auto rowRect = view->visualRect(first).adjusted(0,2,-4,-2);
+            QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, delegate->playRect(rowRect).center());
+            QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, delegate->moreRect(rowRect).center());
+            QTest::keyClick(view, Qt::Key_Return, Qt::ControlModifier);
+            const auto screenshots = qEnvironmentVariable("PXL_UI_SCREENSHOT_DIR");
+            if (!screenshots.isEmpty()) QVERIFY(page.grab().save(QDir(screenshots).filePath(QString("pending-%1.png").arg(mode))));
+        }
+        QCOMPARE(launch.count(), 0);
+        QCOMPARE(menu.count(), 0);
+        QCOMPARE(edit.count(), 0);
         task.fail();
-        QVERIFY(pending->isHidden());
-        QCOMPARE(pending->layout()->count(), 0);
+        QCOMPARE(pending->rowCount(), 1);
+        QCOMPARE(view->model()->rowCount(), 1);
+        second.start();
+        second.complete();
+        QCOMPARE(pending->rowCount(), 0);
+        auto transient = std::make_unique<ManualHistoryTask>();
+        page.showPendingInstance(transient.get(), "Cancelled", {});
+        transient.reset();
+        QCOMPARE(pending->rowCount(), 0);
         QCOMPARE(instances.rowCount(), 0);
     }
 

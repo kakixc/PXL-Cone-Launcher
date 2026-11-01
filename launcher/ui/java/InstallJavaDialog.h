@@ -26,13 +26,16 @@ class MinecraftInstance;
 class PageContainer;
 class PackProfile;
 class QDialogButtonBox;
+namespace Meta { class Index; }
 
 namespace Java {
 class InstallDialog final : public QDialog, private BasePageProvider {
     Q_OBJECT
 
    public:
-    explicit InstallDialog(const QString& uid = QString(), BaseInstance* instance = nullptr, QWidget* parent = nullptr);
+    // Optional metadata index is borrowed and must outlive the dialog.
+    explicit InstallDialog(const QString& uid = QString(), BaseInstance* instance = nullptr, QWidget* parent = nullptr,
+                           Meta::Index* metadata = nullptr);
 
     QList<BasePage*> getPages() override;
     QString dialogTitle() override;
@@ -41,6 +44,7 @@ class InstallDialog final : public QDialog, private BasePageProvider {
     void done(int result) override;
 
    private:
+    Meta::Index* m_metadata;
     PageContainer* container;
     QDialogButtonBox* buttons;
 };

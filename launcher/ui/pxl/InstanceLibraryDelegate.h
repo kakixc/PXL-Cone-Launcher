@@ -14,6 +14,11 @@
 #include <functional>
 
 namespace Pxl {
+enum PendingInstanceRole {
+    PendingRole = Qt::UserRole + 0x600,
+    PendingStatusRole,
+    PendingProgressRole
+};
 // All presentations share the same source data and hit targets as their drawing.
 class InstanceLibraryDelegate final : public QStyledItemDelegate {
 public:
@@ -57,8 +62,12 @@ public:
         const auto group = index.data(InstanceList::GroupRole).toString();
         auto metadata = index.data(m_metadataRole).toString();
         if (!group.isEmpty()) metadata += " · " + group;
-        const auto state = instance && instance->isRunning() ? tr("Running") : m_lastPlayed(instance);
-        const auto duration = m_duration(instance);
+        const bool pending = index.data(PendingRole).toBool();
+        const int progress = index.data(PendingProgressRole).toInt();
+        const auto state = pending ? index.data(PendingStatusRole).toString()
+                                   : instance && instance->isRunning() ? tr("Running") : m_lastPlayed(instance);
+        const auto duration = pending ? (progress >= 0 ? QString::number(progress / 10) + "%" : tr("Downloading…"))
+                                      : m_duration(instance);
         auto text = [&](QRect area, const QString& value, int size, bool bold = false, bool muted = false) {
             QFont font = option.font;
             font.setPixelSize(size);
@@ -103,7 +112,7 @@ public:
                 text(QRect(row.left()+72,row.top()+46,identityWidth,18),metadata,11,false,true);
             } else {
                 text(QRect(row.left()+72,row.top()+11,identityWidth,24),index.data().toString(),15,true);
-                text(QRect(row.left()+72,row.top()+38,identityWidth,20),metadata,12,false,true);
+                text(QRect(row.left()+72,row.top()+38,identityWidth,20),pending && !wide ? state : metadata,12,false,true);
             }
             if (wide) {
                 text(QRect(row.right()-302,row.top()+12,150,22),state,12,false,true);
@@ -125,6 +134,17 @@ public:
         QFont button = option.font; button.setPixelSize(12); button.setWeight(QFont::DemiBold); painter->setFont(button);
         painter->setPen(!enabled ? QColor("#7d858e") : bright && !running ? QColor("#251c16") : QColor("#f4ded0"));
         painter->drawText(action.adjusted(31,0,-5,0),Qt::AlignVCenter,running ? tr("Stop") : tr("Play"));
+        if (pending) {
+            const QRectF track(row.left()+16, row.bottom()-9, row.width()-32, 4);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor(190,200,210,25));
+            painter->drawRoundedRect(track,2,2);
+            painter->setBrush(QColor("#f2a365"));
+            const qreal fraction = progress < 0 ? 0.18 : qBound(0,progress,1000) / 1000.0;
+            painter->drawRoundedRect(QRectF(track.topLeft(),QSizeF(track.width()*fraction,track.height())),2,2);
+            painter->restore();
+            return;
+        }
         const auto more = moreRect(row);
         if (mode() == "covers") { painter->setPen(Qt::NoPen); painter->setBrush(QColor(20,24,29,160)); painter->drawRoundedRect(more,8,8); }
         QIcon(":/pxl/icons/dots-three-vertical.svg").paint(painter,more.adjusted(5,5,-5,-5));
@@ -132,6 +152,7 @@ public:
     }
     bool editorEvent(QEvent* event, QAbstractItemModel*, const QStyleOptionViewItem& option, const QModelIndex& index) override
     {
+        if (index.data(PendingRole).toBool()) return false;
         if (event->type() != QEvent::MouseButtonRelease) return false;
         auto* mouse = static_cast<QMouseEvent*>(event);
         if (mouse->button() != Qt::LeftButton) return false;

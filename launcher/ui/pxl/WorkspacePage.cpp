@@ -47,6 +47,9 @@
 #include <QFontMetrics>
 #include <functional>
 #include <QComboBox>
+#include <QConcatenateTablesProxyModel>
+#include <QStandardItemModel>
+#include <QPersistentModelIndex>
 #include <QFrame>
 #include <QHash>
 #include <QHBoxLayout>
@@ -269,6 +272,13 @@ class WorkspaceInstanceModel final : public QSortFilterProxyModel {
    protected:
     QVariant data(const QModelIndex& index, int role) const override
     {
+        if (QSortFilterProxyModel::data(index, Pxl::PendingRole).toBool()) {
+            if (role == kWorkspaceMetadataRole) return tr("Creating instance");
+            if (role == Qt::AccessibleTextRole || role == Qt::ToolTipRole)
+                return QSortFilterProxyModel::data(index, Qt::DisplayRole).toString() + " — "
+                    + QSortFilterProxyModel::data(index, Pxl::PendingStatusRole).toString();
+            return QSortFilterProxyModel::data(index, role);
+        }
         if (role == Qt::DecorationRole) {
             const auto key = QSortFilterProxyModel::data(index, role).toString();
             if (auto* app = APPLICATION_DYN; app && app->icons())
@@ -297,6 +307,8 @@ class WorkspaceInstanceModel final : public QSortFilterProxyModel {
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
     {
         const auto index = sourceModel()->index(sourceRow, 0, sourceParent);
+        if (index.data(Pxl::PendingRole).toBool())
+            return m_mode == Mode::Library && (m_search.isEmpty() || index.data().toString().contains(m_search, Qt::CaseInsensitive));
         auto* instance = static_cast<BaseInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
         if (!instance || instance->currentStatus() != BaseInstance::Status::Present)
             return false;
@@ -586,13 +598,8 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     featureActions->addStretch();
     recent->addLayout(featureActions);
     contentLayout->addWidget(m_recentSection);
-    m_pendingInstances = new QWidget(content);
+    m_pendingInstances = new QStandardItemModel(0, 1, this);
     m_pendingInstances->setObjectName("workspacePendingInstances");
-    auto* pendingLayout = new QVBoxLayout(m_pendingInstances);
-    pendingLayout->setContentsMargins(0, 0, 0, 0);
-    pendingLayout->setSpacing(12);
-    m_pendingInstances->hide();
-    contentLayout->addWidget(m_pendingInstances);
     // The recent proxy stays authoritative for choosing the featured instance.
     // Its hidden view keeps the same selection synchronisation as the Library.
     m_homeView = new QListView(this);
@@ -709,7 +716,10 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_recentModel = new WorkspaceInstanceModel(WorkspaceInstanceModel::Mode::Recent, this);
     m_libraryModel = new WorkspaceInstanceModel(WorkspaceInstanceModel::Mode::Library, this);
     m_recentModel->setSourceModel(instances);
-    m_libraryModel->setSourceModel(instances);
+    auto* libraryEntries = new QConcatenateTablesProxyModel(this);
+    libraryEntries->addSourceModel(m_pendingInstances);
+    libraryEntries->addSourceModel(instances);
+    m_libraryModel->setSourceModel(libraryEntries);
     m_homeView->setModel(m_recentModel);
     m_libraryView->setModel(m_libraryModel);
     for (auto* view : {m_homeView, m_libraryView}) {
@@ -875,8 +885,9 @@ void WorkspacePage::showHome(bool home)
 void WorkspacePage::updateLayout()
 {
     const int count = m_libraryModel->rowCount();
-    const int total = (m_instances ? m_instances->rowCount() : 0) - (m_showHome && !m_featuredId.isEmpty() ? 1 : 0);
-    const bool emptyHome = m_showHome && (!m_instances || m_instances->rowCount() == 0);
+    const int total = (m_instances ? m_instances->rowCount() : 0) + m_pendingInstances->rowCount()
+                    - (m_showHome && !m_featuredId.isEmpty() ? 1 : 0);
+    const bool emptyHome = m_showHome && total == 0 && m_featuredId.isEmpty();
     findChild<QWidget*>("workspaceEmptyActions")->setVisible(emptyHome);
     for (const auto* name : {"workspaceHomeCreate", "workspaceHomeImport", "workspaceHomeExport"})
         findChild<QPushButton*>(name)->setVisible(!emptyHome);
@@ -890,7 +901,7 @@ void WorkspacePage::updateLayout()
     m_search->setVisible(!m_showHome || total > 0);
     m_libraryFilters->setVisible(!m_showHome || total > 0);
     m_viewModeButton->setVisible(!m_showHome || total > 0);
-    m_emptyState->setVisible(m_pendingInstances->layout()->count() == 0 && count == 0 && (!m_showHome || total > 0 || m_featuredId.isEmpty()));
+    m_emptyState->setVisible(count == 0 && (!m_showHome || total > 0 || m_featuredId.isEmpty()));
     m_libraryEmpty->setText(total == 0 ? (m_featuredId.isEmpty() ? tr("Your library starts here") : tr("Add another instance"))
                                      : tr("No matching instances"));
     m_libraryView->setVisible(count > 0);
@@ -1329,41 +1340,29 @@ void WorkspacePage::bindUpdater(ExternalUpdater* updater)
 void WorkspacePage::showPendingInstance(Task* task, const QString& name, const QIcon& icon)
 {
     if (!task || task->isFinished()) return;
-    auto* card = Pxl::settingsCard(m_pendingInstances, name, tr("Downloading…"));
-    card->setObjectName("pendingInstanceCard");
-    card->setStyleSheet(card->styleSheet().replace("QFrame#pxlSettingsCard", "QFrame#pendingInstanceCard"));
-    auto* layout = static_cast<QVBoxLayout*>(card->layout());
-    auto* row = new QHBoxLayout;
-    auto* image = new QLabel(card);
-    image->setPixmap(icon.pixmap(48, 48));
-    image->setFixedSize(48, 48);
-    row->addWidget(image);
-    auto* status = new QLabel(task->getStatus(), card);
-    status->setTextFormat(Qt::PlainText);
-    status->setWordWrap(true);
-    row->addWidget(status, 1);
-    layout->addLayout(row);
-    auto* progress = new QProgressBar(card);
-    progress->setRange(0, 0);
-    progress->setFixedHeight(8);
-    progress->setTextVisible(false);
-    layout->addWidget(progress);
-    connect(task, &Task::status, status, &QLabel::setText);
-    connect(task, &Task::progress, progress, [progress](qint64 current, qint64 total) {
-        progress->setRange(0, total > 0 ? 1000 : 0);
-        if (total > 0) progress->setValue(int(1000.0 * current / total));
+    auto* item = new QStandardItem(icon, name);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setData(true, Pxl::PendingRole);
+    item->setData(task->getStatus().isEmpty() ? tr("Downloading…") : task->getStatus(), Pxl::PendingStatusRole);
+    item->setData(task->getTotalProgress() > 0 ? int(1000.0 * task->getProgress() / task->getTotalProgress()) : -1,
+                  Pxl::PendingProgressRole);
+    m_pendingInstances->appendRow(item);
+    const QPersistentModelIndex entry(item->index());
+    // Row identity survives sorting, other tasks finishing, and mode changes.
+    connect(task, &Task::status, this, [this, entry](const QString& status) {
+        if (entry.isValid()) m_pendingInstances->setData(entry, status, Pxl::PendingStatusRole);
     });
-    m_pendingInstances->layout()->addWidget(card);
-    m_pendingInstances->show();
-    const auto remove = [this, card] {
-        m_pendingInstances->layout()->removeWidget(card);
-        card->hide();
-        card->deleteLater();
-        m_pendingInstances->setVisible(m_pendingInstances->layout()->count() > 0);
+    connect(task, &Task::progress, this, [this, entry](qint64 current, qint64 total) {
+        if (entry.isValid()) m_pendingInstances->setData(entry, total > 0 ? int(1000.0 * current / total) : -1,
+                                                       Pxl::PendingProgressRole);
+    });
+    const auto remove = [this, entry] {
+        if (!entry.isValid()) return;
+        m_pendingInstances->removeRow(entry.row());
         updateLayout();
     };
-    connect(task, &Task::finished, card, remove);
-    connect(task, &QObject::destroyed, card, remove);
+    connect(task, &Task::finished, this, remove);
+    connect(task, &QObject::destroyed, this, remove);
     updateLayout();
 }
 

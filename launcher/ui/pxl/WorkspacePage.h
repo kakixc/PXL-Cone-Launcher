@@ -22,6 +22,7 @@ class QLabel;
 class QListView;
 class QPushButton;
 class QSortFilterProxyModel;
+class QStandardItemModel;
 class QStackedWidget;
 class WorkspaceCatPreview;
 class QScrollArea;
@@ -105,7 +106,7 @@ class WorkspacePage final : public QWidget {
     QPushButton* m_featuredPlay = nullptr;
     QWidget* m_recentSection = nullptr;
     QWidget* m_emptyState = nullptr;
-    QWidget* m_pendingInstances = nullptr;
+    QStandardItemModel* m_pendingInstances = nullptr;
     QWidget* m_libraryFilters = nullptr;
     QWidget* m_navigation = nullptr;
     QWidget* m_header = nullptr;

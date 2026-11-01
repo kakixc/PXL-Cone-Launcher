@@ -3252,3 +3252,51 @@ msgstr "Для этой сборки нет доступного источни�
 msgctxt "DataPackPage"
 msgid "Data pack updates are unavailable when metadata is disabled!"
 msgstr "Обновление датапаков недоступно, пока отключены метаданные."
+
+msgctxt "QSortFilterProxyModel"
+msgid "Creating instance"
+msgstr "Создание сборки"
+
+msgctxt "QStyledItemDelegate"
+msgid "Downloading…"
+msgstr "Загружается…"
+
+msgctxt "InstallJavaPage"
+msgid "Java version"
+msgstr "Версия Java"
+
+msgctxt "InstallJavaPage"
+msgid "Release"
+msgstr "Выпуск"
+
+msgctxt "Java::InstallDialog"
+msgid "Install Java"
+msgstr "Установить Java"
+
+msgctxt "Java::InstallDialog"
+msgid "Choose a provider and Java version. PXL will download and install it for you."
+msgstr "Выберите источник и версию Java. PXL скачает и установит её автоматически."
+
+msgctxt "Java::InstallDialog"
+msgid "Provider"
+msgstr "Источник"
+
+msgctxt "Java::InstallDialog"
+msgid "Recommended versions only"
+msgstr "Только рекомендуемые версии"
+
+msgctxt "Java::InstallDialog"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "Java::InstallDialog"
+msgid "Download"
+msgstr "Скачать"
+
+msgctxt "Java::InstallDialog"
+msgid "Cancel"
+msgstr "Отмена"
+
+msgctxt "Java::InstallDialog"
+msgid "Java download failed: %1"
+msgstr "Не удалось скачать Java: %1"

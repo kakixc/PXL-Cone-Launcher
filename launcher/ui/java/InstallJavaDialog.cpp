@@ -24,6 +24,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QLabel>
+#include <QComboBox>
 
 #include "Application.h"
 #include "BaseVersionList.h"
@@ -42,28 +44,44 @@
 #include "ui/java/VersionList.h"
 #include "ui/widgets/PageContainer.h"
 #include "ui/widgets/VersionSelectWidget.h"
+#include "ui/pxl/LibraryControls.h"
+#include "ui/pxl/DialogOverlay.h"
+#include "ui/pxl/Animations.h"
+#include "ui/pxl/MessagePanel.h"
 
 class InstallJavaPage : public QWidget, public BasePage {
    public:
     Q_OBJECT
    public:
-    explicit InstallJavaPage(const QString& id, const QString& iconName, const QString& name, QWidget* parent = nullptr)
-        : QWidget(parent), uid(id), iconName(iconName), name(name)
+    explicit InstallJavaPage(const QString& id, const QString& iconName, const QString& name, Meta::Index* metadata,
+                             QWidget* parent = nullptr)
+        : QWidget(parent), uid(id), iconName(iconName), name(name), m_metadata(metadata)
     {
-        setObjectName(QStringLiteral("VersionSelectWidget"));
-        horizontalLayout = new QHBoxLayout(this);
+        setObjectName("javaInstallPage_" + uid);
+        horizontalLayout = new QVBoxLayout(this);
         horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         majorVersionSelect = new VersionSelectWidget(this);
+        majorVersionSelect->setObjectName("javaMajorChoice");
         majorVersionSelect->selectCurrent();
         majorVersionSelect->setEmptyString(tr("No Java versions are currently available in the meta."));
         majorVersionSelect->setEmptyErrorString(tr("Couldn't load or download the Java version lists!"));
-        horizontalLayout->addWidget(majorVersionSelect, 1);
+        majorVersionSelect->useCompactPresentation();
+        auto* majorLabel = new QLabel(tr("Java version"), this);
+        horizontalLayout->addWidget(majorLabel);
+        horizontalLayout->addWidget(majorVersionSelect);
 
         javaVersionSelect = new VersionSelectWidget(this);
+        javaVersionSelect->setObjectName("javaReleaseChoice");
         javaVersionSelect->setEmptyString(tr("No Java versions are currently available for your OS."));
         javaVersionSelect->setEmptyErrorString(tr("Couldn't load or download the Java version lists!"));
-        horizontalLayout->addWidget(javaVersionSelect, 4);
+        javaVersionSelect->useCompactPresentation();
+        horizontalLayout->addSpacing(10);
+        horizontalLayout->addWidget(new QLabel(tr("Release"), this));
+        horizontalLayout->addWidget(javaVersionSelect);
+        javaVersionSelect->setEnabled(false);
+        horizontalLayout->setSpacing(8);
+        horizontalLayout->addStretch();
         connect(majorVersionSelect, &VersionSelectWidget::selectedVersionChanged, this, &InstallJavaPage::setSelectedVersion);
         connect(majorVersionSelect, &VersionSelectWidget::selectedVersionChanged, this, &InstallJavaPage::selectionChanged);
         connect(javaVersionSelect, &VersionSelectWidget::selectedVersionChanged, this, &InstallJavaPage::selectionChanged);
@@ -72,9 +90,6 @@ class InstallJavaPage : public QWidget, public BasePage {
     }
     ~InstallJavaPage()
     {
-        delete horizontalLayout;
-        delete majorVersionSelect;
-        delete javaVersionSelect;
     }
 
     //! loads the list if needed.
@@ -87,6 +102,8 @@ class InstallJavaPage : public QWidget, public BasePage {
     void setSelectedVersion(BaseVersion::Ptr version)
     {
         auto dcast = std::dynamic_pointer_cast<Meta::Version>(version);
+        m_hasMajor = bool(dcast);
+        javaVersionSelect->setEnabled(m_hasMajor);
         if (!dcast) {
             return;
         }
@@ -103,7 +120,7 @@ class InstallJavaPage : public QWidget, public BasePage {
         if (loaded)
             return;
 
-        const auto versions = APPLICATION->metadataIndex()->get(uid);
+        const auto versions = m_metadata->get(uid);
         if (!versions)
             return;
 
@@ -117,12 +134,12 @@ class InstallJavaPage : public QWidget, public BasePage {
         connect(javaVersionSelect->view(), &QAbstractItemView::doubleClicked, dialog, &QDialog::accept);
     }
 
-    BaseVersion::Ptr selectedVersion() const { return javaVersionSelect->selectedVersion(); }
+    BaseVersion::Ptr selectedVersion() const { return m_hasMajor ? javaVersionSelect->selectedVersion() : nullptr; }
     void selectSearch() { javaVersionSelect->selectSearch(); }
     void loadList()
     {
-        majorVersionSelect->loadList(true);
-        javaVersionSelect->loadList(true);
+        if (loaded) majorVersionSelect->loadList(true);
+        if (m_hasMajor) javaVersionSelect->loadList(true);
     }
 
    public slots:
@@ -152,14 +169,16 @@ class InstallJavaPage : public QWidget, public BasePage {
     const QString uid;
     const QString iconName;
     const QString name;
+    Meta::Index* m_metadata;
     bool loaded = false;
 
-    QHBoxLayout* horizontalLayout = nullptr;
+    QVBoxLayout* horizontalLayout = nullptr;
     VersionSelectWidget* majorVersionSelect = nullptr;
     VersionSelectWidget* javaVersionSelect = nullptr;
 
     QStringList m_recommended_majors;
-    bool m_recommend;
+    bool m_recommend = false;
+    bool m_hasMajor = false;
 };
 
 static InstallJavaPage* pageCast(BasePage* page)
@@ -182,30 +201,50 @@ QStringList getRecommendedJavaVersionsFromVersionList(Meta::VersionList::Ptr lis
     return recommendedJavas;
 }
 
-InstallDialog::InstallDialog(const QString& uid, BaseInstance* instance, QWidget* parent)
-    : QDialog(parent), container(new PageContainer(this, QString(), this)), buttons(new QDialogButtonBox(this))
+InstallDialog::InstallDialog(const QString& uid, BaseInstance* instance, QWidget* parent, Meta::Index* metadata)
+    : QDialog(parent), m_metadata(metadata ? metadata : APPLICATION->metadataIndex()),
+      container(new PageContainer(this, QString(), this)), buttons(new QDialogButtonBox(this))
 {
     auto layout = new QVBoxLayout(this);
-    // small margins look ugly on macOS on modal windows
-    #ifndef Q_OS_MACOS
-    layout->setContentsMargins(0, 0, 0, 0);
-    #endif
+    setObjectName("pxlInstallJava");
+    setProperty("pxlFlow", true);
+    setProperty("pxlAnimateLifecycle", true);
+    setProperty("pxlPreferredSize", QSize(580, 450));
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(16);
+    auto* title = new QLabel(tr("Install Java"), this);
+    title->setStyleSheet("font-size:22px; font-weight:700; background:transparent;");
+    layout->addWidget(title);
+    auto* subtitle = new QLabel(tr("Choose a provider and Java version. PXL will download and install it for you."), this);
+    subtitle->setWordWrap(true);
+    subtitle->setProperty("pxlFlowHint", true);
+    layout->addWidget(subtitle);
+    auto* providerRow = new QHBoxLayout;
+    providerRow->setSpacing(12);
+    providerRow->addWidget(new QLabel(tr("Provider"), this));
+    auto* providers = new Pxl::ChoiceChip(this);
+    providers->setObjectName("javaProviderChoice");
+    providers->setAccessibleName(tr("Provider"));
+    for (auto* page : container->getPages()) providers->addItem(page->icon(), page->displayName(), page->id());
+    providerRow->addWidget(providers, 1);
+    layout->addLayout(providerRow);
+    container->hidePageList();
+    container->setPageHeadingVisible(false);
+    container->setMinimumSize(0, 0);
     container->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     layout->addWidget(container);
 
-    auto buttonLayout = new QHBoxLayout(this);
-    // small margins look ugly on macOS on modal windows
-    #ifndef Q_OS_MACOS
-    buttonLayout->setContentsMargins(0, 0, 6, 6);
-    #endif
+    auto buttonLayout = new QHBoxLayout;
+    buttonLayout->setSpacing(10);
 
-    auto refreshLayout = new QHBoxLayout(this);
+    auto refreshLayout = new QHBoxLayout;
 
-    auto refreshButton = new QPushButton(tr("&Refresh"), this);
+    auto refreshButton = new QPushButton(tr("Refresh"), this);
+    refreshButton->setIcon(QIcon(":/pxl/icons/arrows-clockwise.svg"));
     connect(refreshButton, &QPushButton::clicked, this, [this] { pageCast(container->selectedPage())->loadList(); });
     refreshLayout->addWidget(refreshButton);
 
-    auto recommendedCheckBox = new QCheckBox("Recommended", this);
+    auto recommendedCheckBox = new QCheckBox(tr("Recommended versions only"), this);
     recommendedCheckBox->setCheckState(Qt::CheckState::Checked);
     connect(recommendedCheckBox, &QCheckBox::stateChanged, this, [this](int state) {
         for (BasePage* page : container->getPages()) {
@@ -213,22 +252,24 @@ InstallDialog::InstallDialog(const QString& uid, BaseInstance* instance, QWidget
         }
     });
 
-    refreshLayout->addWidget(recommendedCheckBox);
+    layout->insertWidget(3, recommendedCheckBox);
     buttonLayout->addLayout(refreshLayout);
+    buttonLayout->addStretch();
 
     buttons->setOrientation(Qt::Horizontal);
     buttons->setStandardButtons(QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
     buttons->button(QDialogButtonBox::Ok)->setText(tr("Download"));
+    buttons->button(QDialogButtonBox::Ok)->setProperty("pxlPrimary", true);
     buttons->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     buttonLayout->addWidget(buttons);
 
-    container->addButtons(buttonLayout);
+    layout->addLayout(buttonLayout);
 
     setWindowTitle(dialogTitle());
     setWindowModality(Qt::WindowModal);
-    resize(840, 480);
+    resize(580, 450);
 
     QStringList recommendedJavas;
     if (auto mcInst = dynamic_cast<MinecraftInstance*>(instance); mcInst) {
@@ -242,7 +283,7 @@ InstallDialog::InstallDialog(const QString& uid, BaseInstance* instance, QWidget
             }
         }
     } else {
-        const auto versions = APPLICATION->metadataIndex()->get("net.minecraft.java");
+        const auto versions = m_metadata->get("net.minecraft.java");
         if (versions) {
             if (versions->isLoaded()) {
                 recommendedJavas = getRecommendedJavaVersionsFromVersionList(versions);
@@ -269,13 +310,21 @@ InstallDialog::InstallDialog(const QString& uid, BaseInstance* instance, QWidget
 
         auto cast = pageCast(page);
         cast->setRecommend(true);
-        connect(cast, &InstallJavaPage::selectionChanged, this, [this, cast] { validate(cast); });
+        connect(cast, &InstallJavaPage::selectionChanged, this, [this, cast] {
+            if (container->selectedPage() == cast) validate(cast);
+        });
         if (!recommendedJavas.isEmpty()) {
             cast->setRecommendedMajors(recommendedJavas);
         }
     }
     connect(container, &PageContainer::selectedPageChanged, this, [this](BasePage* previous, BasePage* selected) { validate(selected); });
-    pageCast(container->selectedPage())->selectSearch();
+    providers->setCurrentIndex(providers->findData(container->selectedPage()->id()));
+    connect(providers, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, providers](int) {
+        container->selectPage(providers->currentData().toString());
+        container->setPageHeadingVisible(false);
+        Pxl::animatePage(container);
+    });
+    container->setPageHeadingVisible(false);
     validate(container->selectedPage());
 }
 
@@ -283,16 +332,16 @@ QList<BasePage*> InstallDialog::getPages()
 {
     return {
         // Mojang
-        new InstallJavaPage("net.minecraft.java", "mojang", tr("Mojang")),
+        new InstallJavaPage("net.minecraft.java", "mojang", tr("Mojang"), m_metadata),
         // Adoptium
-        new InstallJavaPage("net.adoptium.java", "adoptium", tr("Adoptium")),
+        new InstallJavaPage("net.adoptium.java", "adoptium", tr("Adoptium"), m_metadata),
         // Azul
-        new InstallJavaPage("com.azul.java", "azul", tr("Azul Zulu")),
+        new InstallJavaPage("com.azul.java", "azul", tr("Azul Zulu"), m_metadata),
         // IBM
 	/* Must watch out in case the AdoptOpenJDK infrastructure is deprecated.
         In case of happening, IBM does not seem to provide as of today (03/2026) an API like Adoptium does and rather uses GitHub directly in its website: `developer.ibm.com`.
         GitHub is known for rate limiting requests that do not use an API key from an account. */
-        new InstallJavaPage("com.ibm.java", "openj9_hex_custom", tr("IBM Semeru Open")),
+        new InstallJavaPage("com.ibm.java", "openj9_hex_custom", tr("IBM Semeru Open"), m_metadata),
     };
 }
 
@@ -324,8 +373,7 @@ void InstallDialog::done(int result)
                         task = makeShared<ArchiveDownloadTask>(meta->url, final_path, meta->checksumType, meta->checksumHash);
                         break;
                     case Java::DownloadType::Unknown:
-                        QString error = QString(tr("Could not determine Java download type!"));
-                        CustomMessageBox::selectable(this, tr("Error"), error, QMessageBox::Warning)->show();
+                        Pxl::showNotice(window(), tr("Error"), tr("Could not determine Java download type!"));
                         deletePath();
                         return;
                 }
@@ -335,9 +383,8 @@ void InstallDialog::done(int result)
                 seq->addTask(makeShared<Java::SymlinkTask>(final_path));
                 task = seq;
 #endif
-                connect(task.get(), &Task::failed, this, [this, &deletePath](QString reason) {
-                    QString error = QString("Java download failed: %1").arg(reason);
-                    CustomMessageBox::selectable(this, tr("Error"), error, QMessageBox::Warning)->show();
+                connect(task.get(), &Task::failed, this, [this, deletePath](QString reason) {
+                    Pxl::showNotice(window(), tr("Error"), tr("Java download failed: %1").arg(reason));
                     deletePath();
                 });
                 connect(task.get(), &Task::aborted, this, deletePath);
