@@ -29,6 +29,18 @@ New non-portable installations use a separate `PXLConeLauncher` data directory r
 
 The Windows installer offers PXL archive associations for `.pxlconep` and `.pxlt`, which open the existing import preview rather than installing immediately. Existing extension defaults are retained; `.zip` and `.mrpack` receive only an Open With entry. Browser links from CurseForge and Prism are an unchecked optional component, and an existing handler is preserved. Registry writes are per-user. Uninstallation checks that a command still points to the same PXL installation before removing its association. These source rules still need a disposable Windows installation/coexistence test, including Windows' Default Apps selection.
 
+### Local Inno Setup build
+
+The NSIS installer described above remains the CI packaging route. For local builds with Inno Setup 6, use `scripts/build-windows-inno.ps1` and `program_info/pxlcone-setup.iss`. This installer uses a separate `PXLConeLauncherAlpha` installation identity and program directory to avoid sharing uninstall ownership with NSIS. It does not register archive or browser-link associations; open archives through the launcher's import action. It does not migrate an older preview installation or remove user data.
+
+Prepare a new, clean Setup payload from the reviewed Windows Portable archive, omitting `portable.txt`, and regenerate its manifest with `scripts/write-package-manifest.py`. Include the portable release runtime DLLs, but no PDBs or test executables. Do not use an installed application or working preview folder. Then compile to an existing output directory that does not already contain this version's Setup file:
+
+```powershell
+./scripts/build-windows-inno.ps1 -PackageRoot path/to/clean-setup-payload -Version 0.1.0-alpha.1 -OutputDirectory path/to/new-output
+```
+
+The wrapper validates required files, allowed package structure, the exact manifest and embedded application version, and writes a SHA256 sidecar. Compilation does not install the application or validate installation, update and uninstall behavior on another machine.
+
 The script does not build an installer, run packages, sign files, contact GitHub or publish anything. The disabled `release.ymloff` is an inherited publication template and must not be enabled as a PXL release workflow without revision.
 
 An artifact-enabled build also compiles the standalone updater. Validate this target separately from a local build with an empty `Launcher_BUILD_ARTIFACT`: the latter does not compile it. The standalone process uses the shared progress dialog without the main launcher's task-center integration. A successful build does not validate application replacement, rollback or installer execution.

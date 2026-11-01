@@ -24,6 +24,29 @@ try {
         [IO.File]::WriteAllText((Join-Path $fixture $runtime), 'fixture')
     }
     & $checker -PackageRoot $fixture -RequireMsvcRuntime
+    $rejected = $false
+    try { & $checker -PackageRoot $fixture -RequireMsvcRuntime -SetupPayload } catch {
+        if ($_.Exception.Message -notlike '*portable.txt*') { throw }
+        $rejected = $true
+    }
+    if (-not $rejected) { throw 'Setup payload accepted a portable marker.' }
+    Remove-Item -LiteralPath (Join-Path $fixture 'portable.txt')
+    & $checker -PackageRoot $fixture -RequireMsvcRuntime -SetupPayload
+    foreach ($relative in @('.env', 'CMakeCache.txt', 'debug.log', 'test.exe', 'jars/extra.jar', 'platforms/notes.txt')) {
+        $stray = Join-Path $fixture $relative
+        [IO.File]::WriteAllText($stray, 'fixture')
+        $rejected = $false
+        try {
+            & (Join-Path $PSScriptRoot '../scripts/build-windows-inno.ps1') -PackageRoot $fixture `
+                -Version '0.1.0-alpha.1' -OutputDirectory $temporaryBase -Compiler (Join-Path $fixture 'pxlcone.exe')
+        } catch {
+            if ($_.Exception.Message -notlike '*Unexpected file in Setup payload*') { throw }
+            $rejected = $true
+        }
+        if (-not $rejected) { throw "Unexpected Setup file was accepted: $relative" }
+        Remove-Item -LiteralPath $stray
+    }
+    [IO.File]::WriteAllText((Join-Path $fixture 'portable.txt'), 'fixture')
     foreach ($name in @('pxlcone.cfg', 'elyprismlauncher.cfg', 'prismlauncher.cfg', 'polymc.cfg', 'multimc.cfg')) {
         $config = Join-Path $fixture $name
         [IO.File]::WriteAllText($config, 'private settings')
