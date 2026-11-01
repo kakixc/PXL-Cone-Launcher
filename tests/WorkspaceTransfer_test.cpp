@@ -139,6 +139,45 @@ class WorkspaceTransferTest : public QObject {
         files[0].versionId = "exact-version";
         QCOMPARE(Pxl::fromJson(Pxl::toJson(manifest), parsed), QString());
     }
+    void rejectPrivateArchiveContent_data()
+    {
+        QTest::addColumn<QString>("path");
+        for (const auto& path : { "accounts.json", "launcher_accounts.json", "launcher_profiles.json",
+                                 "usercache.json", "usernamecache.json", "session.json", "auth.json",
+                                 "ACCOUNTS.JSON", "LaUnChEr_PrOfIlEs.JsOn", "logs/latest.log", "SESSION.LOCK" })
+            QTest::newRow(path) << QString("minecraft/") + path;
+    }
+    void rejectPrivateArchiveContent()
+    {
+        QFETCH(QString, path);
+        QTemporaryDir temp;
+        const auto source = fixture(temp.path() + "/source");
+        const auto archive = temp.path() + "/crafted.pxlconep";
+        QCOMPARE(Pxl::exportArchive(archive, { source }, { "pxlconep", "offline", false, false }), QString());
+        Pxl::Manifest manifest;
+        QCOMPARE(Pxl::inspectArchive(archive, manifest), QString());
+        auto file = manifest.instances[0].files.first();
+        const QByteArray payload("private archive fixture");
+        file.path = path;
+        file.size = payload.size();
+        file.sha256 = QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex();
+        file.bundled = true;
+        manifest.instances[0].files = { file };
+        {
+            MMCZip::ArchiveWriter writer(archive);
+            QVERIFY(writer.open());
+            QVERIFY(writer.addFile("manifest.json", QJsonDocument(Pxl::toJson(manifest)).toJson()));
+            QVERIFY(writer.addFile("instances/0/" + path, payload));
+            QVERIFY(writer.close());
+        }
+        const auto staging = temp.path() + "/staging";
+        QVERIFY(QDir().mkpath(staging));
+        Pxl::Workspace prepared;
+        QVERIFY(!Pxl::prepareArchiveInstance(archive, 0, staging, prepared).isEmpty());
+        QVERIFY(QDir(staging).entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden).isEmpty());
+        QCOMPARE(Pxl::fileHash(source.root + "/.minecraft/accounts.json"),
+                 QString(QCryptographicHash::hash(QByteArray("secret"), QCryptographicHash::Sha256).toHex()));
+    }
     void rejectUnsafeArchiveAndCorruption()
     {
         QTemporaryDir temp;

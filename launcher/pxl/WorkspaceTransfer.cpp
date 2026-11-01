@@ -54,9 +54,17 @@ QJsonObject readObject(const QByteArray& bytes)
     require(error.error == QJsonParseError::NoError && document.isObject(), QObject::tr("Invalid JSON manifest: %1").arg(error.errorString()));
     return document.object();
 }
+bool portableGamePath(const QString& path)
+{
+    const QString first = path.section('/', 0, 0).toLower();
+    static const QSet<QString> excluded = { "logs", "crash-reports", "natives", ".git", ".cache", "webcache", "cache",
+                                            "accounts.json", "launcher_accounts.json", "launcher_profiles.json",
+                                            "usercache.json", "usernamecache.json", "session.json", "auth.json" };
+    return !excluded.contains(first) && !path.endsWith(".lock", Qt::CaseInsensitive);
+}
 bool contentPath(const QString& path)
 {
-    return safeRelativePath(path) && (path.startsWith("minecraft/") || path.startsWith("patches/") ||
+    return safeRelativePath(path) && ((path.startsWith("minecraft/") && portableGamePath(path.mid(10))) || path.startsWith("patches/") ||
                                       path.startsWith("jarmods/") || path == "icon.png");
 }
 bool trustedDownload(const QString& text)
@@ -117,10 +125,7 @@ void writeMetadata(const Workspace& workspace, const QString& staging)
 bool includedGamePath(const QString& path, const ExportOptions& options)
 {
     const QString first = path.section('/', 0, 0).toLower();
-    static const QSet<QString> excluded = { "logs", "crash-reports", "natives", ".git", ".cache", "webcache", "cache",
-                                            "accounts.json", "launcher_accounts.json", "launcher_profiles.json",
-                                            "usercache.json", "usernamecache.json", "session.json", "auth.json" };
-    if (excluded.contains(first) || path.endsWith(".lock") || path == "session.lock")
+    if (!portableGamePath(path))
         return false;
     return (options.worlds || first != "saves") && (options.screenshots || first != "screenshots");
 }
