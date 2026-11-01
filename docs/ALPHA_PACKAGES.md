@@ -49,6 +49,8 @@ Before the owner publishes an alpha, validate the Windows packages, including a 
 
 Linux AppImage may be offered as an **experimental, manually untested** alpha package. Repeat this limitation in the release notes; do not claim desktop Linux validation. Inspect the actual final AppImage contents before upload: exclude accounts and session files, user configuration, instances, worlds, screenshots, logs and local development/test data. Build it from a clean install payload. The staging script checks the AppImage header but does not inspect its contents, so staging success alone is not a privacy check. If no AppImage is available, this inspection remains pending.
 
+The Linux packaging workflow runs `scripts/normalize-linux-bundle.py` after sharun bundling. It selects the bundled Qt SDK rather than system Qt, places plugins under a stable relative path, and retains Java-helper access after sharun dispatch. Generated SDK paths and superseded libraries are preserved in a separate build backup outside the distributed package. Run `python3 tests/LinuxBundle_test.py` on Linux when changing this step; an existing output/backup is not overwritten.
+
 Upload the reviewed files themselves as assets of the matching GitHub prerelease. The website recognises these filenames and links directly to the published assets. It cannot offer a private draft as a public download. After publication, check each website download and the launcher's update notification against that actual release.
 
 Local staging regression tests:

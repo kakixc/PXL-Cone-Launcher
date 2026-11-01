@@ -32,6 +32,7 @@ runs:
       run: |
         python3 tests/PackageManifest_test.py
         python3 tests/AlphaAssets_test.py
+        python3 tests/LinuxBundle_test.py
 
     - name: Cleanup Qt installation on Linux
       shell: bash
@@ -102,6 +103,9 @@ runs:
         # FIXME(@getchoo): gamemode doesn't seem to be very portable with DBus. Find a way to make it work!
         find "$INSTALL_APPIMAGE_DIR" -name '*gamemode*' -exec rm {} +
 
+        python3 scripts/normalize-linux-bundle.py "$INSTALL_APPIMAGE_DIR" \
+          --qt-prefix "$(dirname -- "$QT_PLUGIN_PATH")" --backup "$BUILD_DIR/appimage-qt-backup"
+
         #disable OpenGL and Vulkan launcher features until https://github.com/VHSgunzo/sharun/issues/35
         echo "PINECONEMC_DISABLE_GLVULKAN=1" >> "$INSTALL_APPIMAGE_DIR"/.env
         #makes the launcher use portals for file picking
@@ -110,6 +114,7 @@ runs:
         ln -s share/applications/io.github.kakixc.PXLConeLauncher.desktop "$INSTALL_APPIMAGE_DIR"
         ln -s share/icons/hicolor/256x256/apps/io.github.kakixc.PXLConeLauncher.png "$INSTALL_APPIMAGE_DIR"
         mv "$INSTALL_APPIMAGE_DIR"/{sharun,AppRun}
+        python3 scripts/write-package-manifest.py "$INSTALL_APPIMAGE_DIR"
         ls -la "$INSTALL_APPIMAGE_DIR"
 
         if [[ "${{ github.ref_type }}" == "tag" ]]; then
@@ -141,6 +146,9 @@ runs:
 
         # FIXME(@getchoo): gamemode doesn't seem to be very portable with DBus. Find a way to make it work!
         find "$INSTALL_PORTABLE_DIR" -name '*gamemode*' -exec rm {} +
+
+        python3 scripts/normalize-linux-bundle.py "$INSTALL_PORTABLE_DIR" \
+          --qt-prefix "$(dirname -- "$QT_PLUGIN_PATH")" --backup "$BUILD_DIR/portable-qt-backup"
 
         python3 scripts/write-package-manifest.py "$INSTALL_PORTABLE_DIR"
         tar -czf PXL-Cone-portable.tar.gz -C "$INSTALL_PORTABLE_DIR" .
