@@ -33,7 +33,9 @@ The script does not build an installer, run packages, sign files, contact GitHub
 
 An artifact-enabled build also compiles the standalone updater. Validate this target separately from a local build with an empty `Launcher_BUILD_ARTIFACT`: the latter does not compile it. The standalone process uses the shared progress dialog without the main launcher's task-center integration. A successful build does not validate application replacement, rollback or installer execution.
 
-Before the owner publishes an alpha, verify all three packages on their target systems, including a data-preserving update. Check account sign-in, Java selection/download, game launch/stop, content installation/update, cancellation, import/export and small-screen behavior. Record known limitations in the release notes. Source builds and fixture tests do not replace those checks.
+Before the owner publishes an alpha, validate the Windows packages, including a data-preserving update. Check account sign-in, Java selection/download, game launch/stop, content installation/update, cancellation, import/export and small-screen behavior. Record known limitations in the release notes. Source builds and fixture tests do not replace those checks.
+
+Linux AppImage may be offered as an **experimental, manually untested** alpha package. Repeat this limitation in the release notes; do not claim desktop Linux validation. Inspect the actual final AppImage contents before upload: exclude accounts and session files, user configuration, instances, worlds, screenshots, logs and local development/test data. Build it from a clean install payload. The staging script checks the AppImage header but does not inspect its contents, so staging success alone is not a privacy check. If no AppImage is available, this inspection remains pending.
 
 Upload the reviewed files themselves as assets of the matching GitHub prerelease. The website recognises these filenames and links directly to the published assets. It cannot offer a private draft as a public download. After publication, check each website download and the launcher's update notification against that actual release.
 

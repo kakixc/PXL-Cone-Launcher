@@ -84,7 +84,10 @@ Other development directions have no fixed release date:
 
 The launcher uses **C++ and Qt** and reuses the PineconeMC / Prism architecture. It does not use Electron or an embedded web frontend as its UI foundation.
 
-The first public alpha targets **Windows Portable, Windows Setup and Linux AppImage**. These packages still need clean-system validation; source builds or a Windows preview do not establish readiness of all three formats. A release date has not been set.
+The first public alpha targets **Windows Portable, Windows Setup and Linux AppImage**. A release date has not been set.
+
+> [!WARNING]
+> **Linux AppImage is experimental and has not been manually tested on a desktop Linux system.** Startup, game launch and desktop integration are not confirmed.
 
 Build configuration lives in the root [CMakeLists.txt](CMakeLists.txt); platform workflows are in [.github/workflows](.github/workflows). Core dependencies and build options follow the upstream project, with PXL resources and UI components added alongside them.
 
