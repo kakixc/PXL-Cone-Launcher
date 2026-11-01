@@ -1,0 +1,91 @@
+; SPDX-License-Identifier: GPL-3.0-only
+!ifndef PXL_SHELL_ASSOCIATIONS
+!define PXL_SHELL_ASSOCIATIONS
+
+!define PXL_PROGID "@Launcher_InstallID@.App"
+!define PXL_EXE "@Launcher_APP_BINARY_NAME@.exe"
+!define PXL_IMPORT_COMMAND '"$INSTDIR\${PXL_EXE}" -I "%1"'
+
+; Register only our own application namespace. A different install keeps it.
+; $R9 tells the caller whether extension registration is safe.
+!macro PXL_REGISTER_APP
+  StrCpy $R9 0
+  ReadRegStr $R0 HKCR "Applications\${PXL_EXE}\shell\open\command" ""
+  ReadRegStr $R1 HKCR "${PXL_PROGID}\shell\open\command" ""
+  ${If} $R0 == ""
+  ${OrIf} $R0 == '${PXL_IMPORT_COMMAND}'
+    ${If} $R1 == ""
+    ${OrIf} $R1 == '${PXL_IMPORT_COMMAND}'
+      WriteRegStr HKCU "Software\Classes\${PXL_PROGID}" "" "@Launcher_DisplayName@"
+      WriteRegStr HKCU "Software\Classes\${PXL_PROGID}\DefaultIcon" "" '"$INSTDIR\${PXL_EXE}",0'
+      WriteRegStr HKCU "Software\Classes\${PXL_PROGID}\shell\open\command" "" '${PXL_IMPORT_COMMAND}'
+      WriteRegStr HKCU "Software\Classes\Applications\${PXL_EXE}" "FriendlyAppName" "@Launcher_DisplayName@"
+      WriteRegStr HKCU "Software\Classes\Applications\${PXL_EXE}\shell\open\command" "" '${PXL_IMPORT_COMMAND}'
+      WriteRegStr HKCU "Software\Classes\Applications\${PXL_EXE}\Capabilities" "ApplicationName" "@Launcher_DisplayName@"
+      WriteRegStr HKCU "Software\Classes\Applications\${PXL_EXE}\Capabilities" "ApplicationDescription" "Minecraft instances and PXL Cone archives"
+      WriteRegStr HKCU "Software\RegisteredApplications" "@Launcher_DisplayName@" "Software\Classes\Applications\${PXL_EXE}\Capabilities"
+      StrCpy $R9 1
+    ${EndIf}
+  ${EndIf}
+!macroend
+
+!macro PXL_REGISTER_EXTENSION EXT DEFAULT_IF_FREE
+  WriteRegNone HKCU "Software\Classes\${EXT}\OpenWithProgids" "${PXL_PROGID}"
+  WriteRegStr HKCU "Software\Classes\Applications\${PXL_EXE}\Capabilities\FileAssociations" "${EXT}" "${PXL_PROGID}"
+  ${If} ${DEFAULT_IF_FREE} == true
+    ; HKCR includes existing machine-wide handlers; do not shadow them.
+    ReadRegStr $R0 HKCR "${EXT}" ""
+    ${If} $R0 == ""
+      WriteRegStr HKCU "Software\Classes\${EXT}" "" "${PXL_PROGID}"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
+!macro PXL_REGISTER_PROTOCOL_IF_FREE SCHEME
+  ReadRegStr $R0 HKCR "${SCHEME}\shell\open\command" ""
+  ${If} $R0 == ""
+  ${OrIf} $R0 == '${PXL_IMPORT_COMMAND}'
+    WriteRegStr HKCU "Software\Classes\${SCHEME}" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\${SCHEME}\DefaultIcon" "" '"$INSTDIR\${PXL_EXE}",0'
+    WriteRegStr HKCU "Software\Classes\${SCHEME}\shell\open\command" "" '${PXL_IMPORT_COMMAND}'
+  ${Else}
+    DetailPrint "Kept existing ${SCHEME} link handler."
+  ${EndIf}
+!macroend
+
+!macro PXL_REMOVE_EXTENSION_IF_OWNED EXT
+  ReadRegStr $R0 HKCU "Software\Classes\${PXL_PROGID}\shell\open\command" ""
+  ${If} $R0 == '${PXL_IMPORT_COMMAND}'
+    ReadRegStr $R1 HKCU "Software\Classes\${EXT}" ""
+    ${If} $R1 == "${PXL_PROGID}"
+      DeleteRegValue HKCU "Software\Classes\${EXT}" ""
+    ${EndIf}
+    DeleteRegValue HKCU "Software\Classes\${EXT}\OpenWithProgids" "${PXL_PROGID}"
+    DeleteRegKey /ifempty HKCU "Software\Classes\${EXT}\OpenWithProgids"
+    DeleteRegKey /ifempty HKCU "Software\Classes\${EXT}"
+  ${EndIf}
+!macroend
+
+!macro PXL_REMOVE_PROTOCOL_IF_OWNED SCHEME
+  ReadRegStr $R0 HKCU "Software\Classes\${SCHEME}\shell\open\command" ""
+  ${If} $R0 == '${PXL_IMPORT_COMMAND}'
+    DeleteRegKey HKCU "Software\Classes\${SCHEME}"
+  ${EndIf}
+!macroend
+
+!macro PXL_REMOVE_APP_IF_OWNED
+  ReadRegStr $R0 HKCU "Software\Classes\${PXL_PROGID}\shell\open\command" ""
+  ${If} $R0 == '${PXL_IMPORT_COMMAND}'
+    DeleteRegKey HKCU "Software\Classes\${PXL_PROGID}"
+  ${EndIf}
+  ReadRegStr $R0 HKCU "Software\Classes\Applications\${PXL_EXE}\shell\open\command" ""
+  ${If} $R0 == '${PXL_IMPORT_COMMAND}'
+    DeleteRegKey HKCU "Software\Classes\Applications\${PXL_EXE}"
+    ReadRegStr $R1 HKCU "Software\RegisteredApplications" "@Launcher_DisplayName@"
+    ${If} $R1 == "Software\Classes\Applications\${PXL_EXE}\Capabilities"
+      DeleteRegValue HKCU "Software\RegisteredApplications" "@Launcher_DisplayName@"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
+!endif

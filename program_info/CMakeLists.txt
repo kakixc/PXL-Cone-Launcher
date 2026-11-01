@@ -82,6 +82,7 @@ SectionEnd
 ]=])
 endif()
 
+configure_file(PxlShellAssociations.nsh.in PxlShellAssociations.nsh @ONLY)
 configure_file(win_install.nsi.in win_install.nsi @ONLY)
 
 if(SCDOC_FOUND)

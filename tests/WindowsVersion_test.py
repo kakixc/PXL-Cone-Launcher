@@ -81,7 +81,7 @@ class WindowsVersionTest(unittest.TestCase):
         self.assertIn('InstallDir "$LOCALAPPDATA\\Programs\\PXLConeLauncher"', installer)
         self.assertIn('!define UNINST_KEY "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PXLConeLauncher"', installer)
         self.assertIn('InstallDirRegKey HKCU "Software\\PXLConeLauncher" "InstallDir"', installer)
-        self.assertIn('!define APPID "PXLConeLauncher.App"', installer)
+        self.assertIn('/PxlShellAssociations.nsh"', installer)
         self.assertNotIn("ElyPrismLauncher", installer)
 
 

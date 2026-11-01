@@ -127,143 +127,9 @@ VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "@PXL_WINDOWS_VERSION_DIS
 !macroend
 
 ;--------------------------------
-; Shell Associate Macros
+; PXL shell association helpers
 
-!macro APP_SETUP_Def DESCRIPTION ICON APP_ID APP_NAME APP_EXE COMMANDTEXT COMMAND
-
-  ; setup APP_ID
-  WriteRegStr ShCtx "Software\Classes\${APP_ID}" "" `${DESCRIPTION}`
-  WriteRegStr ShCtx "Software\Classes\${APP_ID}\DefaultIcon" "" `${ICON}`
-  ; default open verb
-  WriteRegStr ShCtx "Software\Classes\${APP_ID}\shell" "" "open"
-  WriteRegStr ShCtx "Software\Classes\${APP_ID}\shell\open" "" `${COMMANDTEXT}`
-  WriteRegStr ShCtx "Software\Classes\${APP_ID}\shell\open\command" "" `${COMMAND}`
-
-  WriteRegStr ShCtx "Software\Classes\Applications\${APP_EXE}\shell\open\command" "" `${COMMAND}`
-  WriteRegStr ShCtx "Software\Classes\Applications\${APP_EXE}" "FriendlyAppName" `${APP_NAME}` ; [Optional]
-
-!macroend
-
-!macro APP_SETUP DESCRIPTION ICON APP_ID APP_NAME APP_EXE COMMANDTEXT COMMAND
-
-  !insertmacro APP_SETUP_Def `${DESCRIPTION}` `${ICON}` `${APP_ID}` `${APP_NAME}` `${APP_EXE}` `${COMMANDTEXT}` `${COMMAND}`
-
-!macroend
-
-!macro APP_SETUP_DEFAULT DESCRIPTION ICON APP_ID APP_NAME APP_EXE COMMANDTEXT COMMAND
-
-  !insertmacro APP_SETUP_Def `${DESCRIPTION}` `${ICON}` `${APP_ID}` `${APP_NAME}` `${APP_EXE}` `${COMMANDTEXT}` `${COMMAND}`
-
-  # Register "Default Programs"
-  WriteRegStr ShCtx "Software\Classes\Applications\${APP_EXE}\Capabilities" "ApplicationDescription" `${DESCRIPTION}`
-  WriteRegStr ShCtx "Software\RegisteredApplications" `${APP_NAME}` "Software\Classes\Applications\${APP_EXE}\Capabilities"
-
-!macroend
-
-!macro APP_ASSOCIATE_Def EXT APP_ID APP_EXE OVERWIRTE
-  ; Backup the previously associated file class
-  ${If} ${OVERWIRTE} == true
-  ReadRegStr $R0 ShCtx "Software\Classes\${EXT}" ""
-  WriteRegStr ShCtx "Software\Classes\${EXT}" "${APP_ID}_backup" "$R0"
-  WriteRegStr ShCtx "Software\Classes\${EXT}" "" "${APP_ID}"
-  ${EndIf}
-
-  WriteRegNone ShCtx "Software\Classes\${EXT}\OpenWithList" "${APP_EXE}" ; Win2000+
-  WriteRegNone ShCtx "Software\Classes\${EXT}\OpenWithProgids" "${APP_ID}" ; WinXP+
-
-!macroend
-
-!macro APP_ASSOCIATE EXT APP_ID APP_EXE OVERWIRTE
-
-  !insertmacro APP_ASSOCIATE_Def `${EXT}` `${APP_ID}` `${APP_EXE}` `${OVERWIRTE}`
-
-!macroend
-
-!macro APP_ASSOCIATE_DEFAULT EXT APP_ID APP_EXE OVERWIRTE
-
-  !insertmacro APP_ASSOCIATE_Def `${EXT}` `${APP_ID}` `${APP_EXE}` `${OVERWIRTE}`
-
-  # Register "Default Programs"
-  WriteRegStr ShCtx "Software\Classes\Applications\${APP_EXE}\Capabilities\FileAssociations" "${EXT}" "${APP_ID}"
-
-!macroend
-
-!macro APP_UNASSOCIATE EXT APP_ID APP_EXE
-
-  # Unregister file type
-  ClearErrors
-  ; restore backup
-  ReadRegStr $R1 ShCtx "Software\Classes\${EXT}" ""
-  ${If} $R1 == "${APP_ID}"
-    ReadRegStr $R0 ShCtx "Software\Classes\${EXT}" `${APP_ID}_backup`
-    WriteRegStr ShCtx "Software\Classes\${EXT}" "" "$R0"
-  ${Else}
-    ReadRegStr $R0 ShCtx "Software\Classes\${EXT}" ""
-  ${EndIf}
-
-  DeleteRegKey /IfEmpty ShCtx "Software\Classes\${APP_ID}"
-  ${IfNot} ${Errors}
-  ${AndIf} $R0 == "${APP_ID}"
-    DeleteRegValue ShCtx "Software\Classes\${EXT}" ""
-    DeleteRegKey /IfEmpty ShCtx "Software\Classes\${EXT}"
-  ${EndIf}
-
-  DeleteRegValue ShCtx "Software\Classes\${EXT}\OpenWithList" "${APP_EXE}"
-  DeleteRegKey /IfEmpty ShCtx "Software\Classes\${EXT}\OpenWithList"
-  DeleteRegValue ShCtx "Software\Classes\${EXT}\OpenWithProgids" "${APP_ID}"
-  DeleteRegKey /IfEmpty ShCtx "Software\Classes\${EXT}\OpenWithProgids"
-  DeleteRegKey /IfEmpty  ShCtx "Software\Classes\${EXT}"
-
-  # Attempt to clean up junk left behind by the Windows shell
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "${APP_ID}_${EXT}"
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "Applications\${APP_EXE}_${EXT}"
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\${EXT}\OpenWithProgids" "${APP_ID}"
-  DeleteRegKey /IfEmpty HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\${EXT}\OpenWithProgids"
-  DeleteRegKey /IfEmpty HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\${EXT}\OpenWithList"
-  DeleteRegKey /IfEmpty HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\${EXT}"
-
-!macroend
-
-!macro APP_TEARDOWN_Def APP_ID APP_NAME APP_EXE
-
-  # Unregister file type
-  ClearErrors
-  DeleteRegKey /IfEmpty ShCtx "Software\Classes\${APP_ID}\shell"
-  ${IfNot} ${Errors}
-    DeleteRegKey ShCtx "Software\Classes\${APP_ID}\DefaultIcon"
-  ${EndIf}
-
-  # Unregister "Open With"
-  DeleteRegKey ShCtx "Software\Classes\Applications\${APP_EXE}"
-
-  DeleteRegKey ShCtx `Software\Classes\${APP_ID}`
-  DeleteRegKey ShCtx "Software\Classes\Applications\${APP_EXE}"
-
-  # Attempt to clean up junk left behind by the Windows shell
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Search\JumplistData" "$INSTDIR\${APP_EXE}"
-  DeleteRegValue HKCU "Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" "$INSTDIR\${APP_EXE}.FriendlyAppName"
-  DeleteRegValue HKCU "Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" "$INSTDIR\${APP_EXE}.ApplicationCompany"
-  DeleteRegValue HKCU "Software\Microsoft\Windows\ShellNoRoam\MUICache" "$INSTDIR\${APP_EXE}" ; WinXP
-  DeleteRegValue HKCU "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store" "$INSTDIR\${APP_EXE}"
-
-!macroend
-
-!macro APP_TEARDOWN APP_ID APP_NAME APP_EXE
-
-  !insertmacro APP_TEARDOWN_Def `${APP_ID}` `${APP_NAME}` `${APP_EXE}`
-
-!macroend
-
-!macro APP_TEARDOWN_DEFAULT APP_ID APP_NAME APP_EXE
-
-  !insertmacro APP_TEARDOWN_Def `${APP_ID}` `${APP_NAME}` `${APP_EXE}`
-
-  # Unregister "Default Programs"
-  DeleteRegValue ShCtx "Software\RegisteredApplications" `${APP_NAME}`
-  DeleteRegKey ShCtx "Software\Classes\Applications\${APP_EXE}\Capabilities"
-  DeleteRegKey /IfEmpty ShCtx "Software\Classes\Applications\${APP_EXE}"
-
-!macroend
+!include "@CMAKE_CURRENT_BINARY_DIR@/PxlShellAssociations.nsh"
 
 ; !defines for use with SHChangeNotify
 !ifdef SHCNE_ASSOCCHANGED
@@ -390,17 +256,7 @@ Section "@Launcher_DisplayName@"
   ; Write the installation path into the registry
   WriteRegStr HKCU Software\@Launcher_InstallID@ "InstallDir" "$INSTDIR"
 
-  ; Write the URL Handler into registry for curseforge
-  WriteRegStr HKCU Software\Classes\curseforge "URL Protocol" ""
-  WriteRegStr HKCU Software\Classes\curseforge\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
-
-  ; Write the URL Handler into registry for prismlauncher
-  WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@ "URL Protocol" ""
-  WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
-
-  ; Write the URL Handler into registry for prismlauncher import
-  WriteRegStr HKCU Software\Classes\prismlauncher "URL Protocol" ""
-  WriteRegStr HKCU Software\Classes\prismlauncher\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
+  !insertmacro PXL_REGISTER_PROTOCOL_IF_FREE "@Launcher_APP_BINARY_NAME@"
 
   ; Write the uninstall keys for Windows
   ; https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
@@ -442,20 +298,22 @@ Section /o "Desktop Shortcut" DESKTOP_SHORTCUTS
 SectionEnd
 
 
-!define APPID "@Launcher_InstallID@.App"
-!define APPEXE "@Launcher_APP_BINARY_NAME@.exe"
-!define APPICON "$INSTDIR\${APPEXE},0"
-!define APPDESCRIPTION "@Launcher_DisplayName@"
-!define APPNAME "@Launcher_DisplayName@"
-!define APPCMDTEXT "@Launcher_DisplayName@"
+Section "PXL archives and Open With" SHELL_ASSOC
 
-Section /o "Shell Association (Open-With dialog)" SHELL_ASSOC
+  !insertmacro PXL_REGISTER_APP
+  ${If} $R9 == 1
+    !insertmacro PXL_REGISTER_EXTENSION ".pxlconep" true
+    !insertmacro PXL_REGISTER_EXTENSION ".pxlt" true
+    !insertmacro PXL_REGISTER_EXTENSION ".mrpack" false
+    !insertmacro PXL_REGISTER_EXTENSION ".zip" false
+  ${EndIf}
 
-  !insertmacro APP_SETUP `${APPDESCRIPTION}` `${APPICON}` `${APPID}` `${APPCMDTEXT}` `${APPEXE}` `${APPCMDTEXT}` '$INSTDIR\${APPEXE} -I "%1"'
+  !insertmacro NotifyShell_AssocChanged
+SectionEnd
 
-  !insertmacro APP_ASSOCIATE_DEFAULT ".mrpack" `${APPID}` `${APPEXE}` true
-  !insertmacro APP_ASSOCIATE ".zip" `${APPID}` `${APPEXE}` false
-
+Section /o "Browser links from CurseForge and Prism" BROWSER_LINKS
+  !insertmacro PXL_REGISTER_PROTOCOL_IF_FREE "curseforge"
+  !insertmacro PXL_REGISTER_PROTOCOL_IF_FREE "prismlauncher"
   !insertmacro NotifyShell_AssocChanged
 SectionEnd
 
@@ -495,10 +353,15 @@ SectionEnd
 
 Section -un.ShellAssoc
 
-  !insertmacro APP_TEARDOWN_DEFAULT `${APPID}` `${APPNAME}` `${APPEXE}`
-
-  !insertmacro APP_UNASSOCIATE ".zip" `${APPID}` `${APPEXE}`
-  !insertmacro APP_UNASSOCIATE ".mrpack" `${APPID}` `${APPEXE}`
+  ; Check ownership before removing each association; another install may now own it.
+  !insertmacro PXL_REMOVE_EXTENSION_IF_OWNED ".pxlconep"
+  !insertmacro PXL_REMOVE_EXTENSION_IF_OWNED ".pxlt"
+  !insertmacro PXL_REMOVE_EXTENSION_IF_OWNED ".mrpack"
+  !insertmacro PXL_REMOVE_EXTENSION_IF_OWNED ".zip"
+  !insertmacro PXL_REMOVE_PROTOCOL_IF_OWNED "@Launcher_APP_BINARY_NAME@"
+  !insertmacro PXL_REMOVE_PROTOCOL_IF_OWNED "curseforge"
+  !insertmacro PXL_REMOVE_PROTOCOL_IF_OWNED "prismlauncher"
+  !insertmacro PXL_REMOVE_APP_IF_OWNED
 
   !insertmacro NotifyShell_AssocChanged
 SectionEnd
