@@ -31,6 +31,8 @@ The Windows installer offers PXL archive associations for `.pxlconep` and `.pxlt
 
 The script does not build an installer, run packages, sign files, contact GitHub or publish anything. The disabled `release.ymloff` is an inherited publication template and must not be enabled as a PXL release workflow without revision.
 
+An artifact-enabled build also compiles the standalone updater. Validate this target separately from a local build with an empty `Launcher_BUILD_ARTIFACT`: the latter does not compile it. The standalone process uses the shared progress dialog without the main launcher's task-center integration. A successful build does not validate application replacement, rollback or installer execution.
+
 Before the owner publishes an alpha, verify all three packages on their target systems, including a data-preserving update. Check account sign-in, Java selection/download, game launch/stop, content installation/update, cancellation, import/export and small-screen behavior. Record known limitations in the release notes. Source builds and fixture tests do not replace those checks.
 
 Upload the reviewed files themselves as assets of the matching GitHub prerelease. The website recognises these filenames and links directly to the published assets. It cannot offer a private draft as a public download. After publication, check each website download and the launcher's update notification against that actual release.

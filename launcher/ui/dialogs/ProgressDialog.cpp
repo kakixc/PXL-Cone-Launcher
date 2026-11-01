@@ -48,7 +48,9 @@
 #include "tasks/Task.h"
 
 #include "ui/widgets/SubTaskProgressBar.h"
+#ifndef PXL_STANDALONE_UPDATER
 #include "ui/pxl/TaskHistory.h"
+#endif
 
 // map a value in a numeric range of an arbitrary type to between 0 and INT_MAX
 // for getting the best precision out of the qt progress bar
@@ -80,6 +82,7 @@ ProgressDialog::ProgressDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Pr
     auto* title = new QLabel(tr("Downloads & tasks"), this);
     title->setProperty("pxlFlowTitle", true);
     header->addWidget(title, 1);
+#ifndef PXL_STANDALONE_UPDATER
     auto* tasksButton = new QPushButton(this);
     tasksButton->setIcon(QIcon(":/pxl/icons/download-simple.svg"));
     tasksButton->setToolTip(tr("View all tasks"));
@@ -87,6 +90,7 @@ ProgressDialog::ProgressDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Pr
     tasksButton->setFixedSize(40, 36);
     header->addWidget(tasksButton);
     connect(tasksButton, &QPushButton::clicked, this, [this] { Pxl::TaskHistory::instance()->showTasks(this); });
+#endif
     m_percentage = new QLabel(this);
     m_percentage->setStyleSheet("font-size: 20px; font-weight: 700;");
     header->addWidget(m_percentage);
@@ -208,7 +212,9 @@ int ProgressDialog::execWithTask(Task* task)
         qDebug() << "Programmer error: Progress dialog created with null task.";
         return QDialog::DialogCode::Accepted;
     }
+#ifndef PXL_STANDALONE_UPDATER
     Pxl::TaskHistory::instance()->watch(task, windowTitle(), windowIcon());
+#endif
 
     QDialog::DialogCode result{};
     if (handleImmediateResult(result)) {

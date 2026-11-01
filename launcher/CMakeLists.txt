@@ -1411,6 +1411,9 @@ endif()
 if(Launcher_BUILD_UPDATER)
     # Updater
     add_library(prism_updater_logic STATIC ${PRISMUPDATER_SOURCES} ${TASKS_SOURCES})
+    # Shared progress UI must not pull the launcher's task-center singleton
+    # into the separate updater process.
+    target_compile_definitions(prism_updater_logic PUBLIC PXL_STANDALONE_UPDATER)
     target_include_directories(prism_updater_logic PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     if(${Launcher_USE_PCH})
