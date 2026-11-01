@@ -46,6 +46,7 @@
 #include "ui/pxl/WindowGeometry.h"
 #include "BuildConfig.h"
 #include "pxl/DataLocation.h"
+#include "pxl/ConfigPaths.h"
 
 #include "DataMigrationTask.h"
 #include "java/JavaInstallList.h"
@@ -634,9 +635,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     // Initialize application settings
     {
-        // Provide a fallback for migration from PolyMC
-        m_settings.reset(
-            new INISettingsObject({ BuildConfig.LAUNCHER_CONFIGFILE, "prismlauncher.cfg", "polymc.cfg", "multimc.cfg" }, this));
+        // Copy an existing preview/upstream configuration only in the explicitly selected data directory.
+        m_settings.reset(new INISettingsObject(Pxl::launcherConfigFiles(BuildConfig.LAUNCHER_CONFIGFILE), this));
 
         // Theming
         m_settings->registerSetting("IconTheme", QString());

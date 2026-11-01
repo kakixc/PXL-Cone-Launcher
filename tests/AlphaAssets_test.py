@@ -22,7 +22,7 @@ class AlphaAssetsTest(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.portable = self.root / "portable payload"
         self.portable.mkdir()
-        for name in ("elyprismlauncher.exe", "portable.txt", "manifest.txt", ".env", "русский файл"):
+        for name in ("pxlcone.exe", "portable.txt", "manifest.txt", ".env", "русский файл"):
             (self.portable / name).write_bytes(b"fixture")
         self.setup = self.root / "setup.exe"
         self.setup.write_bytes(b"MZfixture")
@@ -40,7 +40,7 @@ class AlphaAssetsTest(unittest.TestCase):
         with zipfile.ZipFile(paths[0]) as archive:
             self.assertIn(".env", archive.namelist())
             self.assertIn("русский файл", archive.namelist())
-            self.assertEqual(archive.read("elyprismlauncher.exe"), b"fixture")
+            self.assertEqual(archive.read("pxlcone.exe"), b"fixture")
         self.assertEqual(paths[1].read_bytes(), self.setup.read_bytes())
         self.assertEqual(paths[2].read_bytes(), self.appimage.read_bytes())
         self.assertEqual((self.portable / "manifest.txt").read_bytes(), b"fixture")
@@ -66,6 +66,17 @@ class AlphaAssetsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.stage()
         self.assertFalse(self.output.exists())
+
+    def test_refuses_all_supported_config_fallbacks(self):
+        for name in ("pxlcone.cfg", "elyprismlauncher.cfg", "prismlauncher.cfg", "polymc.cfg", "multimc.cfg"):
+            with self.subTest(name=name):
+                config = self.portable / name
+                config.write_text("private settings", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "Personal data"):
+                    self.stage()
+                self.assertFalse(self.output.exists())
+                self.assertEqual(config.read_text(), "private settings")
+                config.unlink()
 
     def test_destination_created_during_staging_is_preserved(self):
         copy = assets.shutil.copy2

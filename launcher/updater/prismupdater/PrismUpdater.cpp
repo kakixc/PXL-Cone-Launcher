@@ -976,9 +976,9 @@ void PrismUpdaterApp::backupAppDir()
         } else {  // windows by process of elimination
             file_list.append({
                 "jars",
-                "elyprismlauncher.exe",
-                "elyprismlauncher_filelink.exe",
-                "elyprismlauncher_updater.exe",
+                BuildConfig.LAUNCHER_APP_BINARY_NAME + ".exe",
+                BuildConfig.LAUNCHER_APP_BINARY_NAME + "_filelink.exe",
+                BuildConfig.LAUNCHER_APP_BINARY_NAME + "_updater.exe",
                 "qtlogging.ini",
                 "imageformats",
                 "iconengines",

@@ -26,7 +26,7 @@ class ApplicationIdentityTest(unittest.TestCase):
             'project(IdentityFixture LANGUAGES NONE)\n'
             'set(CMAKE_DISABLE_FIND_PACKAGE_PkgConfig TRUE)\n'
             f'list(APPEND CMAKE_MODULE_PATH "{ROOT.as_posix()}/cmake")\n'
-            'set(Launcher_APP_BINARY_NAME "elyprismlauncher")\n'
+            'set(Launcher_APP_BINARY_NAME "pxlcone")\n'
             'set(Launcher_RELEASE_VERSION "0.1.0-alpha.7")\n'
             'set(Launcher_VERSION_NAME "12.0.0-develop")\n'
             'set(Launcher_VERSION_NAME4 "12.0.0.0")\n'
@@ -40,9 +40,9 @@ class ApplicationIdentityTest(unittest.TestCase):
         if result.returncode:
             raise AssertionError(result.stdout + result.stderr)
 
-    def test_internal_name_and_existing_ini_are_retained(self):
+    def test_internal_target_and_pxl_product_names(self):
         self.assertEqual((self.build / "identity.txt").read_text().splitlines(),
-                         ["ElyPrismLauncher", "PXLConeLauncher", "elyprismlauncher.cfg", APP_ID])
+                         ["ElyPrismLauncher", "PXLConeLauncher", "pxlcone.cfg", APP_ID])
 
     def test_desktop_and_appstream_use_same_pxl_identity(self):
         desktop = configparser.ConfigParser(interpolation=None)
@@ -51,7 +51,7 @@ class ApplicationIdentityTest(unittest.TestCase):
         self.assertEqual(entry["Name"], "PXL Cone Launcher")
         self.assertEqual(entry["Icon"], APP_ID)
         self.assertEqual(entry["StartupWMClass"], "PXLConeLauncher")
-        self.assertEqual(entry["Exec"], "elyprismlauncher %U")
+        self.assertEqual(entry["Exec"], "pxlcone %U")
         metadata = ET.parse(self.build / "program_info" / f"{APP_ID}.metainfo.xml").getroot()
         self.assertEqual(metadata.findtext("id"), APP_ID)
         self.assertEqual(metadata.findtext("launchable"), f"{APP_ID}.desktop")

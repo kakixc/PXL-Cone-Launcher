@@ -30,12 +30,13 @@ def stage_assets(portable: Path, setup: Path, appimage: Path, output: Path, vers
         with file.open("rb") as stream:
             if stream.read(len(magic)) != magic:
                 raise ValueError("Setup must be a Windows executable and AppImage must be an ELF file")
-    for required in ("elyprismlauncher.exe", "portable.txt", "manifest.txt"):
+    for required in ("pxlcone.exe", "portable.txt", "manifest.txt"):
         if not (portable / required).is_file():
             raise ValueError(f"Missing portable payload file: {required}")
 
     files = sorted(portable.rglob("*"))
-    private_names = {"userdata", "instances", "logs", "accounts.json", "prismlauncher.cfg", "elyprismlauncher.cfg", ".git"}
+    private_names = {"userdata", "instances", "logs", "accounts.json", "pxlcone.cfg", "prismlauncher.cfg",
+                     "elyprismlauncher.cfg", "polymc.cfg", "multimc.cfg", ".git"}
     for file in files:
         relative = file.relative_to(portable)
         if file.is_symlink():

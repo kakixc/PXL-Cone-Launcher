@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $checker = Join-Path $PSScriptRoot '../scripts/check-windows-portable.ps1'
 $temporaryBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 $fixture = Join-Path $temporaryBase ('pxl-portable-check-' + [guid]::NewGuid().ToString('N'))
-$files = @('elyprismlauncher.exe', 'elyprismlauncher_filelink.exe', 'portable.txt',
+$files = @('pxlcone.exe', 'pxlcone_filelink.exe', 'portable.txt',
     'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll', 'Qt6Network.dll', 'platforms/qwindows.dll',
     'qt.conf', 'qtlogging.ini', 'jars/NewLaunch.jar', 'jars/NewLaunchLegacy.jar',
     'jars/JavaCheck.jar', 'LICENSE', 'COPYING.md')
@@ -24,6 +24,18 @@ try {
         [IO.File]::WriteAllText((Join-Path $fixture $runtime), 'fixture')
     }
     & $checker -PackageRoot $fixture -RequireMsvcRuntime
+    foreach ($name in @('pxlcone.cfg', 'elyprismlauncher.cfg', 'prismlauncher.cfg', 'polymc.cfg', 'multimc.cfg')) {
+        $config = Join-Path $fixture $name
+        [IO.File]::WriteAllText($config, 'private settings')
+        $rejected = $false
+        try { & $checker -PackageRoot $fixture -RequireMsvcRuntime } catch {
+            if ($_.Exception.Message -notlike '*Personal data*') { throw }
+            $rejected = $true
+        }
+        if (-not $rejected) { throw "Personal configuration was accepted: $name" }
+        if ([IO.File]::ReadAllText($config) -ne 'private settings') { throw 'Source configuration changed.' }
+        Remove-Item -LiteralPath $config -Force
+    }
     [IO.Directory]::CreateDirectory((Join-Path $fixture 'UserData')) | Out-Null
     $rejected = $false
     try { & $checker -PackageRoot $fixture -RequireMsvcRuntime } catch {

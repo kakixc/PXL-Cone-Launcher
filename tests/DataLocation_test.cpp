@@ -5,6 +5,8 @@
 #include <QStandardPaths>
 #include "BuildConfig.h"
 #include "pxl/DataLocation.h"
+#include "pxl/ConfigPaths.h"
+#include "settings/INISettingsObject.h"
 
 class DataLocationTest : public QObject {
     Q_OBJECT
@@ -70,7 +72,36 @@ private slots:
         QCOMPARE(sentinel.readAll(), QByteArray("keep"));
         QCOMPARE(Pxl::selectDataLocation(legacy, {}, root, persistent, false).path, legacy);
     }
-    void independentQtIdentityAndExistingConfigName()
+    void previewConfigurationIsCopiedWithoutChangingOriginal()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const auto preferred = temp.path() + "/pxlcone.cfg";
+        const auto legacy = temp.path() + "/elyprismlauncher.cfg";
+        const QByteArray original("[General]\nFixtureValue=preview\n");
+        QFile file(legacy);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(original), original.size());
+        file.close();
+        auto paths = Pxl::launcherConfigFiles("pxlcone.cfg");
+        for (auto& path : paths)
+            path = QDir(temp.path()).filePath(path);
+        {
+            INISettingsObject settings(paths);
+            settings.registerSetting("FixtureValue", QString());
+            QCOMPARE(settings.get("FixtureValue").toString(), QString("preview"));
+            settings.set("FixtureValue", QString("current"));
+        }
+        QVERIFY(QFileInfo::exists(preferred));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+        file.close();
+        INISettingsObject settings(paths);
+        settings.registerSetting("FixtureValue", QString());
+        QCOMPARE(settings.get("FixtureValue").toString(), QString("current"));
+        QCOMPARE(Pxl::launcherConfigFiles("elyprismlauncher.cfg").count("elyprismlauncher.cfg"), 1);
+    }
+    void independentQtIdentityAndConfigName()
     {
         QCOMPARE(BuildConfig.LAUNCHER_RUNTIME_NAME, QString("PXLConeLauncher"));
         QVERIFY(BuildConfig.LAUNCHER_RUNTIME_NAME != BuildConfig.LAUNCHER_NAME);
