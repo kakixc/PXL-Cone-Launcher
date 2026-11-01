@@ -718,7 +718,8 @@ WorkspacePage::WorkspacePage(InstanceList* instances, QWidget* parent, SettingsO
     m_recentModel->setSourceModel(instances);
     auto* libraryEntries = new QConcatenateTablesProxyModel(this);
     libraryEntries->addSourceModel(m_pendingInstances);
-    libraryEntries->addSourceModel(instances);
+    if (instances)
+        libraryEntries->addSourceModel(instances);
     m_libraryModel->setSourceModel(libraryEntries);
     m_homeView->setModel(m_recentModel);
     m_libraryView->setModel(m_libraryModel);
