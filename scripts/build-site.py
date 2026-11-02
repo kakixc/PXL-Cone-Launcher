@@ -7,6 +7,7 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 FILES = {
     "index.html": "website/index.html",
+    "sitemap.xml": "website/sitemap.xml",
     "styles.css": "website/styles.css",
     "app.js": "website/app.js",
     "downloads.js": "website/downloads.js",
